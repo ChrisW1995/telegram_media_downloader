@@ -61,6 +61,8 @@ class DownloadBot:
         self.task_node: dict = {}
         self.is_running = True
         self.allowed_user_ids: List[Union[int, str]] = []
+        self.pending_user_ids: List[Union[int, str]] = []  # 待允許的用戶列表
+        self.admin_id: Union[int, str] = None  # 管理員ID
 
         meta = MetaData(datetime(2022, 8, 5, 14, 35, 12), 0, "", 0, 0, 0, "", 0)
         self.filter.set_meta_data(meta)
@@ -201,11 +203,17 @@ class DownloadBot:
             try:
                 chat = await self.client.get_chat(allowed_user_id)
                 self.allowed_user_ids.append(chat.id)
+                logger.info(f"Added allowed user ID: {allowed_user_id}")
             except Exception as e:
                 logger.warning(f"set allowed_user_ids error: {e}")
 
         admin = await self.client.get_me()
+        self.admin_id = admin.id  # 儲存管理員ID
         self.allowed_user_ids.append(admin.id)
+        
+        logger.info(f"Bot initialized with admin ID: {self.admin_id}")
+        logger.info(f"Allowed user IDs: {self.allowed_user_ids}")
+        logger.info(f"Pending user IDs: {self.pending_user_ids}")
 
         await self.bot.set_bot_commands(commands)
 
@@ -260,9 +268,8 @@ class DownloadBot:
         )
         self.bot.add_handler(
             MessageHandler(
-                help_command,
-                filters=pyrogram.filters.command(["start"])
-                & pyrogram.filters.user(self.allowed_user_ids),
+                self.handle_start_command,
+                filters=pyrogram.filters.command(["start"]),
             )
         )
         self.bot.add_handler(
@@ -293,6 +300,37 @@ class DownloadBot:
                 on_query_handler, filters=pyrogram.filters.user(self.allowed_user_ids)
             )
         )
+        
+        # 管理員專用指令
+        self.bot.add_handler(
+            MessageHandler(
+                self.approve_user_command,
+                filters=pyrogram.filters.command(["approve"])
+                & pyrogram.filters.user([self.admin_id]),
+            )
+        )
+        self.bot.add_handler(
+            MessageHandler(
+                self.reject_user_command,
+                filters=pyrogram.filters.command(["reject"])
+                & pyrogram.filters.user([self.admin_id]),
+            )
+        )
+        self.bot.add_handler(
+            MessageHandler(
+                self.pending_users_command,
+                filters=pyrogram.filters.command(["pending"])
+                & pyrogram.filters.user([self.admin_id]),
+            )
+        )
+        self.bot.add_handler(
+            MessageHandler(
+                self.debug_users_command,
+                filters=pyrogram.filters.command(["debug_users"])
+                & pyrogram.filters.user([self.admin_id]),
+            )
+        )
+        
 
         self.client.add_handler(MessageHandler(listen_forward_msg))
 
@@ -310,6 +348,287 @@ class DownloadBot:
                 & pyrogram.filters.user(self.allowed_user_ids),
             )
         )
+
+    async def handle_start_command(self, client: pyrogram.Client, message: types.Message):
+        """處理 /start 指令，包括用戶權限檢查和申請"""
+        user_id = message.from_user.id
+        user_name = message.from_user.first_name or "未知用戶"
+        user_username = message.from_user.username
+
+        # 檢查用戶是否已在允許列表中
+        if user_id in self.allowed_user_ids:
+            await help_command(client, message)
+            return
+
+        # 檢查用戶是否已在待允許列表中
+        if user_id in self.pending_user_ids:
+            await client.send_message(
+                user_id,
+                f"👋 Hi {user_name}!\n\n"
+                f"⏳ 您的使用權限申請已提交，正在等待管理員審核。\n"
+                f"請耐心等待管理員批准您的使用權限。",
+                reply_to_message_id=message.id
+            )
+            return
+
+        # 新用戶，加入待允許列表並通知管理員
+        self.pending_user_ids.append(user_id)
+        
+        # 向用戶發送等待訊息
+        await client.send_message(
+            user_id,
+            f"👋 Welcome {user_name}!\n\n"
+            f"🔐 您需要管理員授權才能使用此機器人。\n"
+            f"📝 已自動提交使用權限申請。\n"
+            f"⏳ 請等待管理員審核...\n\n"
+            f"💡 管理員將會收到您的申請通知。",
+            reply_to_message_id=message.id
+        )
+
+        # 向管理員發送審核請求
+        admin_message = (
+            f"🔔 新的機器人使用權限申請\n\n"
+            f"👤 用戶: {user_name}\n"
+            f"🆔 ID: `{user_id}`\n"
+            f"📛 用戶名: {'@' + user_username if user_username else '無'}\n\n"
+            f"使用以下指令管理用戶權限:\n"
+            f"• `/approve {user_id}` - 批准用戶\n"
+            f"• `/reject {user_id}` - 拒絕用戶\n"
+            f"• `/pending` - 查看待審用戶列表"
+        )
+        
+        try:
+            await client.send_message(
+                self.admin_id,
+                admin_message,
+                parse_mode=pyrogram.enums.ParseMode.MARKDOWN
+            )
+            logger.info(f"New user permission request: {user_name} (ID: {user_id})")
+        except Exception as e:
+            logger.error(f"Failed to send admin notification: {e}")
+
+    async def approve_user_command(self, client: pyrogram.Client, message: types.Message):
+        """管理員批准用戶權限"""
+        args = message.text.split()
+        if len(args) < 2:
+            await client.send_message(
+                message.from_user.id,
+                "❌ 請提供用戶ID\n用法: `/approve 123456789`",
+                parse_mode=pyrogram.enums.ParseMode.MARKDOWN,
+                reply_to_message_id=message.id
+            )
+            return
+
+        try:
+            user_id = int(args[1])
+        except ValueError:
+            await client.send_message(
+                message.from_user.id,
+                "❌ 無效的用戶ID，請提供數字ID",
+                reply_to_message_id=message.id
+            )
+            return
+
+        if user_id not in self.pending_user_ids:
+            await client.send_message(
+                message.from_user.id,
+                f"❌ 用戶 `{user_id}` 不在待審列表中",
+                parse_mode=pyrogram.enums.ParseMode.MARKDOWN,
+                reply_to_message_id=message.id
+            )
+            return
+
+        # 從待審列表移除並添加到允許列表
+        self.pending_user_ids.remove(user_id)
+        self.allowed_user_ids.append(user_id)
+        logger.info(f"Added user {user_id} to runtime allowed_user_ids: {self.allowed_user_ids}")
+
+        # 更新配置文件
+        if user_id not in self.app.allowed_user_ids:
+            self.app.allowed_user_ids.append(user_id)
+            self.app.update_config()
+            logger.info(f"Added user {user_id} to config allowed_user_ids: {self.app.allowed_user_ids}")
+        else:
+            logger.info(f"User {user_id} already in config allowed_user_ids")
+
+        # 通知管理員
+        try:
+            user_info = await client.get_users(user_id)
+            user_name = user_info.first_name or "未知用戶"
+            await client.send_message(
+                message.from_user.id,
+                f"✅ 已批准用戶 {user_name} (ID: `{user_id}`) 的使用權限",
+                parse_mode=pyrogram.enums.ParseMode.MARKDOWN,
+                reply_to_message_id=message.id
+            )
+
+            # 通知用戶
+            await client.send_message(
+                user_id,
+                f"🎉 恭喜！您的使用權限已被批准！\n\n"
+                f"✅ 您現在可以使用此機器人的所有功能。\n"
+                f"📖 發送 /start 查看可用指令。"
+            )
+            
+            logger.info(f"User {user_name} (ID: {user_id}) approved by admin")
+        except Exception as e:
+            logger.error(f"Error approving user {user_id}: {e}")
+
+    async def reject_user_command(self, client: pyrogram.Client, message: types.Message):
+        """管理員拒絕用戶權限"""
+        args = message.text.split()
+        if len(args) < 2:
+            await client.send_message(
+                message.from_user.id,
+                "❌ 請提供用戶ID\n用法: `/reject 123456789`",
+                parse_mode=pyrogram.enums.ParseMode.MARKDOWN,
+                reply_to_message_id=message.id
+            )
+            return
+
+        try:
+            user_id = int(args[1])
+        except ValueError:
+            await client.send_message(
+                message.from_user.id,
+                "❌ 無效的用戶ID，請提供數字ID",
+                reply_to_message_id=message.id
+            )
+            return
+
+        if user_id not in self.pending_user_ids:
+            await client.send_message(
+                message.from_user.id,
+                f"❌ 用戶 `{user_id}` 不在待審列表中",
+                parse_mode=pyrogram.enums.ParseMode.MARKDOWN,
+                reply_to_message_id=message.id
+            )
+            return
+
+        # 從待審列表移除
+        self.pending_user_ids.remove(user_id)
+
+        # 通知管理員
+        try:
+            user_info = await client.get_users(user_id)
+            user_name = user_info.first_name or "未知用戶"
+            await client.send_message(
+                message.from_user.id,
+                f"❌ 已拒絕用戶 {user_name} (ID: `{user_id}`) 的使用權限申請",
+                parse_mode=pyrogram.enums.ParseMode.MARKDOWN,
+                reply_to_message_id=message.id
+            )
+
+            # 通知用戶
+            await client.send_message(
+                user_id,
+                f"❌ 很抱歉，您的使用權限申請已被拒絕。\n\n"
+                f"如有疑問，請聯繫管理員。"
+            )
+            
+            logger.info(f"User {user_name} (ID: {user_id}) rejected by admin")
+        except Exception as e:
+            logger.error(f"Error rejecting user {user_id}: {e}")
+
+    async def pending_users_command(self, client: pyrogram.Client, message: types.Message):
+        """查看待審用戶列表"""
+        if not self.pending_user_ids:
+            await client.send_message(
+                message.from_user.id,
+                "📝 目前沒有待審核的用戶",
+                reply_to_message_id=message.id
+            )
+            return
+
+        pending_list = "📝 **待審核用戶列表:**\n\n"
+        for i, user_id in enumerate(self.pending_user_ids, 1):
+            try:
+                user_info = await client.get_users(user_id)
+                user_name = user_info.first_name or "未知用戶"
+                user_username = user_info.username
+                pending_list += (
+                    f"{i}. {user_name}\n"
+                    f"   🆔 ID: `{user_id}`\n"
+                    f"   📛 用戶名: {'@' + user_username if user_username else '無'}\n"
+                    f"   ⚡ `/approve {user_id}` | `/reject {user_id}`\n\n"
+                )
+            except Exception:
+                pending_list += f"{i}. 未知用戶 (ID: `{user_id}`)\n   ⚡ `/approve {user_id}` | `/reject {user_id}`\n\n"
+
+        await client.send_message(
+            message.from_user.id,
+            pending_list,
+            parse_mode=pyrogram.enums.ParseMode.MARKDOWN,
+            reply_to_message_id=message.id
+        )
+
+    async def debug_users_command(self, client: pyrogram.Client, message: types.Message):
+        """除錯：查看所有用戶列表狀態"""
+        debug_info = "🔍 **用戶狀態除錯資訊:**\n\n"
+        
+        debug_info += f"🔧 **管理員 ID:** `{self.admin_id}`\n\n"
+        
+        debug_info += f"✅ **已允許用戶 ({len(self.allowed_user_ids)}):**\n"
+        if self.allowed_user_ids:
+            for i, user_id in enumerate(self.allowed_user_ids, 1):
+                try:
+                    user_info = await client.get_users(user_id)
+                    user_name = user_info.first_name or "未知用戶"
+                    debug_info += f"  {i}. {user_name} (`{user_id}`)\n"
+                except Exception:
+                    debug_info += f"  {i}. 未知用戶 (`{user_id}`)\n"
+        else:
+            debug_info += "  無\n"
+        
+        debug_info += f"\n⏳ **待審核用戶 ({len(self.pending_user_ids)}):**\n"
+        if self.pending_user_ids:
+            for i, user_id in enumerate(self.pending_user_ids, 1):
+                try:
+                    user_info = await client.get_users(user_id)
+                    user_name = user_info.first_name or "未知用戶"
+                    debug_info += f"  {i}. {user_name} (`{user_id}`)\n"
+                except Exception:
+                    debug_info += f"  {i}. 未知用戶 (`{user_id}`)\n"
+        else:
+            debug_info += "  無\n"
+        
+        debug_info += f"\n📁 **配置檔案中的允許用戶 ({len(self.app.allowed_user_ids)}):**\n"
+        if self.app.allowed_user_ids:
+            for i, user_id in enumerate(self.app.allowed_user_ids, 1):
+                debug_info += f"  {i}. `{user_id}`\n"
+        else:
+            debug_info += "  無\n"
+
+        await client.send_message(
+            message.from_user.id,
+            debug_info,
+            parse_mode=pyrogram.enums.ParseMode.MARKDOWN,
+            reply_to_message_id=message.id
+        )
+
+    async def debug_all_messages(self, client: pyrogram.Client, message: types.Message):
+        """除錯：記錄所有文字訊息"""
+        user_id = message.from_user.id
+        user_name = message.from_user.first_name or "未知用戶"
+        
+        logger.info(f"📨 Message received from {user_name} (ID: {user_id})")
+        logger.info(f"📝 Text: {message.text}")
+        logger.info(f"🔐 User in allowed_list: {user_id in self.allowed_user_ids}")
+        logger.info(f"⏳ User in pending_list: {user_id in self.pending_user_ids}")
+        logger.info(f"👥 Current allowed_user_ids: {self.allowed_user_ids}")
+        
+        # 檢查是否是 Telegram 連結
+        if message.text and ("t.me/" in message.text or "telegram.me/" in message.text):
+            logger.info(f"🔗 Telegram link detected: {message.text}")
+            if user_id in self.allowed_user_ids:
+                logger.info(f"✅ User {user_id} is authorized for download")
+            else:
+                logger.warning(f"❌ User {user_id} is NOT authorized for download")
+                await client.send_message(
+                    user_id,
+                    f"❌ 您沒有下載權限。請發送 /start 申請權限。",
+                    reply_to_message_id=message.id
+                )
 
 
 _bot = DownloadBot()
@@ -352,19 +671,6 @@ async def send_help_str(client: pyrogram.Client, chat_id):
         its version, and the available commands.
     """
 
-    update_keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "Github",
-                    url="https://github.com/tangyoha/telegram_media_downloader/releases",
-                ),
-                InlineKeyboardButton(
-                    "Join us", url="https://t.me/TeegramMediaDownload"
-                ),
-            ]
-        ]
-    )
     latest_release_str = ""
     # try:
     #     latest_release = get_latest_release(_bot.app.proxy)
@@ -395,7 +701,7 @@ async def send_help_str(client: pyrogram.Client, chat_id):
         f"`[` `]` {_t('means optional, not required')}\n"
     )
 
-    await client.send_message(chat_id, msg, reply_markup=update_keyboard)
+    await client.send_message(chat_id, msg)
 
 
 async def help_command(client: pyrogram.Client, message: pyrogram.types.Message):
@@ -540,7 +846,7 @@ async def direct_download(
 ):
     """Direct Download"""
 
-    replay_message = "Direct download..."
+    replay_message = "直接下載中..."
     last_reply_message = await download_bot.bot.send_message(
         message.from_user.id, replay_message, reply_to_message_id=message.id
     )
@@ -603,8 +909,12 @@ async def download_from_link(client: pyrogram.Client, message: pyrogram.types.Me
     Returns:
         None
     """
+    logger.info(f"download_from_link called by user {message.from_user.id}")
+    logger.info(f"Message text: {message.text}")
+    logger.info(f"Current allowed_user_ids: {_bot.allowed_user_ids}")
 
     if not message.text or not message.text.startswith("https://t.me"):
+        logger.warning(f"Message rejected: text={message.text}, starts_with_t.me={message.text.startswith('https://t.me') if message.text else False}")
         return
 
     msg = (
@@ -617,6 +927,7 @@ async def download_from_link(client: pyrogram.Client, message: pyrogram.types.Me
         await client.send_message(
             message.from_user.id, msg, parse_mode=pyrogram.enums.ParseMode.HTML
         )
+        return
 
     chat_id, message_id, _ = await parse_link(_bot.client, text[0])
 
@@ -631,7 +942,7 @@ async def download_from_link(client: pyrogram.Client, message: pyrogram.types.Me
             if download_message:
                 await direct_download(_bot, entity.id, message, download_message)
             else:
-                client.send_message(
+                await client.send_message(
                     message.from_user.id,
                     f"{_t('From')} {entity.title} {_t('download')} {message_id} {_t('error')}!",
                     reply_to_message_id=message.id,
@@ -805,7 +1116,7 @@ async def get_forward_task_node(
 
     last_reply_message = await client.send_message(
         message.from_user.id,
-        "Forwarding message, please wait...",
+        "轉發訊息中，請稍候...",
         reply_to_message_id=message.id,
     )
 
@@ -843,8 +1154,8 @@ async def get_forward_task_node(
         await client.edit_message_text(
             message.from_user.id,
             last_reply_message.id,
-            "Note that the robot may not be in the target group,"
-            " use the user account to forward",
+            "注意：機器人可能不在目標群組中，"
+            "將使用用戶帳號進行轉發",
         )
 
     return node

@@ -3,6 +3,8 @@ import asyncio
 import logging
 import os
 import shutil
+import signal
+import sys
 import time
 from typing import List, Optional, Tuple, Union
 
@@ -28,7 +30,7 @@ from module.pyrogram_extension import (
     upload_telegram_chat,
 )
 from module.web import init_web
-from utils.format import truncate_filename, validate_title
+from utils.format import format_byte, truncate_filename, validate_title
 from utils.log import LogFilter
 from utils.meta import print_meta
 from utils.meta_data import MetaData
@@ -47,6 +49,34 @@ app = Application(CONFIG_NAME, DATA_FILE_NAME, APPLICATION_NAME)
 
 queue: asyncio.Queue = asyncio.Queue()
 RETRY_TIME_OUT = 3
+
+# Global flag for graceful shutdown
+_shutdown_requested = False
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully."""
+    global _shutdown_requested
+    if not _shutdown_requested:
+        _shutdown_requested = True
+        logger.info(f"Received signal {signum}, initiating graceful shutdown...")
+        # Stop the event loop if it's running
+        try:
+            loop = asyncio.get_running_loop()
+            loop.call_soon_threadsafe(lambda: asyncio.create_task(_graceful_shutdown()))
+        except RuntimeError:
+            # No running loop, exit directly
+            logger.info("No running event loop, exiting immediately")
+            sys.exit(0)
+    else:
+        logger.warning("Shutdown already in progress, forcing exit")
+        sys.exit(1)
+
+async def _graceful_shutdown():
+    """Perform graceful shutdown operations."""
+    global _shutdown_requested
+    _shutdown_requested = True
+    app.is_running = False
+    logger.info("Graceful shutdown initiated")
 
 logging.getLogger("pyrogram.session.session").addFilter(LogFilter())
 logging.getLogger("pyrogram.client").addFilter(LogFilter())
@@ -167,6 +197,7 @@ async def _get_media_meta(
     message: pyrogram.types.Message,
     media_obj: Union[Audio, Document, Photo, Video, VideoNote, Voice],
     _type: str,
+    node: TaskNode = None,
 ) -> Tuple[str, str, Optional[str]]:
     """Extract file name and file id from media object.
 
@@ -202,7 +233,8 @@ async def _get_media_meta(
     if _type in ["voice", "video_note"]:
         # pylint: disable = C0209
         file_format = media_obj.mime_type.split("/")[-1]  # type: ignore
-        file_save_path = app.get_file_save_path(_type, dirname, datetime_dir_name)
+        is_bot = node and node.bot is not None
+        file_save_path = app.get_file_save_path(_type, dirname, datetime_dir_name, is_bot)
         file_name = "{} - {}_{}.{}".format(
             message.id,
             _type,
@@ -247,7 +279,8 @@ async def _get_media_meta(
             app.get_file_name(message.id, file_name, caption) + file_name_suffix
         )
 
-        file_save_path = app.get_file_save_path(_type, dirname, datetime_dir_name)
+        is_bot = node and node.bot is not None
+        file_save_path = app.get_file_save_path(_type, dirname, datetime_dir_name, is_bot)
 
         temp_file_name = os.path.join(app.temp_save_path, dirname, gen_file_name)
 
@@ -269,7 +302,7 @@ async def add_download_task(
 
 
 async def save_msg_to_file(
-    app, chat_id: Union[int, str], message: pyrogram.types.Message
+    app, chat_id: Union[int, str], message: pyrogram.types.Message, node: TaskNode = None
 ):
     """Write message text into file"""
     dirname = validate_title(
@@ -277,7 +310,8 @@ async def save_msg_to_file(
     )
     datetime_dir_name = message.date.strftime(app.date_format) if message.date else "0"
 
-    file_save_path = app.get_file_save_path("msg", dirname, datetime_dir_name)
+    is_bot = node and node.bot is not None
+    file_save_path = app.get_file_save_path("msg", dirname, datetime_dir_name, is_bot)
     file_name = os.path.join(
         app.temp_save_path,
         file_save_path,
@@ -287,7 +321,7 @@ async def save_msg_to_file(
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
 
     if _is_exist(file_name):
-        return DownloadStatus.SkipDownload, None
+        return DownloadStatus.SkipDownload, file_name
 
     with open(file_name, "w", encoding="utf-8") as f:
         f.write(message.text or "")
@@ -305,7 +339,7 @@ async def download_task(
     )
 
     if app.enable_download_txt and message.text and not message.media:
-        download_status, file_name = await save_msg_to_file(app, node.chat_id, message)
+        download_status, file_name = await save_msg_to_file(app, node.chat_id, message, node)
 
     if not node.bot:
         app.set_download_id(node, message.id, download_status)
@@ -336,6 +370,76 @@ async def download_task(
             file_name, update_cloud_upload_stat, (node, message.id, ui_file_name)
         ):
             node.upload_success_count += 1
+
+    # Send downloaded file via bot for successful downloads and skipped files
+    if (node.bot and download_status in [DownloadStatus.SuccessDownload, DownloadStatus.SkipDownload] and 
+        file_name and node.from_user_id and os.path.exists(file_name)):
+        try:
+            # Determine the media type and send accordingly
+            file_ext = os.path.splitext(file_name)[1].lower()
+            file_size_mb = file_size / (1024 * 1024)
+            
+            if download_status is DownloadStatus.SuccessDownload:
+                success_msg = f"✅ **下載完成並傳送檔案** ({file_size_mb:.1f} MB)\n🆔 訊息ID: {message.id}"
+            else:  # SkipDownload
+                success_msg = f"📁 **檔案已存在，傳送現有檔案** ({file_size_mb:.1f} MB)\n🆔 訊息ID: {message.id}"
+            
+            if file_ext in ['.mp4', '.avi', '.mov', '.mkv', '.webm']:
+                # Send as video
+                await node.bot.send_video(
+                    node.from_user_id,
+                    file_name,
+                    caption=success_msg,
+                    parse_mode=pyrogram.enums.ParseMode.MARKDOWN
+                )
+            elif file_ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                # Send as photo
+                await node.bot.send_photo(
+                    node.from_user_id,
+                    file_name,
+                    caption=success_msg,
+                    parse_mode=pyrogram.enums.ParseMode.MARKDOWN
+                )
+            elif file_ext in ['.mp3', '.wav', '.ogg', '.m4a', '.flac']:
+                # Send as audio
+                await node.bot.send_audio(
+                    node.from_user_id,
+                    file_name,
+                    caption=success_msg,
+                    parse_mode=pyrogram.enums.ParseMode.MARKDOWN
+                )
+            else:
+                # Send as document for other file types
+                await node.bot.send_document(
+                    node.from_user_id,
+                    file_name,
+                    caption=success_msg,
+                    parse_mode=pyrogram.enums.ParseMode.MARKDOWN
+                )
+            
+            logger.info(f"Successfully sent file via bot: {os.path.basename(file_name)} ({file_size_mb:.1f} MB)")
+                
+        except Exception as e:
+            logger.warning(f"Failed to send file via bot: {e}")
+            # Fallback: send text message with file info
+            try:
+                file_size_mb = file_size / (1024 * 1024)
+                fallback_msg = (
+                    f"✅ **下載完成**\n\n"
+                    f"❌ **檔案傳送失敗**: {str(e)}\n"
+                    f"📁 **檔案名稱**: `{os.path.basename(file_name)}`\n"
+                    f"📏 **檔案大小**: {file_size_mb:.1f} MB\n"
+                    f"📍 **本地路徑**: `{os.path.abspath(file_name)}`\n"
+                    f"🆔 **訊息ID**: {message.id}"
+                )
+                
+                await node.bot.send_message(
+                    node.from_user_id,
+                    fallback_msg,
+                    parse_mode=pyrogram.enums.ParseMode.MARKDOWN
+                )
+            except Exception as fallback_error:
+                logger.error(f"Failed to send fallback message: {fallback_error}")
 
     await report_bot_download_status(
         node.bot,
@@ -402,7 +506,7 @@ async def download_media(
             if _media is None:
                 continue
             file_name, temp_file_name, file_format = await _get_media_meta(
-                node.chat_id, message, _media, _type
+                node.chat_id, message, _media, _type, node
             )
             media_size = getattr(_media, "file_size", 0)
 
@@ -419,7 +523,7 @@ async def download_media(
                             f"{_t('already download,download skipped')}.\n"
                         )
 
-                        return DownloadStatus.SkipDownload, None
+                        return DownloadStatus.SkipDownload, file_name
             else:
                 return DownloadStatus.SkipDownload, None
 
@@ -602,6 +706,12 @@ async def download_chat_task(
 
 async def download_all_chat(client: pyrogram.Client):
     """Download All chat"""
+    # Check if custom download is enabled and exclusive
+    custom_config = app.config.get('custom_downloads', {})
+    if custom_config.get('enable', False):
+        logger.info("Custom download is enabled, skipping regular chat download")
+        return
+    
     for key, value in app.chat_download_config.items():
         value.node = TaskNode(chat_id=key)
         try:
@@ -643,12 +753,23 @@ async def stop_server(client: pyrogram.Client):
     """
     Stop the server using the provided client.
     """
-    await client.stop()
+    try:
+        await client.stop()
+    except ConnectionError:
+        # Client is already terminated, ignore
+        pass
 
 
 def main():
     """Main function of the downloader."""
+    global _shutdown_requested
     tasks = []
+    
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    
     client = HookClient(
         "media_downloader",
         api_id=app.api_id,
@@ -659,17 +780,21 @@ def main():
     )
     try:
         app.pre_run()
-        init_web(app)
+        init_web(app, client, queue)
 
         set_max_concurrent_transmissions(client, app.max_concurrent_transmissions)
 
         app.loop.run_until_complete(start_server(client))
         logger.success(_t("Successfully started (Press Ctrl+C to stop)"))
 
-        app.loop.create_task(download_all_chat(client))
+        # Start worker tasks first
         for _ in range(app.max_download_task):
             task = app.loop.create_task(worker(client))
             tasks.append(task)
+        
+        app.loop.create_task(download_all_chat(client))
+        
+        # Custom download functionality - removed auto-start, now controlled via web interface
 
         if app.bot_token:
             app.loop.run_until_complete(
@@ -678,25 +803,55 @@ def main():
         _exec_loop()
     except KeyboardInterrupt:
         logger.info(_t("KeyboardInterrupt"))
+        _shutdown_requested = True
     except Exception as e:
         logger.exception("{}", e)
+        _shutdown_requested = True
     finally:
+        # Ensure graceful cleanup
+        logger.info("Starting cleanup process...")
         app.is_running = False
-        if app.bot_token:
-            app.loop.run_until_complete(stop_download_bot())
-        app.loop.run_until_complete(stop_server(client))
+        
+        # Cancel all tasks first
         for task in tasks:
-            task.cancel()
+            if not task.done():
+                task.cancel()
+                logger.debug(f"Cancelled task: {task}")
+        
+        # Wait for cancelled tasks to complete
+        if tasks:
+            try:
+                app.loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+            except Exception as e:
+                logger.warning(f"Error waiting for tasks to complete: {e}")
+        
+        # Stop services in order
+        if app.bot_token:
+            try:
+                app.loop.run_until_complete(stop_download_bot())
+            except Exception as e:
+                logger.warning(f"Error stopping bot: {e}")
+        
+        # Stop client
+        try:
+            app.loop.run_until_complete(stop_server(client))
+        except Exception as e:
+            logger.warning(f"Error stopping server: {e}")
+        
         logger.info(_t("Stopped!"))
-        # check_for_updates(app.proxy)
-        logger.info(f"{_t('update config')}......")
-        app.update_config()
-        logger.success(
-            f"{_t('Updated last read message_id to config file')},"
-            f"{_t('total download')} {app.total_download_task}, "
-            f"{_t('total upload file')} "
-            f"{app.cloud_drive_config.total_upload_success_file_count}"
-        )
+        
+        # Update configuration
+        try:
+            logger.info(f"{_t('update config')}......")
+            app.update_config()
+            logger.success(
+                f"{_t('Updated last read message_id to config file')},"
+                f"{_t('total download')} {app.total_download_task}, "
+                f"{_t('total upload file')} "
+                f"{app.cloud_drive_config.total_upload_success_file_count}"
+            )
+        except Exception as e:
+            logger.warning(f"Error updating config: {e}")
 
 
 if __name__ == "__main__":

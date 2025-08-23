@@ -70,18 +70,29 @@ def run_web_server(app: Application):
     )
 
 
+# 全域變數存儲Application實例
+_app = None
+_client = None
+_queue = None
+
 # pylint: disable = W0603
-def init_web(app: Application):
+def init_web(app: Application, client=None, queue=None):
     """
     Set the value of the users variable.
 
     Args:
         users: The list of users to set.
+        client: Pyrogram client instance.
+        queue: Download queue reference.
 
     Returns:
         None.
     """
-    global web_login_users
+    global web_login_users, _app, _client, _queue
+    _app = app  # 設置全域app實例
+    _client = client  # 設置全域client實例
+    _queue = queue  # 設置全域queue實例
+    
     if app.web_login_secret:
         web_login_users = {"root": app.web_login_secret}
     else:
@@ -220,3 +231,1132 @@ def get_download_list():
 
     result += "]"
     return result
+
+
+@_flask_app.route("/get_groups")
+@login_required
+def get_groups():
+    """獲取群組列表和自訂下載配置"""
+    try:
+        print("=== get_groups API called ===")
+        print(f"_app.config: {getattr(_app, 'config', None)}")
+        groups = []
+        
+        # 從配置中獲取群組資訊
+        if hasattr(_app, 'config') and 'custom_downloads' in _app.config:
+            custom_config = _app.config['custom_downloads']
+            group_tags = custom_config.get('group_tags', {})
+            target_ids = custom_config.get('target_ids', {})
+            
+            for chat_id, tag in group_tags.items():
+                pending_count = len(target_ids.get(chat_id, []))
+                groups.append({
+                    'chat_id': chat_id,
+                    'name': tag,
+                    'pending_count': pending_count
+                })
+        
+        # 也從chat配置中獲取群組（只添加不在group_tags中的）
+        if hasattr(_app, 'config') and 'chat' in _app.config:
+            custom_config = _app.config.get('custom_downloads', {})
+            group_tags = custom_config.get('group_tags', {})
+            target_ids = custom_config.get('target_ids', {})
+            
+            chat_configs = _app.config.get('chat', [])
+            if isinstance(chat_configs, list):
+                for chat_config in chat_configs:
+                    chat_id = str(chat_config.get('chat_id', ''))
+                    # 只有當群組不在group_tags中且不在現有groups列表中時才添加
+                    if chat_id not in group_tags and not any(g['chat_id'] == chat_id for g in groups):
+                        pending_count = len(target_ids.get(chat_id, []))
+                        groups.append({
+                            'chat_id': chat_id,
+                            'name': f'Chat {chat_id}',
+                            'pending_count': pending_count
+                        })
+        
+        print(f"Returning groups: {groups}")
+        return jsonify({'success': True, 'groups': groups})
+    except Exception as e:
+        print(f"ERROR in get_groups: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/add_group", methods=["POST"])
+@login_required
+def add_group():
+    """新增群組"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        name = data.get('name', f'Chat {chat_id}')
+        
+        if not chat_id:
+            return jsonify({'success': False, 'error': '請提供 Chat ID'})
+        
+        # 初始化配置
+        if not hasattr(_app, 'config') or 'custom_downloads' not in _app.config:
+            _app.config['custom_downloads'] = {'enable': True, 'target_ids': {}, 'group_tags': {}}
+        
+        # 添加群組標籤
+        _app.config['custom_downloads']['group_tags'][chat_id] = name
+        
+        # 確保 target_ids 有這個群組
+        if chat_id not in _app.config['custom_downloads']['target_ids']:
+            _app.config['custom_downloads']['target_ids'][chat_id] = []
+        
+        # 保存配置
+        _app.update_config()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'已新增群組 "{name}" (ID: {chat_id})',
+            'group': {'chat_id': chat_id, 'name': name, 'pending_count': 0}
+        })
+    except Exception as e:
+        print(f"ERROR in add_group: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/edit_group", methods=["POST"])
+@login_required
+def edit_group():
+    """編輯群組名稱"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        new_name = data.get('name')
+        
+        if not chat_id or not new_name:
+            return jsonify({'success': False, 'error': '請提供 Chat ID 和新名稱'})
+        
+        # 初始化配置
+        if not hasattr(_app, 'config') or 'custom_downloads' not in _app.config:
+            _app.config['custom_downloads'] = {'enable': True, 'target_ids': {}, 'group_tags': {}}
+        
+        # 更新群組標籤
+        _app.config['custom_downloads']['group_tags'][chat_id] = new_name
+        
+        # 保存配置
+        _app.update_config()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'已更新群組名稱為 "{new_name}"'
+        })
+    except Exception as e:
+        print(f"ERROR in edit_group: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/delete_group", methods=["POST"])
+@login_required
+def delete_group():
+    """刪除群組"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        
+        if not chat_id:
+            return jsonify({'success': False, 'error': '請提供 Chat ID'})
+        
+        # 初始化配置
+        if not hasattr(_app, 'config') or 'custom_downloads' not in _app.config:
+            return jsonify({'success': False, 'error': '群組不存在'})
+        
+        # 刪除群組標籤和目標IDs
+        if 'group_tags' in _app.config['custom_downloads']:
+            _app.config['custom_downloads']['group_tags'].pop(chat_id, None)
+        if 'target_ids' in _app.config['custom_downloads']:
+            _app.config['custom_downloads']['target_ids'].pop(chat_id, None)
+        
+        # 保存配置
+        _app.update_config()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'已刪除群組 (ID: {chat_id})'
+        })
+    except Exception as e:
+        print(f"ERROR in delete_group: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/delete_multiple_groups", methods=["POST"])
+@login_required
+def delete_multiple_groups():
+    """批量刪除群組"""
+    try:
+        data = request.get_json()
+        chat_ids = data.get('chat_ids', [])
+        
+        if not chat_ids:
+            return jsonify({'success': False, 'error': '請選擇要刪除的群組'})
+        
+        # 初始化配置
+        if not hasattr(_app, 'config') or 'custom_downloads' not in _app.config:
+            return jsonify({'success': False, 'error': '沒有群組可刪除'})
+        
+        deleted_count = 0
+        for chat_id in chat_ids:
+            # 刪除群組標籤和目標IDs
+            if 'group_tags' in _app.config['custom_downloads']:
+                if _app.config['custom_downloads']['group_tags'].pop(chat_id, None):
+                    deleted_count += 1
+            if 'target_ids' in _app.config['custom_downloads']:
+                _app.config['custom_downloads']['target_ids'].pop(chat_id, None)
+        
+        # 保存配置
+        _app.update_config()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'已刪除 {deleted_count} 個群組'
+        })
+    except Exception as e:
+        print(f"ERROR in delete_multiple_groups: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/clear_multiple_groups", methods=["POST"])
+@login_required
+def clear_multiple_groups():
+    """批量清空群組訊息"""
+    try:
+        data = request.get_json()
+        chat_ids = data.get('chat_ids', [])
+        
+        if not chat_ids:
+            return jsonify({'success': False, 'error': '請選擇要清空的群組'})
+        
+        # 初始化配置
+        if not hasattr(_app, 'config') or 'custom_downloads' not in _app.config:
+            return jsonify({'success': False, 'error': '沒有群組可清空'})
+        
+        cleared_count = 0
+        total_messages = 0
+        for chat_id in chat_ids:
+            if 'target_ids' in _app.config['custom_downloads'] and chat_id in _app.config['custom_downloads']['target_ids']:
+                message_count = len(_app.config['custom_downloads']['target_ids'][chat_id])
+                total_messages += message_count
+                _app.config['custom_downloads']['target_ids'][chat_id] = []
+                cleared_count += 1
+        
+        # 保存配置
+        _app.update_config()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'已清空 {cleared_count} 個群組的 {total_messages} 條訊息'
+        })
+    except Exception as e:
+        print(f"ERROR in clear_multiple_groups: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/check_group_access", methods=["POST"])
+@login_required
+def check_group_access():
+    """檢查群組訪問權限"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        
+        if not chat_id:
+            return jsonify({'success': False, 'error': '請提供 Chat ID'})
+        
+        if not _client:
+            return jsonify({'success': False, 'error': '客戶端未初始化'})
+        
+        # 使用事件循環檢查群組訪問權限
+        async def check_access():
+            try:
+                chat_info = await _client.get_chat(int(chat_id))
+                return {
+                    'accessible': True,
+                    'title': chat_info.title if hasattr(chat_info, 'title') else 'Unknown',
+                    'type': str(chat_info.type) if hasattr(chat_info, 'type') else 'Unknown',
+                    'members_count': chat_info.members_count if hasattr(chat_info, 'members_count') else 'Unknown'
+                }
+            except Exception as e:
+                return {
+                    'accessible': False,
+                    'error': str(e)
+                }
+        
+        if hasattr(_app, 'loop') and _app.loop:
+            import asyncio
+            result = asyncio.run_coroutine_threadsafe(check_access(), _app.loop).result(timeout=10)
+        else:
+            return jsonify({'success': False, 'error': '事件循環不可用'})
+        
+        return jsonify({
+            'success': True,
+            'chat_id': chat_id,
+            'accessible': result['accessible'],
+            'info': result
+        })
+        
+    except Exception as e:
+        print(f"ERROR in check_group_access: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@_flask_app.route("/get_group_details", methods=["POST"])
+@login_required
+def get_group_details():
+    """獲取群組詳細資訊"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        
+        if not chat_id:
+            return jsonify({'success': False, 'error': '請提供 Chat ID'})
+        
+        # 從配置中獲取群組資訊
+        group_info = None
+        if hasattr(_app, 'config') and 'custom_downloads' in _app.config:
+            custom_config = _app.config['custom_downloads']
+            group_tags = custom_config.get('group_tags', {})
+            target_ids = custom_config.get('target_ids', {})
+            
+            if chat_id in group_tags:
+                pending_count = len(target_ids.get(chat_id, []))
+                group_info = {
+                    'chat_id': chat_id,
+                    'name': group_tags[chat_id],
+                    'pending_count': pending_count,
+                    'created_time': 'Unknown',
+                    'last_activity': 'Unknown'
+                }
+        
+        if not group_info:
+            return jsonify({'success': False, 'error': '群組不存在'})
+        
+        return jsonify({
+            'success': True, 
+            'group': group_info
+        })
+    except Exception as e:
+        print(f"ERROR in get_group_details: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/add_custom_download", methods=["POST"])
+@login_required
+def add_custom_download():
+    """添加自訂下載任務"""
+    try:
+        print("=== add_custom_download API called ===")
+        print(f"Request data: {request.get_json()}")
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        message_ids_text = data.get('message_ids', '')
+        
+        if not chat_id or not message_ids_text:
+            return jsonify({'success': False, 'error': '群組ID和訊息ID不能為空'})
+        
+        # 解析訊息ID
+        message_ids = []
+        for line in message_ids_text.strip().split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+                
+            # 處理逗號分隔的ID
+            for part in line.split(','):
+                part = part.strip()
+                if '-' in part and part.count('-') == 1:
+                    # 處理範圍 (例如: 123-130)
+                    try:
+                        start, end = map(int, part.split('-'))
+                        message_ids.extend(range(start, end + 1))
+                    except ValueError:
+                        return jsonify({'success': False, 'error': f'無效的範圍格式: {part}'})
+                else:
+                    # 處理單個ID
+                    try:
+                        message_ids.append(int(part))
+                    except ValueError:
+                        return jsonify({'success': False, 'error': f'無效的訊息ID: {part}'})
+        
+        if not message_ids:
+            return jsonify({'success': False, 'error': '沒有有效的訊息ID'})
+        
+        # 添加到配置中
+        if not hasattr(_app, 'config'):
+            _app.config = {}
+        if 'custom_downloads' not in _app.config:
+            _app.config['custom_downloads'] = {'enable': True, 'target_ids': {}, 'group_tags': {}}
+        
+        current_ids = _app.config['custom_downloads']['target_ids'].get(chat_id, [])
+        # 去重並添加新的ID
+        new_ids = list(set(current_ids + message_ids))
+        _app.config['custom_downloads']['target_ids'][chat_id] = sorted(new_ids)
+        
+        # 記錄新添加的項目
+        global newly_added_items
+        for msg_id in message_ids:
+            newly_added_items.add((chat_id, msg_id))
+        
+        # 更新配置文件
+        _app.update_config()
+        print(f"Config updated. Current target_ids: {_app.config.get('custom_downloads', {}).get('target_ids', {})}")
+        
+        # 不自動觸發下載，讓使用者手動控制
+        download_message = f'成功添加 {len(message_ids)} 個訊息ID到下載隊列，請手動啟動下載'
+        
+        return jsonify({
+            'success': True, 
+            'message': download_message,
+            'added_count': len(message_ids),
+            'total_count': len(new_ids)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/clear_auto_select", methods=["POST"])
+@login_required
+def clear_auto_select():
+    """清除自動選取標記"""
+    try:
+        # 這個API不需要做任何事情，因為auto_select標記是動態生成的
+        # 只要用戶刷新頁面或重新載入歷史，標記就會消失
+        return jsonify({'success': True, 'message': '已清除自動選取標記'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/clean_downloaded_from_targets", methods=["POST"])
+@login_required
+def clean_downloaded_from_targets():
+    """清理已下載項目從target_ids中"""
+    try:
+        print("=== clean_downloaded_from_targets API called ===")
+        
+        # 讀取下載歷史
+        history_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'custom_download_history.yaml')
+        downloaded_items = set()
+        
+        if os.path.exists(history_file):
+            import yaml
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history_data = yaml.safe_load(f) or {}
+            downloaded_ids = history_data.get('downloaded_ids', {})
+            for chat_id, ids in downloaded_ids.items():
+                for msg_id in ids:
+                    downloaded_items.add((chat_id, msg_id))
+        
+        # 清理target_ids
+        if hasattr(_app, 'config') and 'custom_downloads' in _app.config:
+            target_ids = _app.config['custom_downloads'].get('target_ids', {})
+            updated_target_ids = {}
+            removed_count = 0
+            
+            for chat_id, message_ids in target_ids.items():
+                remaining_ids = []
+                for msg_id in message_ids:
+                    if (chat_id, msg_id) not in downloaded_items:
+                        remaining_ids.append(msg_id)
+                    else:
+                        removed_count += 1
+                        print(f"Removing downloaded item from target_ids: {chat_id}:{msg_id}")
+                
+                if remaining_ids:
+                    updated_target_ids[chat_id] = remaining_ids
+            
+            # 更新配置
+            _app.config['custom_downloads']['target_ids'] = updated_target_ids
+            _app.update_config()
+            
+            return jsonify({
+                'success': True,
+                'message': f'已清理 {removed_count} 個已下載項目',
+                'removed_count': removed_count
+            })
+        
+        return jsonify({'success': False, 'error': '沒有找到配置'})
+        
+    except Exception as e:
+        print(f"ERROR in clean_downloaded_from_targets: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/get_all_groups")
+@login_required 
+def get_all_groups():
+    """獲取所有可用的群組名稱（用於篩選）"""
+    try:
+        all_groups = set()
+        
+        # 從config中獲取群組標籤
+        if hasattr(_app, 'config') and 'custom_downloads' in _app.config:
+            group_tags = _app.config['custom_downloads'].get('group_tags', {})
+            all_groups.update(group_tags.values())
+        
+        return jsonify({
+            'success': True,
+            'groups': sorted(list(all_groups))
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@_flask_app.route("/get_download_history")
+@login_required
+def get_download_history():
+    """獲取下載歷史"""
+    try:
+        print("=== get_download_history API called ===")
+        print(f"_app: {_app}")
+        print(f"_app.config: {getattr(_app, 'config', None)}")
+        # 獲取分頁參數
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 50))  # 默認每頁50條
+        offset = (page - 1) * limit
+        
+        # 獲取篩選參數
+        group_filter = request.args.get('group_filter', '')
+        status_filter = request.args.get('status_filter', '')
+        
+        history = []
+        
+        # 獲取群組標籤映射
+        group_tags = {}
+        if hasattr(_app, 'config') and 'custom_downloads' in _app.config:
+            group_tags = _app.config['custom_downloads'].get('group_tags', {})
+        
+        # 從custom_download_history.yaml讀取歷史記錄
+        history_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'custom_download_history.yaml')
+        if os.path.exists(history_file):
+            import yaml
+            from datetime import datetime
+            try:
+                with open(history_file, 'r', encoding='utf-8') as f:
+                    history_data = yaml.safe_load(f) or {}
+                
+                # 獲取文件修改時間作為大致的時間參考
+                file_mtime = os.path.getmtime(history_file)
+                timestamp = datetime.fromtimestamp(file_mtime).strftime('%Y-%m-%d %H:%M')
+                
+                # 修正數據結構解析
+                for status, chat_data in history_data.items():
+                    if isinstance(chat_data, dict):
+                        for chat_id, ids in chat_data.items():
+                            if isinstance(ids, list):
+                                # 獲取群組名稱
+                                group_name = group_tags.get(chat_id, f'群組 {chat_id}')
+                                
+                                for msg_id in ids:
+                                    history.append({
+                                        'chat_id': chat_id,
+                                        'chat_name': group_name,
+                                        'message_id': msg_id,
+                                        'status': status,
+                                        'timestamp': timestamp
+                                    })
+            except Exception as e:
+                print(f"讀取歷史文件錯誤: {e}")
+        
+        # 添加配置文件中的待下載項目
+        if hasattr(_app, 'config') and 'custom_downloads' in _app.config:
+            target_ids = _app.config['custom_downloads'].get('target_ids', {})
+            print(f"Found target_ids in config: {target_ids}")
+            
+            # 創建目標項目集合
+            target_items = set()
+            for chat_id, message_ids in target_ids.items():
+                for msg_id in message_ids:
+                    target_items.add((chat_id, msg_id))
+            
+            # 讀取下載歷史以檢查哪些項目已經下載
+            downloaded_items = set()
+            failed_items = set()
+            if os.path.exists(history_file):
+                try:
+                    import yaml
+                    with open(history_file, 'r', encoding='utf-8') as f:
+                        history_data = yaml.safe_load(f) or {}
+                    downloaded_ids = history_data.get('downloaded_ids', {})
+                    failed_ids = history_data.get('failed_ids', {})
+                    for chat_id, ids in downloaded_ids.items():
+                        for msg_id in ids:
+                            downloaded_items.add((chat_id, msg_id))
+                    for chat_id, ids in failed_ids.items():
+                        for msg_id in ids:
+                            failed_items.add((chat_id, msg_id))
+                except Exception as e:
+                    print(f"Error reading download history: {e}")
+            
+            # 更新現有歷史項目的狀態
+            for item in history:
+                item_key = (item['chat_id'], item['message_id'])
+                if item_key in target_items:
+                    # 檢查實際下載狀態，不要強制覆蓋為pending
+                    if item_key in downloaded_items:
+                        # 已下載，但在target_ids中 - 可能是要重新下載
+                        from datetime import datetime
+                        current_time = datetime.now().strftime('%Y-%m-%d %H:%M')
+                        item['status'] = 'pending'
+                        item['timestamp'] = f'重新加入佇列 - {current_time}'
+                        item['add_time'] = datetime.now().timestamp()
+                    elif item_key in failed_items:
+                        # 失敗，但在target_ids中 - 標記為重試
+                        from datetime import datetime
+                        current_time = datetime.now().strftime('%Y-%m-%d %H:%M')
+                        item['status'] = 'pending'
+                        item['timestamp'] = f'準備重試 - {current_time}'
+                        item['add_time'] = datetime.now().timestamp()
+                    else:
+                        # 新加入的項目
+                        from datetime import datetime
+                        current_time = datetime.now().strftime('%Y-%m-%d %H:%M')
+                        item['status'] = 'pending'
+                        item['timestamp'] = f'加入佇列 - {current_time}'
+                        item['add_time'] = datetime.now().timestamp()
+                    
+                    # 檢查是否為新添加的項目
+                    global newly_added_items
+                    item['auto_select'] = item_key in newly_added_items
+                    print(f"Updated item: {item['chat_id']}:{item['message_id']} -> {item['status']}")
+            
+            # 添加不在歷史中的新項目
+            existing_items = set()
+            for item in history:
+                existing_items.add((item['chat_id'], item['message_id']))
+            
+            for chat_id, message_ids in target_ids.items():
+                group_name = group_tags.get(chat_id, f'群組 {chat_id}')
+                for msg_id in message_ids:
+                    if (chat_id, msg_id) not in existing_items:
+                        # 檢查是否已經下載
+                        if (chat_id, msg_id) in downloaded_items:
+                            # 已下載，但不在歷史列表中，添加為已下載狀態
+                            history.append({
+                                'chat_id': chat_id,
+                                'chat_name': group_name,
+                                'message_id': msg_id,
+                                'status': 'downloaded_ids',
+                                'timestamp': timestamp
+                            })
+                            print(f"Added downloaded item to history: {chat_id}:{msg_id}")
+                        elif (chat_id, msg_id) in failed_items:
+                            # 失敗的項目，添加為失敗狀態
+                            history.append({
+                                'chat_id': chat_id,
+                                'chat_name': group_name,
+                                'message_id': msg_id,
+                                'status': 'failed_ids',
+                                'timestamp': timestamp
+                            })
+                            print(f"Added failed item to history: {chat_id}:{msg_id}")
+                        else:
+                            # 未下載，添加為待下載，使用當前時間戳確保顯示在前面
+                            from datetime import datetime
+                            current_time = datetime.now().strftime('%Y-%m-%d %H:%M')
+                            history.append({
+                                'chat_id': chat_id,
+                                'chat_name': group_name,
+                                'message_id': msg_id,
+                                'status': 'pending',
+                                'timestamp': f'加入佇列 - {current_time}',
+                                'add_time': datetime.now().timestamp(),  # 用於排序
+                                'auto_select': (chat_id, msg_id) in newly_added_items  # 檢查是否為新添加
+                            })
+                            print(f"Added new pending item: {chat_id}:{msg_id}")
+        
+        # 排序規則：
+        # 1. 狀態優先級：pending(待下載) > failed(失敗) > downloaded(已下載)
+        # 2. 對於 pending 狀態：最新加入的在最前面（add_time降序）
+        # 3. 對於其他狀態：message_id 降序排列
+        status_priority = {'pending': 0, 'failed_ids': 1, 'failed': 1, 'downloaded_ids': 2, 'downloaded': 2}
+        
+        def sort_key(x):
+            status_pri = status_priority.get(x['status'], 3)
+            if x['status'] == 'pending' and 'add_time' in x:
+                # pending 狀態按加入時間降序（新的在前）
+                return (status_pri, -x['add_time'])
+            else:
+                # 其他狀態按 message_id 降序
+                return (status_pri, -int(x['message_id']) if str(x['message_id']).isdigit() else 0)
+        
+        # 應用篩選條件
+        if group_filter or status_filter:
+            filtered_history = []
+            for item in history:
+                show_item = True
+                
+                # 群組篩選
+                if group_filter:
+                    chat_name = item.get('chat_name', '')
+                    if group_filter not in chat_name:
+                        show_item = False
+                
+                # 狀態篩選
+                if status_filter and show_item:
+                    if status_filter == 'pending' and item.get('status') != 'pending':
+                        show_item = False
+                    elif status_filter == 'downloaded' and item.get('status') not in ['downloaded', 'downloaded_ids']:
+                        show_item = False
+                    elif status_filter == 'failed' and item.get('status') not in ['failed', 'failed_ids']:
+                        show_item = False
+                
+                if show_item:
+                    filtered_history.append(item)
+            
+            history = filtered_history
+        
+        history.sort(key=sort_key)
+        
+        # 計算總數和分頁
+        total = len(history)
+        paged_history = history[offset:offset + limit]
+        
+        return jsonify({
+            'success': True, 
+            'history': paged_history,
+            'pagination': {
+                'page': page,
+                'limit': limit,
+                'total': total,
+                'total_pages': (total + limit - 1) // limit
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/clear_download_ids", methods=["POST"])
+@login_required
+def clear_download_ids():
+    """清空指定群組的下載ID"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        
+        if not chat_id:
+            return jsonify({'success': False, 'error': '群組ID不能為空'})
+        
+        if hasattr(_app, 'config') and 'custom_downloads' in _app.config:
+            if chat_id in _app.config['custom_downloads'].get('target_ids', {}):
+                _app.config['custom_downloads']['target_ids'][chat_id] = []
+                _app.update_config()
+                return jsonify({'success': True, 'message': '已清空該群組的下載隊列'})
+        
+        return jsonify({'success': False, 'error': '找不到該群組'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/retry_download", methods=["POST"])
+@login_required
+def retry_download():
+    """重試下載失敗的訊息"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        message_id = data.get('message_id')
+        
+        if not chat_id or not message_id:
+            return jsonify({'success': False, 'error': '群組ID和訊息ID不能為空'})
+        
+        # 將失敗的訊息ID重新添加到目標下載列表
+        message_id = int(message_id)
+        
+        if not hasattr(_app, 'config'):
+            _app.config = {}
+        if 'custom_downloads' not in _app.config:
+            _app.config['custom_downloads'] = {'enable': True, 'target_ids': {}, 'group_tags': {}}
+        
+        current_ids = _app.config['custom_downloads']['target_ids'].get(chat_id, [])
+        if message_id not in current_ids:
+            current_ids.append(message_id)
+            _app.config['custom_downloads']['target_ids'][chat_id] = sorted(current_ids)
+            _app.update_config()
+        
+        # 從失敗列表中移除（如果存在）
+        history_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'custom_download_history.yaml')
+        if os.path.exists(history_file):
+            try:
+                import yaml
+                with open(history_file, 'r', encoding='utf-8') as f:
+                    history_data = yaml.safe_load(f) or {}
+                
+                failed_ids = history_data.get('failed_ids', {})
+                if chat_id in failed_ids and message_id in failed_ids[chat_id]:
+                    failed_ids[chat_id].remove(message_id)
+                    if not failed_ids[chat_id]:
+                        del failed_ids[chat_id]
+                    
+                    history_data['failed_ids'] = failed_ids
+                    with open(history_file, 'w', encoding='utf-8') as f:
+                        yaml.dump(history_data, f, default_flow_style=False, allow_unicode=True)
+            except Exception as e:
+                print(f"Error updating history file: {e}")
+        
+        # 觸發下載
+        download_message = '已將訊息重新加入下載隊列'
+        if _client and _queue:
+            try:
+                from module.custom_download import run_custom_download
+                
+                # 使用主事件循環
+                if hasattr(_app, 'loop') and _app.loop:
+                    _app.loop.create_task(run_custom_download(_app, _client, _queue))
+                    download_message += '，已開始重試下載'
+                    print("Retry download task created in main event loop")
+                else:
+                    download_message += '，但事件循環不可用'
+                    print("ERROR: Main event loop not available for retry")
+            except Exception as e:
+                download_message += f'，但觸發下載時出現錯誤: {str(e)}'
+        
+        return jsonify({'success': True, 'message': download_message})
+        
+    except Exception as e:
+        print(f"ERROR in start_custom_download: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/remove_selected_tasks", methods=["POST"])
+@login_required
+def remove_selected_tasks():
+    """從配置中移除選中的任務"""
+    try:
+        data = request.get_json()
+        tasks = data.get('tasks', [])
+        
+        if not tasks:
+            return jsonify({'success': False, 'error': '沒有選擇要移除的項目'})
+        
+        if not hasattr(_app, 'config') or 'custom_downloads' not in _app.config:
+            return jsonify({'success': False, 'error': '沒有配置自訂下載'})
+        
+        removed_count = 0
+        target_ids = _app.config['custom_downloads']['target_ids']
+        
+        for task in tasks:
+            chat_id = task.get('chat_id')
+            message_id = int(task.get('message_id'))
+            
+            if chat_id in target_ids and message_id in target_ids[chat_id]:
+                target_ids[chat_id].remove(message_id)
+                removed_count += 1
+                print(f"Removed task: {chat_id}:{message_id}")
+                
+                # 如果該聊天室沒有更多ID，刪除該條目
+                if not target_ids[chat_id]:
+                    del target_ids[chat_id]
+        
+        # 更新配置文件
+        _app.update_config()
+        print(f"Removed {removed_count} tasks from config")
+        
+        return jsonify({
+            'success': True,
+            'message': f'成功移除 {removed_count} 個項目'
+        })
+        
+    except Exception as e:
+        print(f"ERROR in remove_selected_tasks: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/start_selected_download", methods=["POST"])
+@login_required
+def start_selected_download():
+    """啟動選中項目的下載"""
+    try:
+        print("=== start_selected_download API called ===")
+        
+        data = request.get_json()
+        tasks = data.get('tasks', [])
+        
+        if not tasks:
+            return jsonify({'success': False, 'error': '沒有選擇要下載的項目'})
+        
+        if not _client or not _queue:
+            return jsonify({'success': False, 'error': '客戶端或隊列未初始化'})
+        
+        # 將選中的任務組織成 target_ids 格式
+        selected_target_ids = {}
+        for task in tasks:
+            chat_id = task.get('chat_id')
+            message_id = int(task.get('message_id'))
+            
+            if chat_id not in selected_target_ids:
+                selected_target_ids[chat_id] = []
+            selected_target_ids[chat_id].append(message_id)
+        
+        print(f"Selected target_ids: {selected_target_ids}")
+        
+        # 使用主事件循環創建自訂下載任務
+        try:
+            from module.custom_download import run_custom_download_for_selected
+            
+            if hasattr(_app, 'loop') and _app.loop:
+                total_tasks = sum(len(ids) for ids in selected_target_ids.values())
+                
+                # 清理已選取的項目的auto_select標記
+                global newly_added_items
+                for chat_id, message_ids in selected_target_ids.items():
+                    for msg_id in message_ids:
+                        newly_added_items.discard((chat_id, msg_id))
+                
+                # 初始化進度追蹤
+                update_download_progress(0, total_tasks, "開始下載...")
+                
+                _app.loop.create_task(run_custom_download_for_selected(_app, _client, _queue, selected_target_ids))
+                print("Selected download task created in main event loop")
+                
+                return jsonify({
+                    'success': True, 
+                    'message': f'已啟動下載，共 {total_tasks} 個選中項目'
+                })
+            else:
+                return jsonify({'success': False, 'error': '事件循環不可用'})
+                
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'啟動下載時出現錯誤: {str(e)}'})
+        
+    except Exception as e:
+        print(f"ERROR in start_selected_download: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+# 全局變量來追蹤下載進度
+download_progress = {
+    'total_count': 0,
+    'completed_count': 0,
+    'status_text': '準備中...',
+    'active': False,
+    'current_files': {},  # 改為字典，追蹤多個並發下載
+    'current_file': {     # 保留兼容性
+        'name': '',
+        'downloaded_bytes': 0,
+        'total_bytes': 0,
+        'download_speed': 0
+    }
+}
+
+# 全局變數來追蹤新加入的項目（會話期間）
+newly_added_items = set()
+
+# 全局變數來追蹤活躍的下載會話
+active_download_session = {
+    'active': False,
+    'session_id': None,
+    'start_time': None,
+    'target_ids': {},
+    'total_tasks': 0
+}
+
+@_flask_app.route("/get_download_progress", methods=["GET"])
+@login_required
+def get_download_progress():
+    """獲取當前下載進度"""
+    global download_progress
+    print(f"Progress API called: {download_progress}")
+    
+    # 選擇一個活躍的下載作為主要顯示
+    active_files = [f for f in download_progress['current_files'].values() 
+                   if f['total_bytes'] > 0 and f['downloaded_bytes'] < f['total_bytes']]
+    
+    if active_files:
+        # 選擇下載進度最大的檔案作為主要顯示
+        main_file = max(active_files, key=lambda x: x['downloaded_bytes'] / max(x['total_bytes'], 1))
+        download_progress['current_file'] = main_file
+    
+    # 獲取總下載速度，參考原始設計
+    total_download_speed = format_byte(get_total_download_speed()) + '/s'
+    
+    return jsonify({
+        'success': True,
+        'total_count': download_progress['total_count'],
+        'completed_count': download_progress['completed_count'],
+        'status_text': download_progress['status_text'],
+        'active': download_progress['active'],
+        'current_file': download_progress['current_file'],
+        'current_files': download_progress['current_files'],  # 返回所有並發文件信息
+        'concurrent_downloads': len(active_files),  # 新增：並發下載數量
+        'total_download_speed': total_download_speed,  # 新增：總下載速度
+        'session': {
+            'active': active_download_session['active'],
+            'session_id': active_download_session['session_id'],
+            'start_time': active_download_session['start_time'],
+            'total_tasks': active_download_session['total_tasks']
+        }
+    })
+
+
+def update_download_progress(completed, total, status_text="下載中..."):
+    """更新任務總進度"""
+    global download_progress, active_download_session
+    download_progress['completed_count'] = completed
+    download_progress['total_count'] = total
+    download_progress['status_text'] = status_text
+    download_progress['active'] = completed < total
+    
+    # 更新會話狀態
+    if completed < total and total > 0:
+        active_download_session['active'] = True
+        active_download_session['total_tasks'] = total
+        if not active_download_session['session_id']:
+            import time
+            active_download_session['session_id'] = str(int(time.time()))
+            active_download_session['start_time'] = time.time()
+    elif completed >= total and total > 0:
+        # 下載完成，清除會話
+        active_download_session['active'] = False
+        active_download_session['session_id'] = None
+        active_download_session['start_time'] = None
+        active_download_session['target_ids'] = {}
+        active_download_session['total_tasks'] = 0
+    
+    print(f"Task progress updated: {completed}/{total} - {status_text}")
+
+
+def update_file_progress(file_name="", downloaded_bytes=0, total_bytes=0, download_speed=0, message_id=None):
+    """更新當前文件下載進度"""
+    global download_progress
+    
+    # 如果有文件名和message_id，更新並發下載追蹤
+    if file_name and message_id:
+        file_key = f"{message_id}_{file_name}"
+        download_progress['current_files'][file_key] = {
+            'name': file_name,
+            'downloaded_bytes': downloaded_bytes,
+            'total_bytes': total_bytes,
+            'download_speed': download_speed,
+            'message_id': message_id
+        }
+        
+        # 如果下載完成，從並發列表中移除
+        if downloaded_bytes >= total_bytes and total_bytes > 0:
+            import threading
+            def remove_completed():
+                import time
+                time.sleep(3)  # 等待3秒後移除
+                try:
+                    if file_key in download_progress['current_files']:
+                        del download_progress['current_files'][file_key]
+                except:
+                    pass
+            threading.Thread(target=remove_completed, daemon=True).start()
+        
+        print(f"File progress updated: {file_name} (ID:{message_id}) - {downloaded_bytes}/{total_bytes} bytes @ {download_speed} B/s")
+    else:
+        # 清空所有進度
+        if not file_name:
+            download_progress['current_files'].clear()
+        
+        # 兼容舊的單一文件進度更新
+        download_progress['current_file'] = {
+            'name': file_name,
+            'downloaded_bytes': downloaded_bytes,
+            'total_bytes': total_bytes,
+            'download_speed': download_speed
+        }
+
+
+@_flask_app.route("/test", methods=["GET"])
+def test_api():
+    """測試API是否正常工作"""
+    return jsonify({
+        'success': True,
+        'message': 'API working',
+        'app_available': _app is not None,
+        'client_available': _client is not None,
+        'queue_available': _queue is not None,
+        'config_available': hasattr(_app, 'config') if _app else False
+    })
+
+
+@_flask_app.route("/start_custom_download", methods=["POST"])
+@login_required
+def start_custom_download():
+    """手動啟動自訂下載"""
+    try:
+        print("=== start_custom_download API called ===")
+        print(f"_client: {_client}")
+        print(f"_queue: {_queue}")
+        print(f"_app: {_app}")
+        
+        if not _client or not _queue:
+            return jsonify({'success': False, 'error': '客戶端或隊列未初始化'})
+        
+        # 檢查是否有待下載的項目
+        if not hasattr(_app, 'config') or 'custom_downloads' not in _app.config:
+            return jsonify({'success': False, 'error': '沒有配置自訂下載'})
+        
+        target_ids = _app.config['custom_downloads'].get('target_ids', {})
+        print(f"target_ids: {target_ids}")
+        
+        if not target_ids:
+            return jsonify({'success': False, 'error': '沒有待下載的訊息'})
+        
+        # 計算待下載數量 (包括失敗的ID作為重試項目)
+        total_pending = 0
+        from module.custom_download import CustomDownloadManager
+        manager = CustomDownloadManager(_app)
+        
+        # 計算待下載的項目（包含所有target_ids中的項目，允許重新下載）
+        pending_downloads = {}
+        for chat_id, message_ids in target_ids.items():
+            chat_key = str(chat_id)
+            pending_for_chat = []
+            for msg_id in message_ids:
+                # 包含所有target_ids中的項目，包括已下載的（允許重新下載）
+                pending_for_chat.append(msg_id)
+            if pending_for_chat:
+                pending_downloads[chat_key] = pending_for_chat
+        
+        total_pending = sum(len(ids) for ids in pending_downloads.values())
+        
+        if total_pending == 0:
+            return jsonify({'success': False, 'error': '所有訊息都已成功下載'})
+        
+        # 觸發下載 - 使用正確的事件循環
+        try:
+            import asyncio
+            from module.custom_download import run_custom_download
+            
+            # 獲取當前的事件循環並在其中調度任務
+            if hasattr(_app, 'loop') and _app.loop:
+                # 在主事件循環中創建任務
+                _app.loop.create_task(run_custom_download(_app, _client, _queue))
+                print("Download task created in main event loop")
+            else:
+                print("ERROR: Main event loop not available")
+            
+            return jsonify({
+                'success': True, 
+                'message': f'已啟動下載，共 {total_pending} 個待下載項目'
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'啟動下載時出現錯誤: {str(e)}'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})

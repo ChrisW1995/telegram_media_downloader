@@ -120,3 +120,37 @@ async def update_download_status(
         _total_download_speed = max(_total_download_speed, 0)
         _total_download_size = 0
         _last_download_time = cur_time
+
+    # Update web UI file progress
+    try:
+        from module.web import update_file_progress
+        import os
+        
+        # Get the current download speed for this file
+        current_speed = 0
+        if _download_result[chat_id].get(message_id):
+            current_speed = _download_result[chat_id][message_id]["download_speed"]
+        
+        update_file_progress(
+            file_name=os.path.basename(file_name),
+            downloaded_bytes=down_byte,
+            total_bytes=total_size,
+            download_speed=current_speed,
+            message_id=message_id
+        )
+        
+        # Check if download is complete and clear file progress after a delay
+        if down_byte >= total_size and total_size > 0:
+            import threading
+            def clear_progress():
+                try:
+                    import time
+                    time.sleep(5)  # Wait 5 seconds before clearing
+                    update_file_progress("", 0, 0, 0)  # Clear the progress
+                except:
+                    pass
+            
+            threading.Thread(target=clear_progress, daemon=True).start()
+    except Exception as e:
+        # Don't let web update errors break downloads
+        pass

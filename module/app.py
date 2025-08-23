@@ -372,6 +372,7 @@ class Application:
         self.chat_download_config: dict = {}
 
         self.save_path = os.path.join(os.path.abspath("."), "downloads")
+        self.bot_save_path = os.path.join(os.path.abspath("."), "downloads_bot")
         self.temp_save_path = os.path.join(os.path.abspath("."), "temp")
         self.api_id: str = ""
         self.api_hash: str = ""
@@ -435,6 +436,9 @@ class Application:
         # TODO: judge the storage if enough,and provide more path
         if _config.get("save_path") is not None:
             self.save_path = _config["save_path"]
+        
+        if _config.get("bot_save_path") is not None:
+            self.bot_save_path = _config["bot_save_path"]
 
         self.api_id = _config["api_id"]
         self.api_hash = _config["api_hash"]
@@ -691,7 +695,7 @@ class Application:
         return ret
 
     def get_file_save_path(
-        self, media_type: str, chat_title: str, media_datetime: str
+        self, media_type: str, chat_title: str, media_datetime: str, is_bot: bool = False
     ) -> str:
         """Get file save path prefix.
 
@@ -706,13 +710,16 @@ class Application:
         media_datetime: str
             media datetime
 
+        is_bot: bool
+            whether the download is from bot (default: False)
+
         Returns
         -------
         str
             file save path prefix
         """
 
-        res: str = self.save_path
+        res: str = self.bot_save_path if is_bot else self.save_path
         for prefix in self.file_path_prefix:
             if prefix == "chat_title":
                 res = os.path.join(res, chat_title)
@@ -822,13 +829,13 @@ class Application:
             unfinished_ids = set(value.ids_to_retry)
 
             for it in value.ids_to_retry:
-                if  value.node.download_status.get(
+                if DownloadStatus.SuccessDownload == value.node.download_status.get(
                     it, DownloadStatus.FailedDownload
-                ) in [DownloadStatus.SuccessDownload, DownloadStatus.SkipDownload]:
+                ):
                     unfinished_ids.remove(it)
 
             for _idx, _value in value.node.download_status.items():
-                if DownloadStatus.SuccessDownload != _value and DownloadStatus.SkipDownload != _value:
+                if DownloadStatus.SuccessDownload != _value:
                     unfinished_ids.add(_idx)
 
             self.chat_download_config[key].ids_to_retry = list(unfinished_ids)
@@ -846,6 +853,7 @@ class Application:
             idx += 1
 
         self.config["save_path"] = self.save_path
+        self.config["bot_save_path"] = self.bot_save_path
         self.config["file_path_prefix"] = self.file_path_prefix
 
         if self.config.get("ids_to_retry"):
@@ -861,6 +869,7 @@ class Application:
             self.config.pop("last_read_message_id")
 
         self.config["language"] = self.language.name
+        self.config["allowed_user_ids"] = self.allowed_user_ids
         # for it in self.downloaded_ids:
         #    self.already_download_ids_set.add(it)
 
@@ -904,7 +913,28 @@ class Application:
         self.cloud_drive_config.pre_run()
         if not os.path.exists(self.session_file_path):
             os.makedirs(self.session_file_path)
+        
+        # Clean up stale session files to prevent database locks
+        self._cleanup_session_files()
+        
         set_language(self.language)
+    
+    def _cleanup_session_files(self):
+        """Clean up stale session files that might cause database locks."""
+        session_files = [
+            "media_downloader.session-journal",
+            "media_downloader.session-wal", 
+            "media_downloader.session-shm"
+        ]
+        
+        for filename in session_files:
+            filepath = os.path.join(self.session_file_path, filename)
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                    logger.info(f"Cleaned up stale session file: {filename}")
+                except OSError as e:
+                    logger.warning(f"Failed to remove session file {filename}: {e}")
 
     def set_caption_name(
         self, chat_id: Union[int, str], media_group_id: Optional[str], caption: str

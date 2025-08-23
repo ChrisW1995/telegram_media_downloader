@@ -786,6 +786,8 @@ async def report_bot_download_status(
     """
     node.stat(download_status)
     node.total_download_byte += download_size
+    
+    
     await report_bot_status(client, node)
 
 

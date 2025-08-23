@@ -5,8 +5,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Telegram Media Downloader</title>
-  <link href="static/layui/css/layui.css" rel="stylesheet">
-  <link href="static/css/index.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='layui/css/layui.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/index.css') }}" rel="stylesheet">
   <style>
     body {
       padding: 6px 16px;
@@ -18,24 +18,316 @@
   <div class="layui-tab" lay-filter="telegram_media_downloader">
     <div class="header-title layui-tab-brief">
       <ul class="layui-tab-title">
-        <li class="layui-this">Downloading</li>
-        <li>Downloaded</li>
-        <!-- <li>Config</li> -->
+        <li class="layui-this">下載管理</li>
+        <li>群組管理</li>
       </ul>
-      <div class="stop-btn" id="download_state" data-value="{{ download_state }}" onclick="download_state_change(this)"> {{ download_state }} </div>
+      <div class="stop-btn" id="download_control" onclick="toggleDownloadState()" style="display: none;">
+        <span id="download_control_text">暫停下載</span>
+      </div>
     </div>
     <div class="layui-tab-content" style="padding: 0;">
+      <!-- 下載管理分頁 -->
       <div class="layui-tab-item layui-show">
-        <table class="layui-hide" id="download_list" lay-filter="download_list"></table>
+        <div style="padding: 20px;">
+          <div class="layui-card">
+            <div class="layui-card-header">
+              下載控制
+              <div style="float: right;">
+                <button class="layui-btn layui-btn-normal" onclick="startAllDownloads()">
+                  <i class="layui-icon layui-icon-play"></i> 啟動選中項目
+                </button>
+              </div>
+            </div>
+            <div class="layui-card-body">
+              <div class="layui-text">選擇要下載的項目，然後點擊「啟動選中項目」來開始下載</div>
+              
+              <!-- 下載進度顯示區域 -->
+              <div id="download-progress-area" style="margin-top: 15px; display: none;">
+                <!-- 任務總進度 -->
+                <div style="margin-bottom: 10px;">
+                  <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">
+                    總進度 - <span id="task-status-text">準備開始下載...</span>
+                  </div>
+                  <div class="layui-progress layui-progress-big" lay-showpercent="true" lay-filter="task-progress-bar">
+                    <div class="layui-progress-bar layui-bg-blue" lay-percent="0%"></div>
+                  </div>
+                  <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                    已完成 <span id="task-completed">0</span> / <span id="task-total">0</span> 個任務
+                    <span style="margin-left: 15px; color: #5FB878;">
+                      <i class="layui-icon layui-icon-download-circle"></i>
+                      <span id="total-download-speed">0.00 B/s</span>
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- 並發文件進度 -->
+                <div id="concurrent-progress-section" style="display: none; margin-top: 20px;">
+                  <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">
+                    並發下載進度 (<span id="concurrent-count">0</span> 個檔案同時下載)
+                  </div>
+                  <div id="concurrent-progress-container">
+                    <!-- 並發進度條會動態生成在這裡 -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="layui-card" style="margin-top: 20px;">
+            <div class="layui-card-header">批量新增下載 ID</div>
+            <div class="layui-card-body">
+              <form class="layui-form" lay-filter="custom-download-form">
+                <div class="layui-form-item">
+                  <label class="layui-form-label">選擇群組</label>
+                  <div class="layui-input-block">
+                    <select name="chat_id" lay-verify="required" lay-search="">
+                      <option value="">請選擇群組</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="layui-form-item layui-form-text">
+                  <label class="layui-form-label">訊息 ID</label>
+                  <div class="layui-input-block">
+                    <textarea name="message_ids" placeholder="請輸入訊息ID，支援以下格式：&#10;單個ID：123&#10;多個ID：123,456,789&#10;範圍：123-130&#10;混合：123,456-460,789" class="layui-textarea" style="height: 120px;"></textarea>
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <div class="layui-input-block">
+                    <button class="layui-btn" lay-submit="" lay-filter="submit-download">立即下載</button>
+                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="layui-card" style="margin-top: 20px;">
+            <div class="layui-card-header">
+              下載歷史
+              <div style="float: right;">
+                <button class="layui-btn layui-btn-sm" onclick="selectAllTasks()">全選</button>
+                <button class="layui-btn layui-btn-sm layui-btn-normal" onclick="selectPendingTasks()">選擇待下載</button>
+                <button class="layui-btn layui-btn-sm" onclick="deselectAllTasks()">取消全選</button>
+                <button class="layui-btn layui-btn-sm layui-btn-warm" onclick="cleanDownloadedItems()">清理已下載</button>
+                <button class="layui-btn layui-btn-sm layui-btn-danger" onclick="removeSelectedTasks()">移除選中</button>
+              </div>
+            </div>
+            <div class="layui-card-body">
+              <!-- 篩選區域 -->
+              <div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.3);">
+                <div class="layui-row layui-col-space15">
+                  <!-- 篩選標題 -->
+                  <div class="layui-col-md12" style="margin-bottom: 15px;">
+                    <h3 style="color: white; margin: 0; font-size: 16px; font-weight: 500;">
+                      <i class="layui-icon layui-icon-search" style="margin-right: 8px;"></i>
+                      智能篩選控制台
+                    </h3>
+                  </div>
+                  
+                  <!-- 篩選控制項 -->
+                  <div class="layui-col-md4">
+                    <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 6px; padding: 12px;">
+                      <label style="color: rgba(255,255,255,0.9); font-size: 13px; margin-bottom: 8px; display: block;">
+                        <i class="layui-icon layui-icon-group"></i> 群組篩選
+                      </label>
+                      <select id="group-filter" lay-filter="group-filter" style="width: 100%; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3);">
+                        <option value="">🔍 全部群組</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div class="layui-col-md4">
+                    <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 6px; padding: 12px;">
+                      <label style="color: rgba(255,255,255,0.9); font-size: 13px; margin-bottom: 8px; display: block;">
+                        <i class="layui-icon layui-icon-flag"></i> 狀態篩選
+                      </label>
+                      <select id="status-filter" lay-filter="status-filter" style="width: 100%; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3);">
+                        <option value="">📊 全部狀態</option>
+                        <option value="pending">⏳ 待下載</option>
+                        <option value="downloading">⚡ 下載中</option>
+                        <option value="downloaded">✅ 已下載</option>
+                        <option value="failed">❌ 失敗</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div class="layui-col-md4">
+                    <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 6px; padding: 12px;">
+                      <label style="color: rgba(255,255,255,0.9); font-size: 13px; margin-bottom: 8px; display: block;">
+                        <i class="layui-icon layui-icon-util"></i> 操作
+                      </label>
+                      <div class="layui-btn-group" style="width: 100%;">
+                        <button class="layui-btn layui-btn-normal" onclick="applyFilters()" style="border-radius: 4px 0 0 4px; width: 50%; background: rgba(22, 155, 213, 0.8); border: none;">
+                          <i class="layui-icon layui-icon-search"></i> 篩選
+                        </button>
+                        <button class="layui-btn" onclick="clearFilters()" style="border-radius: 0 4px 4px 0; width: 50%; background: rgba(255,255,255,0.2); border: none; color: white;">
+                          <i class="layui-icon layui-icon-refresh-1"></i> 清除
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 統計信息 -->
+                <div style="margin-top: 15px; text-align: center; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+                  <span id="filtered-count" style="
+                    color: white; 
+                    font-size: 14px; 
+                    background: rgba(255,255,255,0.2); 
+                    padding: 6px 16px; 
+                    border-radius: 15px; 
+                    backdrop-filter: blur(5px);
+                  ">
+                    📋 顯示：0 項目
+                  </span>
+                </div>
+              </div>
+              <table class="layui-table" id="download-history-table">
+                <thead>
+                  <tr>
+                    <th width="50">
+                      <input type="checkbox" id="select-all-checkbox" lay-skin="primary" title="">
+                    </th>
+                    <th>時間</th>
+                    <th>群組</th>
+                    <th>訊息ID</th>
+                    <th>狀態</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="download-history-tbody">
+                  <tr>
+                    <td colspan="6" style="text-align: center;">暫無下載歷史</td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              <!-- 分頁導航 -->
+              <div id="history-pagination" style="margin-top: 15px; display: none;"></div>
+            </div>
+          </div>
+        </div>
       </div>
+      
+      <!-- 群組管理分頁 -->
       <div class="layui-tab-item">
-        <table class="layui-hide" id="already_download_list" lay-filter="already_download_list"></table>
+        <div style="padding: 20px;">
+          <div class="layui-card">
+            <div class="layui-card-header">
+              群組管理
+              <div style="float: right;">
+                <button class="layui-btn layui-btn-sm layui-btn-normal" onclick="addGroupDialog()">
+                  <i class="layui-icon layui-icon-add-circle"></i> 新增群組
+                </button>
+                <button class="layui-btn layui-btn-sm" onclick="loadGroups()">
+                  <i class="layui-icon layui-icon-refresh"></i> 重新整理
+                </button>
+                <button class="layui-btn layui-btn-sm layui-btn-warm" onclick="importGroupFromLink()">
+                  <i class="layui-icon layui-icon-link"></i> 從連結匯入
+                </button>
+              </div>
+            </div>
+            <div class="layui-card-body">
+              <div class="layui-row layui-col-space15">
+                <div class="layui-col-md12">
+                  <!-- 快速搜索 -->
+                  <div style="margin-bottom: 15px;">
+                    <div class="layui-inline">
+                      <input type="text" id="group-search" placeholder="搜尋群組名稱或Chat ID" autocomplete="off" class="layui-input" style="width: 200px;">
+                    </div>
+                    <div class="layui-inline">
+                      <button class="layui-btn layui-btn-sm" onclick="searchGroups()">
+                        <i class="layui-icon layui-icon-search"></i> 搜尋
+                      </button>
+                    </div>
+                    <div class="layui-inline" style="float: right;">
+                      <label class="layui-checkbox-button">
+                        <input type="checkbox" id="select-all-groups" lay-skin="primary">
+                        全選
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <table class="layui-table" id="groups-table">
+                    <thead>
+                      <tr>
+                        <th width="40">選擇</th>
+                        <th>群組名稱</th>
+                        <th width="150">Chat ID</th>
+                        <th width="100">待下載數量</th>
+                        <th width="100">狀態</th>
+                        <th width="80">類型</th>
+                        <th width="250">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="groups-tbody">
+                      <tr>
+                        <td colspan="7" style="text-align: center; color: #999; padding: 40px;">
+                          <i class="layui-icon layui-icon-loading layui-icon-anim-rotate"></i> 載入中...
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  
+                  <!-- 批量操作區域 -->
+                  <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e6e6e6;">
+                    <div class="layui-btn-group">
+                      <button class="layui-btn layui-btn-danger layui-btn-sm" onclick="deleteSelectedGroups()">
+                        <i class="layui-icon layui-icon-delete"></i> 刪除選中
+                      </button>
+                      <button class="layui-btn layui-btn-warm layui-btn-sm" onclick="clearSelectedGroups()">
+                        <i class="layui-icon layui-icon-close"></i> 清空選中訊息
+                      </button>
+                      <button class="layui-btn layui-btn-sm" onclick="exportSelectedGroups()">
+                        <i class="layui-icon layui-icon-export"></i> 匯出選中
+                      </button>
+                    </div>
+                    <div style="float: right;">
+                      <span class="layui-badge" id="selected-count">已選擇：0 個群組</span>
+                      <span class="layui-badge layui-bg-blue" id="total-groups">總共：0 個群組</span>
+                    </div>
+                  </div>
+                  
+                  <!-- 統計資訊 -->
+                  <div style="margin-top: 20px;">
+                    <div class="layui-card">
+                      <div class="layui-card-header">群組統計</div>
+                      <div class="layui-card-body">
+                        <div class="layui-row layui-col-space15">
+                          <div class="layui-col-md3">
+                            <div style="text-align: center; padding: 20px;">
+                              <div style="font-size: 24px; font-weight: bold; color: #009688;" id="stats-total-groups">0</div>
+                              <div style="color: #666;">總群組數</div>
+                            </div>
+                          </div>
+                          <div class="layui-col-md3">
+                            <div style="text-align: center; padding: 20px;">
+                              <div style="font-size: 24px; font-weight: bold; color: #FF5722;" id="stats-pending-messages">0</div>
+                              <div style="color: #666;">待下載訊息</div>
+                            </div>
+                          </div>
+                          <div class="layui-col-md3">
+                            <div style="text-align: center; padding: 20px;">
+                              <div style="font-size: 24px; font-weight: bold; color: #2196F3;" id="stats-active-groups">0</div>
+                              <div style="color: #666;">活躍群組</div>
+                            </div>
+                          </div>
+                          <div class="layui-col-md3">
+                            <div style="text-align: center; padding: 20px;">
+                              <div style="font-size: 24px; font-weight: bold; color: #4CAF50;" id="stats-empty-groups">0</div>
+                              <div style="color: #666;">空群組</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <!-- <div class="layui-tab-item">
-        <form class="layui-form" action="">
-        under development
-      </form>
-      </div> -->
     </div>
   </div>
 
@@ -62,14 +354,17 @@
     </div>
   </div>
 
-  <script src="static/layui/layui.js"></script>
+  <script src="../static/layui/layui.js"></script>
   <script>
 
-    layui.use(['table', 'element'], function () {
+    var layer, $; // 全局變量
+    
+    layui.use(['table', 'element', 'laypage'], function () {
       var table = layui.table;
       var element = layui.element;
-      var layer = layui.layer;
-      var $ = layui.$;
+      layer = layui.layer; // 設置為全局
+      var laypage = layui.laypage;
+      $ = layui.$; // 設置為全局
       var already_download_list_data = new Array()
       var download_list_table_data = new Array()
 
@@ -287,13 +582,1528 @@
 
       };
 
-      element.on('tab(telegram_media_downloader)', function (data) {
-        if (data.index != 0) {
-          clearInterval(update_download_list_int);
+
+      // 自訂下載功能
+      function loadGroups() {
+        console.log('=== loadGroups called ===');
+        $.ajax({
+          url: "/get_groups",
+          type: "GET",
+          dataType: "json",
+          success: function(result) {
+            console.log('loadGroups success:', result);
+            if (result.success) {
+              // 更新群組表格
+              const tbody = $("#groups-tbody");
+              tbody.empty();
+              
+              // 更新群組選擇下拉選單
+              const select = $("select[name='chat_id']");
+              select.empty();
+              select.append('<option value="">請選擇群組</option>');
+              
+              console.log('Groups data:', result.groups);
+              if (result.groups && result.groups.length > 0) {
+                console.log('Processing', result.groups.length, 'groups');
+                result.groups.forEach(function(group) {
+                  console.log('Processing group:', group);
+                  // 確定群組狀態和類型
+                  let status = '正常';
+                  let statusColor = 'layui-bg-green';
+                  let groupType = '私人';
+                  
+                  if (group.pending_count > 0) {
+                    status = '有待下載項目';
+                    statusColor = 'layui-bg-orange';
+                  }
+                  
+                  // 根據Chat ID判斷類型
+                  if (group.chat_id.toString().startsWith('-100')) {
+                    groupType = '超級群組/頻道';
+                  } else if (group.chat_id.toString().startsWith('-')) {
+                    groupType = '群組';
+                  }
+                  
+                  // 添加到表格
+                  tbody.append(`
+                    <tr data-chat-id="${group.chat_id}">
+                      <td>
+                        <input type="checkbox" name="group-select" value="${group.chat_id}" lay-skin="primary" onchange="updateSelectedCount()">
+                      </td>
+                      <td>
+                        <div>
+                          <span class="group-name" data-chat-id="${group.chat_id}" style="font-weight: bold;">${group.name || 'Chat ' + group.chat_id}</span>
+                        </div>
+                      </td>
+                      <td><code style="font-size: 12px;">${group.chat_id}</code></td>
+                      <td>
+                        <span class="${group.pending_count > 0 ? 'layui-badge layui-bg-orange' : 'layui-badge'}">${group.pending_count}</span>
+                      </td>
+                      <td>
+                        <span class="layui-badge ${statusColor}">${status}</span>
+                      </td>
+                      <td>
+                        <span class="layui-badge layui-bg-cyan">${groupType}</span>
+                      </td>
+                      <td>
+                        <div class="layui-btn-group">
+                          <button class="layui-btn layui-btn-xs btn-edit-group" data-chat-id="${group.chat_id}" data-group-name="${group.name || ''}" title="編輯群組名稱">
+                            <i class="layui-icon layui-icon-edit"></i>
+                          </button>
+                          <button class="layui-btn layui-btn-normal layui-btn-xs btn-check-access" data-chat-id="${group.chat_id}" title="檢查訪問權限">
+                            <i class="layui-icon layui-icon-survey"></i>
+                          </button>
+                          <button class="layui-btn layui-btn-warm layui-btn-xs btn-clear-group" data-chat-id="${group.chat_id}" title="清空群組訊息">
+                            <i class="layui-icon layui-icon-close"></i>
+                          </button>
+                          <button class="layui-btn layui-btn-danger layui-btn-xs btn-delete-group" data-chat-id="${group.chat_id}" title="刪除群組">
+                            <i class="layui-icon layui-icon-delete"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  `);
+                  
+                  // 添加到下拉選單
+                  select.append(`<option value="${group.chat_id}">${group.name} (${group.chat_id})</option>`);
+                });
+                // 更新統計信息
+                updateGroupStats(result.groups);
+              } else {
+                tbody.append('<tr><td colspan="7" style="text-align: center;">暫無群組</td></tr>');
+                updateGroupStats([]);
+              }
+              
+              // 重新渲染表單
+              layui.form.render('select');
+              layui.form.render('checkbox');
+            } else {
+              console.error('loadGroups failed:', result.error);
+              layer.msg("載入群組失敗: " + result.error, {icon: 2});
+            }
+          },
+          error: function(xhr, status, error) {
+            console.error('loadGroups error:', xhr, status, error);
+            layer.msg("載入群組失敗: " + error, {icon: 2});
+          }
+        });
+      }
+      
+      // 更新群組統計信息
+      function updateGroupStats(groups) {
+        const totalGroups = groups.length;
+        let pendingMessages = 0;
+        let activeGroups = 0;
+        let emptyGroups = 0;
+        
+        groups.forEach(group => {
+          pendingMessages += group.pending_count || 0;
+          if (group.pending_count > 0) {
+            activeGroups++;
+          } else {
+            emptyGroups++;
+          }
+        });
+        
+        $('#stats-total-groups').text(totalGroups);
+        $('#stats-pending-messages').text(pendingMessages);
+        $('#stats-active-groups').text(activeGroups);
+        $('#stats-empty-groups').text(emptyGroups);
+        $('#total-groups').text(`總共：${totalGroups} 個群組`);
+      }
+      
+      // 更新選中數量
+      function updateSelectedCount() {
+        const selectedCount = $('input[name="group-select"]:checked').length;
+        $('#selected-count').text(`已選擇：${selectedCount} 個群組`);
+      }
+      
+      // 全選/取消全選
+      $(document).on('change', '#select-all-groups', function() {
+        const isChecked = $(this).is(':checked');
+        $('input[name="group-select"]').prop('checked', isChecked);
+        layui.form.render('checkbox');
+        updateSelectedCount();
+      });
+      
+      // 搜尋群組
+      window.searchGroups = function() {
+        const searchTerm = $('#group-search').val().toLowerCase().trim();
+        if (!searchTerm) {
+          $('tbody#groups-tbody tr').show();
+          return;
+        }
+        
+        $('tbody#groups-tbody tr').each(function() {
+          const row = $(this);
+          const groupName = row.find('.group-name').text().toLowerCase();
+          const chatId = row.find('code').text().toLowerCase();
+          
+          if (groupName.includes(searchTerm) || chatId.includes(searchTerm)) {
+            row.show();
+          } else {
+            row.hide();
+          }
+        });
+      }
+      
+      // 從連結匯入群組
+      window.importGroupFromLink = function() {
+        layer.prompt({
+          title: '從連結匯入群組',
+          content: `
+            <div style="margin-top: 10px;">
+              <label>Telegram 群組連結:</label>
+              <input type="text" id="import-link" placeholder="請輸入 https://t.me/... 連結" style="width: 100%; margin: 5px 0; padding: 8px; border: 1px solid #ccc;">
+              <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                支援格式：https://t.me/groupname 或 https://t.me/c/1234567890/123
+              </div>
+            </div>
+          `,
+          btn: ['解析並匯入', '取消'],
+          yes: function(index, layero) {
+            const link = layero.find('#import-link').val().trim();
+            
+            if (!link) {
+              layer.msg('請輸入群組連結', {icon: 2});
+              return;
+            }
+            
+            if (!link.includes('t.me/')) {
+              layer.msg('請輸入有效的 Telegram 連結', {icon: 2});
+              return;
+            }
+            
+            parseAndImportGroup(link);
+            layer.close(index);
+          }
+        });
+      }
+      
+      // 解析並匯入群組
+      function parseAndImportGroup(link) {
+        layer.msg('正在解析群組資訊...', {icon: 16, time: 0});
+        
+        let chatId = '';
+        let groupName = '';
+        
+        try {
+          // 清理連結，移除不必要的部分
+          link = link.replace(/\?.*$/, '').replace(/#.*$/, '');
+          
+          if (link.includes('/c/')) {
+            // 私有群組連結格式: https://t.me/c/1234567890/123 或 https://t.me/c/1234567890
+            const matches = link.match(/\/c\/(\d+)/);
+            if (matches) {
+              // Telegram 私有群組 ID 格式是 -100 + 群組 ID
+              chatId = '-100' + matches[1];
+              groupName = `私有群組 ${matches[1]}`;
+            }
+          } else if (link.includes('/joinchat/')) {
+            // 邀請連結格式: https://t.me/joinchat/XXXXX
+            layer.closeAll();
+            layer.msg('邀請連結無法直接解析 Chat ID，請手動添加或先加入群組後使用私有連結', {icon: 0, time: 5000});
+            return;
+          } else {
+            // 公開群組連結格式: https://t.me/groupname
+            const matches = link.match(/t\.me\/([a-zA-Z0-9_]+)/);
+            if (matches) {
+              const username = matches[1];
+              groupName = `@${username}`;
+              
+              // 提示用戶輸入 Chat ID
+              layer.closeAll();
+              layer.prompt({
+                title: `解析到公開群組: ${groupName}`,
+                content: `
+                  <div style="margin-top: 10px;">
+                    <p>公開群組需要您提供 Chat ID。</p>
+                    <p>您可以通過以下方式獲取：</p>
+                    <ul style="margin: 10px 0; padding-left: 20px; font-size: 12px; color: #666;">
+                      <li>使用 @userinfobot 在群組中發送消息獲取</li>
+                      <li>使用 @getidsbot 轉發群組消息獲取</li>
+                      <li>或者從群組的私有連結中獲取</li>
+                    </ul>
+                    <label>請輸入 Chat ID:</label>
+                    <input type="text" placeholder="例如: -1001234567890" style="width: 100%; margin: 5px 0; padding: 8px; border: 1px solid #ccc;">
+                  </div>
+                `,
+                btn: ['添加群組', '取消'],
+                yes: function(index, layero) {
+                  const inputChatId = layero.find('input').val().trim();
+                  if (!inputChatId) {
+                    layer.msg('請輸入 Chat ID', {icon: 2});
+                    return;
+                  }
+                  
+                  if (!inputChatId.match(/^-?\d+$/)) {
+                    layer.msg('Chat ID 格式不正確，應該是數字', {icon: 2});
+                    return;
+                  }
+                  
+                  layer.close(index);
+                  addGroup(inputChatId, groupName);
+                }
+              });
+              return;
+            }
+          }
+          
+          if (chatId) {
+            layer.closeAll();
+            addGroup(chatId, groupName);
+          } else {
+            layer.closeAll();
+            layer.msg('無法解析群組資訊，請檢查連結格式', {icon: 2});
+          }
+        } catch (e) {
+          console.error('解析連結錯誤:', e);
+          layer.closeAll();
+          layer.msg('連結解析失敗', {icon: 2});
+        }
+      }
+      
+      
+      // 獲取群組類型
+      function getGroupType(chatId) {
+        if (chatId.toString().startsWith('-100')) {
+          return '超級群組/頻道';
+        } else if (chatId.toString().startsWith('-')) {
+          return '群組';
+        }
+        return '私人';
+      }
+      
+      // 匯出選中群組
+      window.exportSelectedGroups = function() {
+        const selectedChatIds = [];
+        $('input[name="group-select"]:checked').each(function() {
+          selectedChatIds.push($(this).val());
+        });
+        
+        if (selectedChatIds.length === 0) {
+          layer.msg('請選擇要匯出的群組', {icon: 2});
+          return;
+        }
+        
+        // 獲取選中群組的詳細信息
+        const exportData = [];
+        selectedChatIds.forEach(chatId => {
+          const row = $(`tr[data-chat-id="${chatId}"]`);
+          const groupName = row.find('.group-name').text();
+          const pendingCount = parseInt(row.find('.layui-badge').first().text()) || 0;
+          
+          exportData.push({
+            chat_id: chatId,
+            name: groupName,
+            pending_count: pendingCount,
+            type: getGroupType(chatId)
+          });
+        });
+        
+        // 生成JSON檔案
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(dataBlob);
+        
+        // 創建下載連結
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `groups_export_${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        layer.msg(`已匯出 ${selectedChatIds.length} 個群組`, {icon: 1});
+      }
+      
+      // 新增群組對話框
+      window.addGroupDialog = function() {
+        layer.prompt({
+          title: '新增群組',
+          content: `
+            <div style="margin-top: 10px;">
+              <label>Chat ID:</label>
+              <input type="text" id="new-chat-id" placeholder="請輸入 Chat ID (例如: -1001234567890)" style="width: 100%; margin: 5px 0; padding: 8px; border: 1px solid #ccc;">
+              <label>群組名稱:</label>
+              <input type="text" id="new-group-name" placeholder="請輸入群組名稱" style="width: 100%; margin: 5px 0; padding: 8px; border: 1px solid #ccc;">
+            </div>
+          `,
+          btn: ['確定', '取消'],
+          yes: function(index, layero) {
+            const chatId = layero.find('#new-chat-id').val().trim();
+            const groupName = layero.find('#new-group-name').val().trim();
+            
+            if (!chatId) {
+              layer.msg('請輸入 Chat ID', {icon: 2});
+              return;
+            }
+            
+            if (!groupName) {
+              layer.msg('請輸入群組名稱', {icon: 2});
+              return;
+            }
+            
+            addGroup(chatId, groupName);
+            layer.close(index);
+          }
+        });
+      }
+      
+      // 新增群組
+      function addGroup(chatId, name) {
+        $.ajax({
+          url: '/add_group',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ chat_id: chatId, name: name }),
+          success: function(result) {
+            if (result.success) {
+              layer.msg(result.message, {icon: 1});
+              loadGroups(); // 重新載入群組列表
+            } else {
+              layer.msg('新增失敗: ' + result.error, {icon: 2});
+            }
+          },
+          error: function() {
+            layer.msg('新增失敗：網路錯誤', {icon: 2});
+          }
+        });
+      }
+      
+      // 編輯群組名稱
+      function editGroupName(chatId, currentName) {
+        layer.prompt({
+          title: '編輯群組名稱',
+          value: currentName,
+          yes: function(index, layero) {
+            const newName = layero.find('input').val().trim();
+            
+            if (!newName) {
+              layer.msg('請輸入群組名稱', {icon: 2});
+              return;
+            }
+            
+            if (newName === currentName) {
+              layer.close(index);
+              return;
+            }
+            
+            $.ajax({
+              url: '/edit_group',
+              type: 'POST',
+              contentType: 'application/json',
+              data: JSON.stringify({ chat_id: chatId, name: newName }),
+              success: function(result) {
+                if (result.success) {
+                  layer.msg(result.message, {icon: 1});
+                  loadGroups(); // 重新載入群組列表
+                  loadAllGroupOptions(); // 重新載入篩選選項
+                  loadDownloadHistory(currentPage); // 重新載入下載歷史以更新群組名稱
+                } else {
+                  layer.msg('編輯失敗: ' + result.error, {icon: 2});
+                }
+              },
+              error: function() {
+                layer.msg('編輯失敗：網路錯誤', {icon: 2});
+              }
+            });
+            
+            layer.close(index);
+          }
+        });
+      }
+      
+      // 刪除單個群組
+      function deleteGroup(chatId) {
+        layer.confirm('確定要刪除這個群組嗎？此操作會同時刪除該群組的所有下載任務。', {
+          btn: ['確定', '取消']
+        }, function(index) {
+          $.ajax({
+            url: '/delete_group',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ chat_id: chatId }),
+            success: function(result) {
+              if (result.success) {
+                layer.msg(result.message, {icon: 1});
+                loadGroups(); // 重新載入群組列表
+                loadDownloadHistory(); // 重新載入下載歷史
+              } else {
+                layer.msg('刪除失敗: ' + result.error, {icon: 2});
+              }
+            },
+            error: function() {
+              layer.msg('刪除失敗：網路錯誤', {icon: 2});
+            }
+          });
+          layer.close(index);
+        });
+      }
+      
+      // 批量刪除群組
+      window.deleteSelectedGroups = function() {
+        const selectedChatIds = [];
+        $('input[name="group-select"]:checked').each(function() {
+          selectedChatIds.push($(this).val());
+        });
+        
+        if (selectedChatIds.length === 0) {
+          layer.msg('請選擇要刪除的群組', {icon: 2});
+          return;
+        }
+        
+        layer.confirm(`確定要刪除選中的 ${selectedChatIds.length} 個群組嗎？此操作會同時刪除這些群組的所有下載任務。`, {
+          btn: ['確定', '取消']
+        }, function(index) {
+          $.ajax({
+            url: '/delete_multiple_groups',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ chat_ids: selectedChatIds }),
+            success: function(result) {
+              if (result.success) {
+                layer.msg(result.message, {icon: 1});
+                loadGroups(); // 重新載入群組列表
+                loadDownloadHistory(); // 重新載入下載歷史
+              } else {
+                layer.msg('刪除失敗: ' + result.error, {icon: 2});
+              }
+            },
+            error: function() {
+              layer.msg('刪除失敗：網路錯誤', {icon: 2});
+            }
+          });
+          layer.close(index);
+        });
+      }
+      
+      // 批量清空群組訊息
+      // 檢查群組訪問權限
+      window.checkGroupAccess = function(chatId) {
+        layer.msg('正在檢查群組訪問權限...', {icon: 16, time: 0});
+        
+        $.ajax({
+          url: '/check_group_access',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ chat_id: chatId }),
+          success: function(result) {
+            layer.closeAll();
+            
+            if (result.success) {
+              const info = result.info;
+              let content = '';
+              let icon = 1; // 成功圖標
+              let title = '群組訪問檢查結果';
+              
+              if (info.accessible) {
+                content = `
+                  <div style="padding: 10px;">
+                    <p><strong>✅ 群組可正常訪問</strong></p>
+                    <hr style="margin: 10px 0;">
+                    <p><strong>群組名稱:</strong> ${info.title}</p>
+                    <p><strong>群組類型:</strong> ${info.type}</p>
+                    <p><strong>成員數量:</strong> ${info.members_count}</p>
+                    <p><strong>Chat ID:</strong> ${chatId}</p>
+                    <hr style="margin: 10px 0;">
+                    <p style="color: #5FB878; font-size: 12px;">機器人可以正常從此群組下載訊息</p>
+                  </div>
+                `;
+              } else {
+                icon = 2; // 錯誤圖標
+                content = `
+                  <div style="padding: 10px;">
+                    <p><strong>❌ 群組無法訪問</strong></p>
+                    <hr style="margin: 10px 0;">
+                    <p><strong>Chat ID:</strong> ${chatId}</p>
+                    <p><strong>錯誤信息:</strong> ${info.error}</p>
+                    <hr style="margin: 10px 0;">
+                    <p style="color: #FF5722; font-size: 12px;"><strong>可能的原因:</strong></p>
+                    <ul style="margin: 5px 0; padding-left: 20px; font-size: 12px; color: #666;">
+                      <li>機器人被從群組中移除</li>
+                      <li>群組被刪除或設為私人</li>
+                      <li>機器人缺乏必要權限</li>
+                      <li>群組 ID 不正確</li>
+                    </ul>
+                    <hr style="margin: 10px 0;">
+                    <p style="color: #FF5722; font-size: 12px;">建議從下載列表中移除此群組的項目</p>
+                  </div>
+                `;
+              }
+              
+              layer.open({
+                type: 1,
+                title: title,
+                icon: icon,
+                area: ['500px', 'auto'],
+                content: content,
+                btn: info.accessible ? ['確定'] : ['確定', '清空此群組'],
+                yes: function(index) {
+                  layer.close(index);
+                },
+                btn2: function(index) {
+                  // 如果群組不可訪問，提供清空選項
+                  layer.confirm('確定要清空此群組的所有下載項目嗎？', function(confirmIndex) {
+                    clearGroupIds(chatId);
+                    layer.close(confirmIndex);
+                    layer.close(index);
+                  });
+                  return false; // 阻止對話框關閉
+                }
+              });
+            } else {
+              layer.msg('檢查失敗: ' + result.error, {icon: 2});
+            }
+          },
+          error: function() {
+            layer.closeAll();
+            layer.msg('檢查請求失敗', {icon: 2});
+          }
+        });
+      }
+      
+      window.clearSelectedGroups = function() {
+        const selectedChatIds = [];
+        $('input[name="group-select"]:checked').each(function() {
+          selectedChatIds.push($(this).val());
+        });
+        
+        if (selectedChatIds.length === 0) {
+          layer.msg('請選擇要清空的群組', {icon: 2});
+          return;
+        }
+        
+        layer.confirm(`確定要清空選中的 ${selectedChatIds.length} 個群組的所有訊息嗎？`, {
+          btn: ['確定', '取消']
+        }, function(index) {
+          $.ajax({
+            url: '/clear_multiple_groups',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ chat_ids: selectedChatIds }),
+            success: function(result) {
+              if (result.success) {
+                layer.msg(result.message, {icon: 1});
+                loadGroups(); // 重新載入群組列表
+                loadDownloadHistory(); // 重新載入下載歷史
+              } else {
+                layer.msg('清空失敗: ' + result.error, {icon: 2});
+              }
+            },
+            error: function() {
+              layer.msg('清空失敗：網路錯誤', {icon: 2});
+            }
+          });
+          layer.close(index);
+        });
+      }
+
+      let currentPage = 1;
+      const pageLimit = 20; // 每頁顯示20條記錄
+
+      // 載入所有群組選項用於篩選
+      function loadAllGroupOptions() {
+        $.ajax({
+          url: '/get_all_groups',
+          type: 'GET',
+          dataType: 'json',
+          success: function(result) {
+            if (result.success) {
+              const groupSelect = $('#group-filter');
+              const currentValue = groupSelect.val();
+              
+              // 清除舊選項（保留"全部群組"）
+              groupSelect.find('option[value!=""]').remove();
+              
+              // 添加所有群組選項
+              result.groups.forEach(function(groupName) {
+                groupSelect.append(`<option value="${groupName}">${groupName}</option>`);
+              });
+              
+              // 恢復之前的選擇
+              if (currentValue) {
+                groupSelect.val(currentValue);
+              }
+              
+              layui.form.render('select');
+            }
+          },
+          error: function() {
+            console.error('無法載入群組選項');
+          }
+        });
+      }
+
+      function loadDownloadHistory(page = 1, groupFilter = '', statusFilter = '') {
+        currentPage = page;
+        
+        // 構建查詢參數
+        let url = `/get_download_history?page=${page}&limit=${pageLimit}`;
+        if (groupFilter) {
+          url += `&group_filter=${encodeURIComponent(groupFilter)}`;
+        }
+        if (statusFilter) {
+          url += `&status_filter=${encodeURIComponent(statusFilter)}`;
+        }
+        
+        $.ajax({
+          url: url,
+          type: "GET", 
+          dataType: "json",
+          success: function(result) {
+            if (result.success) {
+              const tbody = $("#download-history-tbody");
+              tbody.empty();
+              
+              if (result.history && result.history.length > 0) {
+                // 收集所有群組名稱用於篩選下拉選單
+                const groupNames = new Set();
+                
+                result.history.forEach(function(item) {
+                  // 添加群組名稱到集合
+                  if (item.chat_name) {
+                    groupNames.add(item.chat_name);
+                  }
+                  let statusClass, statusText, actionButton;
+                  
+                  if (item.status === 'downloaded' || item.status === 'downloaded_ids') {
+                    statusClass = 'layui-bg-green';
+                    statusText = '已下載';
+                    actionButton = '<span class="layui-btn layui-btn-disabled layui-btn-xs">已完成</span>';
+                  } else if (item.status === 'failed' || item.status === 'failed_ids') {
+                    statusClass = 'layui-bg-red';
+                    statusText = '失敗';
+                    actionButton = `<button class="layui-btn layui-btn-xs" onclick="retryDownload('${item.chat_id}', '${item.message_id}')">
+                      <i class="layui-icon layui-icon-refresh"></i> 重試
+                    </button>`;
+                  } else if (item.status === 'pending') {
+                    statusClass = 'layui-bg-orange';
+                    statusText = '待下載';
+                    actionButton = '<span class="layui-btn layui-btn-disabled layui-btn-xs">等待中</span>';
+                  } else {
+                    statusClass = 'layui-bg-blue';
+                    statusText = '處理中';
+                    actionButton = '<span class="layui-btn layui-btn-disabled layui-btn-xs">處理中</span>';
+                  }
+                  
+                  // 只有pending狀態的項目才能被選中
+                  let checkboxHtml = '';
+                  if (item.status === 'pending') {
+                    // 檢查是否應該自動選取
+                    const autoChecked = item.auto_select ? 'checked' : '';
+                    checkboxHtml = `<input type="checkbox" class="task-checkbox" value="${item.chat_id},${item.message_id}" lay-skin="primary" title="" ${autoChecked}>`;
+                  }
+                  
+                  tbody.append(`
+                    <tr>
+                      <td>${checkboxHtml}</td>
+                      <td>${item.timestamp}</td>
+                      <td>${item.chat_name || item.chat_id}</td>
+                      <td>${item.message_id}</td>
+                      <td><span class="layui-badge ${statusClass}">${statusText}</span></td>
+                      <td>${actionButton}</td>
+                    </tr>
+                  `);
+                });
+                
+                        // 群組篩選選項在頁面初始化時載入，這裡不需要再更新
+                
+                // 更新篩選計數
+                $('#filtered-count').text(`顯示：${result.history.length} 項目`);
+                
+                // 更新分頁資訊
+                if (result.pagination) {
+                  updatePagination(result.pagination);
+                } else {
+                  $("#history-pagination").hide();
+                }
+              } else {
+                tbody.append('<tr><td colspan="6" style="text-align: center;">暫無下載歷史</td></tr>');
+                $("#history-pagination").hide();
+              }
+            } else {
+              $("#download-history-tbody").html('<tr><td colspan="6" style="text-align: center; color: red;">載入失敗: ' + result.error + '</td></tr>');
+            }
+          },
+          error: function() {
+            $("#download-history-tbody").html('<tr><td colspan="6" style="text-align: center; color: red;">載入失敗</td></tr>');
+          }
+        });
+      }
+
+      function updatePagination(pagination) {
+        if (pagination.total > 0) {
+          $("#history-pagination").show();
+          
+          // 使用Layui的laypage組件
+          laypage.render({
+            elem: 'history-pagination',
+            count: pagination.total,
+            limit: pageLimit,
+            curr: pagination.page,
+            layout: ['count', 'prev', 'page', 'next', 'skip'],
+            theme: '#009688',
+            jump: function(obj, first) {
+              if (!first) {
+                loadDownloadHistory(obj.curr);
+              }
+            }
+          });
+        } else {
+          $("#history-pagination").hide();
+        }
+      }
+
+      function clearGroupIds(chatId) {
+        layer.confirm('確定要清空該群組的下載隊列嗎？', {icon: 3, title:'提示'}, function(index){
+          $.ajax({
+            url: "/clear_download_ids",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({chat_id: chatId}),
+            dataType: "json",
+            success: function(result) {
+              if (result.success) {
+                layer.msg(result.message, {icon: 1});
+                loadGroups(); // 重新載入群組資料
+                loadDownloadHistory(1); // 重新載入下載歷史
+              } else {
+                layer.msg("操作失敗: " + result.error, {icon: 2});
+              }
+            }
+          });
+          layer.close(index);
+        });
+      }
+
+      function retryDownload(chatId, messageId) {
+        layer.confirm('確定要重試下載這個訊息嗎？', {icon: 3, title: '確認重試'}, function(index) {
+          $.ajax({
+            url: '/retry_download',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+              chat_id: chatId,
+              message_id: messageId
+            }),
+            success: function(response) {
+              if (response.success) {
+                layer.msg(response.message, {icon: 1});
+                // 重新載入下載歷史
+                setTimeout(() => {
+                  loadDownloadHistory(currentPage);
+                }, 1000);
+              } else {
+                layer.msg('重試失敗: ' + response.error, {icon: 2});
+              }
+            },
+            error: function() {
+              layer.msg('重試請求失敗', {icon: 2});
+            }
+          });
+          layer.close(index);
+        });
+      }
+
+      // 選擇框相關函數
+      window.selectAllTasks = function() {
+        $('.task-checkbox').prop('checked', true);
+        $('#select-all-checkbox').prop('checked', true);
+      }
+      
+      window.selectPendingTasks = function() {
+        // 只選擇待下載狀態的項目
+        $('.task-checkbox').each(function() {
+          const row = $(this).closest('tr');
+          const statusElement = row.find('.layui-badge');
+          if (statusElement.text().includes('待下載') || statusElement.text().includes('準備') || statusElement.text().includes('pending')) {
+            $(this).prop('checked', true);
+          }
+        });
+        
+        // 統計選中數量並顯示消息
+        const selectedCount = $('.task-checkbox:checked').length;
+        if (selectedCount > 0) {
+          layer.msg(`已選擇 ${selectedCount} 個待下載項目`, {icon: 1});
+        } else {
+          layer.msg('沒有找到待下載的項目', {icon: 3});
+        }
+      }
+      
+      window.deselectAllTasks = function() {
+        $('.task-checkbox').prop('checked', false);
+        $('#select-all-checkbox').prop('checked', false);
+      }
+      
+      // 篩選功能
+      window.applyFilters = function() {
+        const groupFilter = $('#group-filter').val();
+        const statusFilter = $('#status-filter').val();
+        
+        // 重新載入第一頁，帶上篩選參數
+        loadDownloadHistory(1, groupFilter, statusFilter);
+      }
+      
+      window.clearFilters = function() {
+        $('#group-filter').val('');
+        $('#status-filter').val('');
+        layui.form.render('select');
+        
+        // 重新載入第一頁，不帶篩選參數
+        loadDownloadHistory(1);
+      }
+      
+      window.removeSelectedTasks = function() {
+        let selectedTasks = [];
+        $('.task-checkbox:checked').each(function() {
+          let value = $(this).val().split(',');
+          selectedTasks.push({
+            chat_id: value[0],
+            message_id: value[1]
+          });
+        });
+        
+        if (selectedTasks.length === 0) {
+          layer.msg('請先選擇要移除的項目', {icon: 3});
+          return;
+        }
+        
+        layer.confirm(`確定要從下載隊列中移除 ${selectedTasks.length} 個項目嗎？`, {
+          icon: 3, 
+          title: '確認移除'
+        }, function(index) {
+          $.ajax({
+            url: '/remove_selected_tasks',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({tasks: selectedTasks}),
+            success: function(response) {
+              if (response.success) {
+                layer.msg(response.message, {icon: 1});
+                // 重新載入下載歷史和群組資訊
+                loadDownloadHistory(currentPage);
+                loadGroups();
+              } else {
+                layer.msg('移除失敗: ' + response.error, {icon: 2});
+              }
+            },
+            error: function() {
+              layer.msg('移除請求失敗', {icon: 2});
+            }
+          });
+          layer.close(index);
+        });
+      }
+      
+      window.cleanDownloadedItems = function() {
+        layer.confirm('清理已下載項目會將已成功下載的項目從待下載列表中移除，確定要繼續嗎？', {
+          icon: 3, 
+          title: '確認清理'
+        }, function(index) {
+          $.ajax({
+            url: '/clean_downloaded_from_targets',
+            type: 'POST',
+            success: function(response) {
+              if (response.success) {
+                layer.msg(response.message, {icon: 1});
+                loadDownloadHistory(1); // 重新載入歷史，回到第一頁
+                loadGroups(); // 重新載入群組資訊
+              } else {
+                layer.msg('清理失敗: ' + response.error, {icon: 2});
+              }
+            },
+            error: function() {
+              layer.msg('清理請求失敗', {icon: 2});
+            }
+          });
+          layer.close(index);
+        });
+      }
+      
+      // 檢查並恢復活躍的下載會話
+      function checkAndResumeActiveSession() {
+        $.ajax({
+          url: '/get_download_progress',
+          type: 'GET',
+          success: function(response) {
+            if (response.success && response.session && response.session.active) {
+              console.log('Found active download session, resuming monitoring...');
+              console.log('Session info:', response.session);
+              
+              // 顯示進度區域
+              $('#download-progress-area').show();
+              $('#download_control').show();
+              
+              // 設置初始進度
+              lastCompletedCount = response.completed_count || 0;
+              updateTaskProgress(
+                response.completed_count || 0,
+                response.total_count || response.session.total_tasks,
+                response.status_text || '恢復中...',
+                response.total_download_speed || '0.00 B/s'
+              );
+              
+              // 開始監控
+              startDownloadMonitoring();
+              
+              // 立即更新一次頁面資料
+              setTimeout(() => {
+                loadDownloadHistory(currentPage);
+                loadGroups();
+              }, 500);
+              
+              layer.msg('偵測到進行中的下載任務，已恢復監控', {icon: 1});
+            }
+          },
+          error: function() {
+            console.log('Failed to check active session');
+          }
+        });
+      }
+      
+      // 全選checkbox處理
+      $(document).on('change', '#select-all-checkbox', function() {
+        $('.task-checkbox').prop('checked', $(this).prop('checked'));
+      });
+      
+      // 進度條相關函數
+      let downloadMonitoringInterval;
+      
+      function showDownloadProgress(totalTasks) {
+        $('#download-progress-area').show();
+        $('#task-total').text(totalTasks);
+        $('#task-completed').text(0);
+        $('#task-status-text').text('準備開始下載...');
+        
+        // 初始化進度條
+        console.log('Initializing progress bar');
+        try {
+          element.progress('task-progress-bar', '0%');
+          console.log('Progress bar initialized successfully');
+        } catch (e) {
+          console.error('Failed to initialize progress bar:', e);
+          // 備用方案
+          const progressBarElement = $('[lay-filter="task-progress-bar"] .layui-progress-bar');
+          progressBarElement.css('width', '0%');
+          progressBarElement.attr('lay-percent', '0%');
+          progressBarElement.addClass('layui-bg-blue');
+        }
+        
+        $('#concurrent-progress-section').hide();
+      }
+      
+      function updateTaskProgress(completed, total, statusText, downloadSpeed) {
+        let percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+        console.log(`Updating task progress: ${completed}/${total} = ${percentage}%`);
+        
+        $('#task-completed').text(completed);
+        $('#task-total').text(total);
+        $('#task-status-text').text(statusText || '下載中...');
+        
+        // 更新總下載速度，參考原始進度條設計
+        if (downloadSpeed) {
+          $('#total-download-speed').text(downloadSpeed);
+        }
+        
+        // 使用 Layui 的 element.progress 方法來獲得流暢動畫
+        console.log(`Calling element.progress('task-progress-bar', '${percentage}%')`);
+        try {
+          element.progress('task-progress-bar', percentage + '%');
+          console.log('element.progress call successful');
+        } catch (e) {
+          console.error('element.progress failed:', e);
+          // 備用方案：直接設置 CSS
+          const progressBarElement = $('[lay-filter="task-progress-bar"] .layui-progress-bar');
+          progressBarElement.css('width', percentage + '%');
+          progressBarElement.attr('lay-percent', percentage + '%');
+          
+          // 手動更新百分比文字
+          const percentSpan = $('[lay-filter="task-progress-bar"] .layui-progress-text');
+          if (percentSpan.length === 0) {
+            // 如果沒有百分比文字元素，創建一個
+            progressBarElement.parent().append(`<span class="layui-progress-text">${percentage}%</span>`);
+          } else {
+            percentSpan.text(percentage + '%');
+          }
+          console.log('Fallback CSS update applied');
+        }
+        
+        // 根據進度更改顏色，完全參考原始檔案下載進度條設計
+        const progressBar = $('[lay-filter="task-progress-bar"] .layui-progress-bar');
+        progressBar.removeClass('layui-bg-red layui-bg-blue layui-bg-green');
+        if (percentage > 30 && percentage < 100) {
+          progressBar.addClass('layui-bg-blue');
+        } else if (percentage > 0 && percentage <= 30) {
+          progressBar.addClass('layui-bg-red');
+        } else if (percentage == 100) {
+          progressBar.addClass('layui-bg-green');
+        }
+        
+        if (completed >= total && total > 0) {
+          clearInterval(downloadMonitoringInterval);
+          $('#task-status-text').text('所有任務完成！');
+          $('#total-download-speed').text('0.00 B/s'); // 重置下載速度顯示
+          $('#concurrent-progress-section').hide();
+          $('#download_control').hide();
+          
+          // 下載完成後自動更新頁面資料
+          console.log('所有下載任務完成，開始更新頁面資料...');
+          setTimeout(() => {
+            loadDownloadHistory(currentPage); // 重新載入下載歷史
+            loadGroups(); // 重新載入群組資料
+            console.log('頁面資料更新完成');
+          }, 1000); // 等待1秒確保後端狀態更新完成
+          
+          setTimeout(() => {
+            $('#download-progress-area').hide();
+          }, 3000);
+        }
+      }
+      
+      // 保存上次更新的進度，避免頻繁無效更新
+      let lastFileProgress = {};
+      
+      function updateConcurrentProgress(currentFiles) {
+        const activeFiles = Object.values(currentFiles).filter(f => 
+          f.total_bytes > 0 && f.downloaded_bytes < f.total_bytes
+        );
+        
+        if (activeFiles.length > 0) {
+          $('#concurrent-progress-section').show();
+          $('#concurrent-count').text(activeFiles.length);
+          
+          const container = $('#concurrent-progress-container');
+          
+          // 獲取現有的進度條容器
+          const existingContainers = {};
+          container.find('[data-message-id]').each(function() {
+            const messageId = $(this).data('message-id');
+            existingContainers[messageId] = $(this);
+          });
+          
+          activeFiles.forEach((file, index) => {
+            const percentage = Math.round((file.downloaded_bytes / file.total_bytes) * 100);
+            const downloadedMB = (file.downloaded_bytes / (1024 * 1024)).toFixed(2);
+            const totalMB = (file.total_bytes / (1024 * 1024)).toFixed(2);
+            const speedKB = Math.round(file.download_speed / 1024);
+            
+            const progressId = `concurrent-progress-${file.message_id}`;
+            const fileKey = file.message_id.toString();
+            
+            // 檢查是否需要更新（避免無意義的重複更新）
+            const lastProgress = lastFileProgress[fileKey];
+            const needsUpdate = !lastProgress || 
+              Math.abs(lastProgress.percentage - percentage) >= 1 || // 進度變化至少1%
+              Math.abs(lastProgress.speedKB - speedKB) > 10; // 速度變化超過10KB/s
+            
+            if (!needsUpdate && existingContainers[file.message_id]) {
+              // 跳過更新，保留現有進度條
+              delete existingContainers[file.message_id];
+              return;
+            }
+            
+            // 更新進度記錄
+            lastFileProgress[fileKey] = { percentage, speedKB };
+            
+            // 檢查是否已存在此檔案的進度條
+            if (existingContainers[file.message_id]) {
+              // 更新現有進度條，避免重新創建
+              const existing = existingContainers[file.message_id];
+              
+              // 獲取進度條元素（只獲取一次）
+              const progressBar = existing.find('.layui-progress-bar');
+              const progressFilter = `file-progress-${file.message_id}`;
+              
+              // 檢查是否需要更新顏色（避免不必要的DOM操作）
+              const currentPercentage = parseInt(progressBar.attr('lay-percent') || '0');
+              const needsColorUpdate = (
+                (currentPercentage <= 30 && percentage > 30) ||
+                (currentPercentage > 30 && currentPercentage < 100 && percentage === 100) ||
+                (currentPercentage > 30 && percentage <= 30)
+              );
+              
+              // 如果需要顏色更新，先更新顏色
+              if (needsColorUpdate) {
+                progressBar.removeClass('layui-bg-red layui-bg-blue layui-bg-green');
+                if (percentage > 30 && percentage < 100) {
+                  progressBar.addClass('layui-bg-blue');
+                } else if (percentage > 0 && percentage <= 30) {
+                  progressBar.addClass('layui-bg-red');
+                } else if (percentage == 100) {
+                  progressBar.addClass('layui-bg-green');
+                }
+              }
+              
+              // 使用 Layui 的 element.progress 方法來獲得流暢動畫
+              try {
+                element.progress(progressFilter, percentage + '%');
+                // 延遲更新文字信息，讓動畫先完成
+                setTimeout(() => {
+                  existing.find('.downloaded-size').text(downloadedMB);
+                  existing.find('.total-size').text(totalMB);
+                  existing.find('.download-speed').text(speedKB);
+                }, 50);
+              } catch (e) {
+                // 如果 Layui 方法失敗，使用平滑的 CSS 動畫
+                progressBar.css({
+                  'width': percentage + '%',
+                  'transition': 'width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                });
+                progressBar.attr('lay-percent', percentage + '%');
+                
+                // 立即更新文字信息（因為沒有Layui動畫）
+                existing.find('.downloaded-size').text(downloadedMB);
+                existing.find('.total-size').text(totalMB);
+                existing.find('.download-speed').text(speedKB);
+              }
+              
+              delete existingContainers[file.message_id];
+            } else {
+              // 創建新的進度條
+              const progressHtml = `
+                <div data-message-id="${file.message_id}" style="
+                  margin-bottom: 15px; 
+                  padding: 15px; 
+                  border: 2px solid #009688; 
+                  border-radius: 8px; 
+                  box-shadow: 0 2px 8px rgba(0,150,136,0.15);
+                  background: linear-gradient(135deg, #f8fffe 0%, #f0fffe 100%);
+                  position: relative;
+                  overflow: hidden;
+                ">
+                  <div style="
+                    position: absolute; 
+                    top: 0; 
+                    right: 0; 
+                    background: #009688; 
+                    color: white; 
+                    padding: 2px 8px; 
+                    font-size: 10px; 
+                    border-bottom-left-radius: 6px;
+                  ">
+                    ID: ${file.message_id}
+                  </div>
+                  <div style="
+                    font-size: 12px; 
+                    font-weight: bold; 
+                    margin-bottom: 8px; 
+                    color: #00695c;
+                    padding-right: 60px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  ">
+                    📁 ${file.name}
+                  </div>
+                  <div style="width: 80%; margin-bottom: 8px;">
+                    <div class="layui-progress layui-progress-big" lay-showpercent="true" lay-filter="file-progress-${file.message_id}">
+                      <div class="layui-progress-bar ${(percentage > 30 && percentage < 100) ? 'layui-bg-blue' : (percentage > 0 && percentage <= 30) ? 'layui-bg-red' : (percentage == 100) ? 'layui-bg-green' : ''}" lay-percent="${percentage}%"></div>
+                    </div>
+                  </div>
+                  <div style="
+                    font-size: 10px; 
+                    color: #666; 
+                    display: flex; 
+                    justify-content: space-between;
+                    align-items: center;
+                  ">
+                    <span>📊 <span class="downloaded-size">${downloadedMB}</span> / <span class="total-size">${totalMB}</span> MB</span>
+                    <span style="
+                      background: #4caf50; 
+                      color: white; 
+                      padding: 2px 6px; 
+                      border-radius: 10px; 
+                      font-size: 9px;
+                    ">
+                      ⚡ <span class="download-speed">${speedKB}</span> KB/s
+                    </span>
+                  </div>
+                </div>
+              `;
+              
+              container.append(progressHtml);
+              // 重新渲染 Layui 元素，讓新的進度條可以使用 element.progress 方法
+              element.render();
+            }
+          });
+          
+          // 移除已完成的進度條並清理進度記錄
+          Object.keys(existingContainers).forEach(messageId => {
+            existingContainers[messageId].remove();
+            // 清理對應的進度記錄
+            delete lastFileProgress[messageId];
+          });
+          
+          console.log(`Concurrent progress: ${activeFiles.length} files downloading`);
+        } else {
+          $('#concurrent-progress-section').hide();
+          // 清理所有進度記錄
+          lastFileProgress = {};
+        }
+      }
+      
+      // 兼容原來的單一進度條函數
+      function updateFileProgress(fileName, downloadedBytes, totalBytes, downloadSpeed) {
+        // 這個函數現在主要用於兼容性，實際顯示由 updateConcurrentProgress 處理
+        console.log(`File progress: ${fileName} - ${downloadedBytes}/${totalBytes} bytes @ ${downloadSpeed} B/s`);
+      }
+      
+      // 追蹤下載監控狀態
+      let monitoringCount = 0;
+      let lastCompletedCount = 0;
+      
+      function startDownloadMonitoring() {
+        clearInterval(downloadMonitoringInterval);
+        monitoringCount = 0;
+        lastCompletedCount = 0;
+        
+        downloadMonitoringInterval = setInterval(() => {
+          monitoringCount++;
+          
+          // 獲取下載進度和總下載速度
+          $.ajax({
+            url: '/get_download_progress',
+            type: 'GET',
+            success: function(response) {
+              console.log('Progress response:', response);
+              console.log(`Frontend Progress Debug: completed=${response.completed_count}, total=${response.total_count}, active=${response.active}`);
+              if (response.success) {
+                // 檢查是否有新的完成項目
+                if (response.completed_count > lastCompletedCount) {
+                  console.log(`Progress updated: ${lastCompletedCount} -> ${response.completed_count}`);
+                  lastCompletedCount = response.completed_count;
+                  
+                  // 每有新的完成項目時，更新下載歷史
+                  setTimeout(() => {
+                    loadDownloadHistory(currentPage);
+                    loadGroups();
+                  }, 500);
+                }
+                
+                // 更新任務總進度（包含下載速度，直接從response中獲取）
+                updateTaskProgress(
+                  response.completed_count,
+                  response.total_count,
+                  response.status_text,
+                  response.total_download_speed
+                );
+                
+                // 更新並發文件進度
+                if (response.current_files && Object.keys(response.current_files).length > 0) {
+                  updateConcurrentProgress(response.current_files);
+                } else {
+                  $('#concurrent-progress-section').hide();
+                }
+                
+                // 每隔10秒定期更新頁面資料（如果下載還在進行中）
+                if (monitoringCount % 5 === 0 && response.active) {
+                  console.log('定期更新頁面資料...');
+                  loadDownloadHistory(currentPage);
+                  loadGroups();
+                }
+              }
+            },
+            error: function() {
+              console.log('Failed to get download progress');
+            }
+          });
+        }, 2000); // 每2秒檢查一次
+      }
+
+      // 下載控制相關函數
+      let downloadPaused = false;
+      
+      window.toggleDownloadState = function() {
+        if (downloadPaused) {
+          // 恢復下載
+          $.ajax({
+            url: '/resume_download',
+            type: 'POST',
+            success: function(response) {
+              if (response.success) {
+                downloadPaused = false;
+                $('#download_control_text').text('暫停下載');
+                layer.msg('已恢復下載', {icon: 1});
+                startDownloadMonitoring();
+              }
+            }
+          });
+        } else {
+          // 暫停下載
+          $.ajax({
+            url: '/pause_download',
+            type: 'POST',
+            success: function(response) {
+              if (response.success) {
+                downloadPaused = true;
+                $('#download_control_text').text('恢復下載');
+                layer.msg('已暫停下載', {icon: 1});
+                clearInterval(downloadMonitoringInterval);
+              }
+            }
+          });
+        }
+      }
+
+      // 將函數附加到全域作用域
+      window.startAllDownloads = function() {
+        console.log('startAllDownloads called');
+        
+        // 首先檢查是否有活躍的下載會話
+        $.ajax({
+          url: '/get_download_progress',
+          type: 'GET',
+          success: function(response) {
+            if (response.success && response.session && response.session.active) {
+              layer.confirm('偵測到正在進行的下載任務，是否要停止當前任務並開始新的下載？', {
+                icon: 3,
+                title: '下載衝突'
+              }, function(index) {
+                layer.close(index);
+                proceedWithNewDownload();
+              });
+            } else {
+              proceedWithNewDownload();
+            }
+          },
+          error: function() {
+            proceedWithNewDownload();
+          }
+        });
+      }
+      
+      function proceedWithNewDownload() {
+        console.log('proceedWithNewDownload called');
+        
+        // 檢查是否有選中的項目
+        let selectedTasks = [];
+        $('.task-checkbox:checked').each(function() {
+          let value = $(this).val().split(',');
+          selectedTasks.push({
+            chat_id: value[0],
+            message_id: parseInt(value[1])
+          });
+        });
+        
+        if (selectedTasks.length === 0) {
+          layer.confirm('沒有選擇任何項目。是否要自動選擇所有待下載的項目？', {
+            icon: 3,
+            title: '提示',
+            btn: ['選擇待下載項目', '取消']
+          }, function(index) {
+            layer.close(index);
+            selectPendingTasks();
+            // 再次檢查是否有選中項目
+            setTimeout(() => {
+              const nowSelected = $('.task-checkbox:checked').length;
+              if (nowSelected > 0) {
+                layer.confirm(`已選擇 ${nowSelected} 個項目，確定要開始下載嗎？`, {icon: 3, title: '確認下載'}, function(confirmIndex) {
+                  layer.close(confirmIndex);
+                  // 重新調用下載函數
+                  let newSelectedTasks = [];
+                  $('.task-checkbox:checked').each(function() {
+                    let value = $(this).val().split(',');
+                    newSelectedTasks.push({
+                      chat_id: value[0],
+                      message_id: parseInt(value[1])
+                    });
+                  });
+                  startDownloadWithTasks(newSelectedTasks);
+                });
+              } else {
+                layer.msg('沒有找到待下載的項目', {icon: 2});
+              }
+            }, 100);
+          });
+          return;
+        }
+        
+        startDownloadWithTasks(selectedTasks);
+      }
+      
+      function startDownloadWithTasks(selectedTasks) {
+        layer.confirm(`確定要啟動下載 ${selectedTasks.length} 個選中項目嗎？`, {icon: 3, title: '確認啟動'}, function(index) {
+          console.log('Confirmation accepted, making AJAX request for selected tasks:', selectedTasks);
+          $.ajax({
+            url: '/start_selected_download',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({tasks: selectedTasks}),
+            beforeSend: function() {
+              console.log('Making request to /start_selected_download');
+            },
+            success: function(response) {
+              console.log('Response received:', response);
+              if (response.success) {
+                layer.msg(response.message, {icon: 1});
+                
+                // 顯示進度條並開始監控
+                showDownloadProgress(selectedTasks.length);
+                lastCompletedCount = 0; // 重置完成計數
+                startDownloadMonitoring();
+                // 顯示下載控制按鈕
+                $('#download_control').show();
+                downloadPaused = false;
+                $('#download_control_text').text('暫停下載');
+                
+                // 重新載入下載歷史
+                setTimeout(() => {
+                  loadDownloadHistory(currentPage);
+                }, 2000);
+              } else {
+                layer.msg('啟動失敗: ' + response.error, {icon: 2});
+              }
+            },
+            error: function(xhr, status, error) {
+              console.log('AJAX error:', xhr, status, error);
+              layer.msg('啟動請求失敗: ' + error, {icon: 2});
+            }
+          });
+          layer.close(index);
+        });
+      }
+
+      // 表單提交處理
+      layui.form.on('submit(submit-download)', function(data) {
+        const formData = data.field;
+        
+        if (!formData.chat_id || !formData.message_ids) {
+          layer.msg("請填寫完整資訊", {icon: 2});
+          return false;
         }
 
+        $.ajax({
+          url: "/add_custom_download",
+          type: "POST",
+          contentType: "application/json",
+          data: JSON.stringify(formData),
+          dataType: "json",
+          success: function(result) {
+            if (result.success) {
+              layer.msg(result.message, {icon: 1});
+              $("textarea[name='message_ids']").val(''); // 清空輸入框
+              loadGroups(); // 重新載入群組資料
+              loadDownloadHistory(1); // 重新載入下載歷史，回到第一頁
+            } else {
+              layer.msg("添加失敗: " + result.error, {icon: 2});
+            }
+          },
+          error: function() {
+            layer.msg("請求失敗", {icon: 2});
+          }
+        });
+        
+        return false;
+      });
+
+      // 修改原有的標籤切換監聽，添加自訂下載功能
+      element.on('tab(telegram_media_downloader)', function(data) {
         if (data.index == 0) {
           update_download_list_int = self.setInterval(update_download_list, 1000);
+        } else {
+          clearInterval(update_download_list_int);
         }
 
         if (data.index != 1) {
@@ -304,6 +2114,63 @@
           update_already_download_list_int = self.setInterval(update_already_download_list, 1000);
         }
 
+        // 分頁切換事件
+        if (data.index == 0) {
+          // 下載管理分頁
+          loadGroups();
+          loadDownloadHistory();
+        } else if (data.index == 1) {
+          // 群組管理分頁
+          loadGroups();
+        }
+      });
+
+      // 頁面加載時初始化功能
+      console.log('=== Page initialization starting ===');
+      loadGroups();
+      loadAllGroupOptions(); // 載入所有群組選項用於篩選
+      loadDownloadHistory();
+      console.log('=== Page initialization completed ===');
+      
+      // 初始化搜索功能
+      $('#group-search').on('input', function() {
+        searchGroups();
+      });
+      
+      // 使用事件委派處理群組管理按鈕
+      $(document).on('click', '.btn-edit-group', function() {
+        const chatId = $(this).data('chat-id');
+        const groupName = $(this).data('group-name');
+        editGroupName(chatId, groupName);
+      });
+      
+      $(document).on('click', '.btn-clear-group', function() {
+        const chatId = $(this).data('chat-id');
+        clearGroupIds(chatId);
+      });
+      
+      
+      $(document).on('click', '.btn-check-access', function() {
+        const chatId = $(this).data('chat-id');
+        checkGroupAccess(chatId);
+      });
+      
+      $(document).on('click', '.btn-delete-group', function() {
+        const chatId = $(this).data('chat-id');
+        deleteGroup(chatId);
+      });
+      
+      
+      // 檢查是否有活躍的下載會話需要恢復
+      checkAndResumeActiveSession();
+      
+      // 篩選下拉選單監聽事件
+      layui.form.on('select(group-filter)', function(data) {
+        applyFilters();
+      });
+      
+      layui.form.on('select(status-filter)', function(data) {
+        applyFilters();
       });
 
     });
