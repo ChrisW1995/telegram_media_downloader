@@ -208,11 +208,18 @@ class DownloadBot:
                 logger.warning(f"set allowed_user_ids error: {e}")
 
         admin = await self.client.get_me()
-        self.admin_id = admin.id  # 儲存管理員ID
-        self.allowed_user_ids.append(admin.id)
+        # 管理員就是程式運行者（當前客戶端用戶）
+        self.admin_id = admin.id
+        
+        # 管理員不需要在allowed_user_ids列表中，因為管理員有最高權限
+        # allowed_user_ids中只包含其他被允許使用的用戶
+        
+        # 創建包含管理員和其他允許用戶的完整列表，用於指令過濾器
+        all_authorized_users = [self.admin_id] + self.allowed_user_ids
         
         logger.info(f"Bot initialized with admin ID: {self.admin_id}")
         logger.info(f"Allowed user IDs: {self.allowed_user_ids}")
+        logger.info(f"All authorized users (admin + allowed): {all_authorized_users}")
         logger.info(f"Pending user IDs: {self.pending_user_ids}")
 
         await self.bot.set_bot_commands(commands)
@@ -221,49 +228,49 @@ class DownloadBot:
             MessageHandler(
                 download_from_bot,
                 filters=pyrogram.filters.command(["download"])
-                & pyrogram.filters.user(self.allowed_user_ids),
+                & pyrogram.filters.user(all_authorized_users),
             )
         )
         self.bot.add_handler(
             MessageHandler(
                 forward_messages,
                 filters=pyrogram.filters.command(["forward"])
-                & pyrogram.filters.user(self.allowed_user_ids),
+                & pyrogram.filters.user(all_authorized_users),
             )
         )
         self.bot.add_handler(
             MessageHandler(
                 download_forward_media,
                 filters=pyrogram.filters.media
-                & pyrogram.filters.user(self.allowed_user_ids),
+                & pyrogram.filters.user(all_authorized_users),
             )
         )
         self.bot.add_handler(
             MessageHandler(
                 download_from_link,
                 filters=pyrogram.filters.regex(r"^https://t.me.*")
-                & pyrogram.filters.user(self.allowed_user_ids),
+                & pyrogram.filters.user(all_authorized_users),
             )
         )
         self.bot.add_handler(
             MessageHandler(
                 set_listen_forward_msg,
                 filters=pyrogram.filters.command(["listen_forward"])
-                & pyrogram.filters.user(self.allowed_user_ids),
+                & pyrogram.filters.user(all_authorized_users),
             )
         )
         self.bot.add_handler(
             MessageHandler(
                 help_command,
                 filters=pyrogram.filters.command(["help"])
-                & pyrogram.filters.user(self.allowed_user_ids),
+                & pyrogram.filters.user(all_authorized_users),
             )
         )
         self.bot.add_handler(
             MessageHandler(
                 get_info,
                 filters=pyrogram.filters.command(["get_info"])
-                & pyrogram.filters.user(self.allowed_user_ids),
+                & pyrogram.filters.user(all_authorized_users),
             )
         )
         self.bot.add_handler(
@@ -276,14 +283,14 @@ class DownloadBot:
             MessageHandler(
                 set_language,
                 filters=pyrogram.filters.command(["set_language"])
-                & pyrogram.filters.user(self.allowed_user_ids),
+                & pyrogram.filters.user(all_authorized_users),
             )
         )
         self.bot.add_handler(
             MessageHandler(
                 add_filter,
                 filters=pyrogram.filters.command(["add_filter"])
-                & pyrogram.filters.user(self.allowed_user_ids),
+                & pyrogram.filters.user(all_authorized_users),
             )
         )
 
@@ -291,13 +298,13 @@ class DownloadBot:
             MessageHandler(
                 stop,
                 filters=pyrogram.filters.command(["stop"])
-                & pyrogram.filters.user(self.allowed_user_ids),
+                & pyrogram.filters.user(all_authorized_users),
             )
         )
 
         self.bot.add_handler(
             CallbackQueryHandler(
-                on_query_handler, filters=pyrogram.filters.user(self.allowed_user_ids)
+                on_query_handler, filters=pyrogram.filters.user(all_authorized_users)
             )
         )
         
@@ -334,9 +341,13 @@ class DownloadBot:
 
         self.client.add_handler(MessageHandler(listen_forward_msg))
 
+        # 只向管理員發送初始化訊息（版本資訊等）
         try:
-            await send_help_str(self.bot, admin.id)
-        except Exception:
+            if self.admin_id:
+                await send_help_str(self.bot, self.admin_id)
+                logger.info(f"Sent initialization message to admin ID: {self.admin_id}")
+        except Exception as e:
+            logger.warning(f"Failed to send initialization message to admin: {e}")
             pass
 
         self.reply_task = _bot.app.loop.create_task(_bot.update_reply_message())
@@ -345,7 +356,7 @@ class DownloadBot:
             MessageHandler(
                 forward_to_comments,
                 filters=pyrogram.filters.command(["forward_to_comments"])
-                & pyrogram.filters.user(self.allowed_user_ids),
+                & pyrogram.filters.user(all_authorized_users),
             )
         )
 
@@ -355,9 +366,21 @@ class DownloadBot:
         user_name = message.from_user.first_name or "未知用戶"
         user_username = message.from_user.username
 
+        # 檢查是否為管理員
+        if user_id == self.admin_id:
+            # 管理員執行/start時顯示完整的help資訊
+            await help_command(client, message)
+            return
+        
         # 檢查用戶是否已在允許列表中
         if user_id in self.allowed_user_ids:
-            await help_command(client, message)
+            # 其他被允許的用戶只顯示簡單歡迎訊息
+            await client.send_message(
+                user_id,
+                f"👋 歡迎 {user_name}！\n\n"
+                f"✅ 您已獲得使用權限。\n"
+                f"💡 輸入 /help 查看可用指令。"
+            )
             return
 
         # 檢查用戶是否已在待允許列表中

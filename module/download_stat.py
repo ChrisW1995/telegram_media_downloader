@@ -13,6 +13,7 @@ class DownloadState(Enum):
 
     Downloading = 1
     StopDownload = 2
+    Cancelled = 3
 
 
 _download_result: dict = {}

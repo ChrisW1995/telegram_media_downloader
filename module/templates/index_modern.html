@@ -9,10 +9,9 @@
   <!-- Modern CSS Framework -->
   <link href="{{ url_for('static', filename='css/modern.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/progress.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/mobile.css') }}" rel="stylesheet">
   
   <!-- Icons -->
-  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js" rel="stylesheet">
   
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📥</text></svg>">
@@ -37,7 +36,7 @@
         
         <div class="flex items-center gap-md">
           <!-- Global Download Control -->
-          <button id="global-download-control" class="glass-btn glass-btn-secondary" style="display: none;" onclick="toggleGlobalDownloadState()"
+          <button id="global-download-control" class="modern-btn modern-btn-secondary" style="display: none;" onclick="toggleGlobalDownloadState()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="6" y="4" width="4" height="16"/>
               <rect x="14" y="4" width="4" height="16"/>
@@ -103,151 +102,71 @@
           </div>
         </div>
 
-        <!-- Hidden elements for progress tracking (not visible but needed for data sync) -->
-        <div style="display: none;">
-          <span id="overall-completed">0</span>
-          <span id="overall-total">0</span>
-          <span id="overall-speed">0.00 B/s</span>
-          <span id="overall-status-text">準備開始下載...</span>
-          <div id="overall-progress-bar" style="width: 0%;">
-            <div id="overall-progress-text">0%</div>
-          </div>
-          <span id="concurrent-count">0</span>
-          <div id="concurrent-downloads-container"></div>
-          <button id="pause-download-btn" style="display: none;"></button>
-          <button id="resume-download-btn" style="display: none;"></button>
-          <button id="cancel-download-btn" style="display: none;"></button>
-        </div>
-
-        <!-- Floating Download Progress Modal -->
-        <div class="floating-progress-modal" id="floating-progress-modal" style="display: none;">
-          <div class="floating-progress-header">
-            <div class="floating-progress-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7,10 12,15 17,10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              下載進度
-            </div>
-            <div class="floating-progress-controls">
-              <button class="floating-btn floating-btn-minimize" onclick="minimizeProgressModal()" title="最小化">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </button>
-              <button class="floating-btn floating-btn-close" onclick="closeProgressModal()" title="關閉">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-          
-          <div class="floating-progress-content">
-            <div class="floating-progress-stats">
-              <div class="floating-stat-compact">
-                <div class="floating-stat-row">
-                  <span class="floating-stat-item">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="9,11 12,14 22,4"/>
-                    </svg>
-                    已完成 <strong id="floating-completed-count">0</strong>
-                  </span>
-                  <span class="floating-stat-item">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <polyline points="12,6 12,12 16,14"/>
-                    </svg>
-                    剩餘 <strong id="floating-remaining-count">0</strong>
-                  </span>
-                </div>
-                <div class="floating-stat-row">
-                  <span class="floating-stat-speed">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                      <polyline points="8,9 12,5 16,9"/>
-                    </svg>
-                    <strong id="floating-overall-speed">0.00 B/s</strong>
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div class="floating-progress-bar-container">
-              <div class="floating-progress-bar">
-                <div class="floating-progress-fill" id="floating-progress-bar" style="width: 0%;">
-                  <div class="floating-progress-text" id="floating-progress-text">0%</div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="floating-progress-actions">
-              <button class="floating-action-btn floating-btn-pause" onclick="pauseDownload()" id="floating-pause-btn">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="6" y="4" width="4" height="16"/>
-                  <rect x="14" y="4" width="4" height="16"/>
-                </svg>
-                暫停
-              </button>
-              <button class="floating-action-btn floating-btn-resume" onclick="resumeDownload()" id="floating-resume-btn" style="display: none;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- Download Control Panel -->
+        <div class="modern-card">
+          <div class="modern-card-header">
+            <h2 class="modern-card-title">下載控制中心</h2>
+            <div class="modern-card-actions">
+              <button class="modern-btn modern-btn-success" onclick="startSelectedDownloads()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="5,3 19,12 5,21 5,3"/>
                 </svg>
-                繼續
+                啟動選中項目
               </button>
-              <button class="floating-action-btn floating-btn-cancel" onclick="cancelDownload()" id="floating-cancel-btn">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="15" y1="9" x2="9" y2="15"/>
-                  <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-                取消
-              </button>
-            </div>
-            
-            <!-- Concurrent Downloads in Floating Modal -->
-            <div class="floating-concurrent-section" id="floating-concurrent-section" style="display: none;">
-              <div class="floating-concurrent-header">
-                <h4 class="floating-concurrent-title">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
-                  </svg>
-                  並發下載
-                  <span class="floating-concurrent-badge" id="floating-concurrent-count">0</span>
-                </h4>
-                <button class="floating-btn floating-btn-toggle" onclick="toggleConcurrentSection()" id="concurrent-toggle-btn">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6,9 12,15 18,9"/>
-                  </svg>
-                </button>
-              </div>
-              <div class="floating-concurrent-content" id="floating-concurrent-content">
-                <div class="floating-concurrent-grid" id="floating-concurrent-container">
-                  <!-- Concurrent download items will be added here dynamically -->
-                </div>
-              </div>
             </div>
           </div>
-        </div>
-        
-        <!-- Minimized Progress Indicator -->
-        <div class="minimized-progress-indicator" id="minimized-progress-indicator" style="display: none;" onclick="restoreProgressModal()">
-          <div class="minimized-progress-content">
-            <div class="minimized-progress-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7,10 12,15 17,10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-            </div>
-            <div class="minimized-progress-info">
-              <span class="minimized-progress-label">下載中</span>
-              <div class="minimized-progress-bar">
-                <div class="minimized-progress-fill" id="minimized-progress-bar" style="width: 0%;"></div>
+          <div class="modern-card-body">
+            <p class="text-secondary mb-lg">選擇要下載的項目，然後點擊「啟動選中項目」來開始下載</p>
+            
+            <!-- Download Progress Area -->
+            <div id="download-progress-area" class="download-progress-container" style="display: none;">
+              <!-- Overall Progress -->
+              <div class="overall-progress-section">
+                <div class="overall-progress-header">
+                  <h3 style="margin: 0; font-size: 16px; font-weight: 600;">
+                    總下載進度 - <span id="overall-status-text">準備開始下載...</span>
+                  </h3>
+                  <div class="overall-progress-stats">
+                    <div class="progress-stat">
+                      <svg class="progress-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 12l2 2 4-4"/>
+                        <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+                      </svg>
+                      已完成 <span class="progress-stat-value" id="overall-completed">0</span> / <span class="progress-stat-value" id="overall-total">0</span> 個任務
+                    </div>
+                    <div class="progress-stat">
+                      <svg class="progress-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7,10 12,15 17,10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      <span class="progress-stat-value" id="overall-speed">0.00 B/s</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="modern-progress-enhanced">
+                  <div class="modern-progress-bar-enhanced" id="overall-progress-bar" style="width: 0%;">
+                    <div class="progress-text" id="overall-progress-text">0%</div>
+                  </div>
+                </div>
               </div>
-              <span class="minimized-progress-percentage" id="minimized-progress-text">0%</span>
+
+              <!-- Concurrent Downloads -->
+              <div id="concurrent-downloads-section" class="concurrent-downloads-section" style="display: none;">
+                <div class="concurrent-downloads-header">
+                  <h3 class="concurrent-downloads-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+                    </svg>
+                    並發下載進度
+                    <span class="concurrent-count-badge" id="concurrent-count">0</span>
+                  </h3>
+                </div>
+                <div class="concurrent-downloads-grid" id="concurrent-downloads-container">
+                  <!-- Concurrent download items will be dynamically generated here -->
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -278,7 +197,7 @@
               
               <div class="modern-form-group">
                 <div class="flex gap-md">
-                  <button type="submit" class="glass-btn glass-btn-primary flex-1">
+                  <button type="submit" class="modern-btn modern-btn-primary flex-1">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                       <polyline points="7,10 12,15 17,10"/>
@@ -286,7 +205,7 @@
                     </svg>
                     立即加入佇列
                   </button>
-                  <button type="reset" class="glass-btn glass-btn-secondary">
+                  <button type="reset" class="modern-btn modern-btn-secondary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M3 6h18"/>
                       <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
@@ -305,39 +224,22 @@
           <div class="modern-card-header">
             <h2 class="modern-card-title">下載歷史管理</h2>
             <div class="modern-card-actions">
-              <div class="selected-count-display">
-                <span class="selected-count-badge" id="selected-count-badge">
-                  已選中 <strong id="selected-count">0</strong> 個項目
-                </span>
-              </div>
-              <button class="glass-btn glass-btn-sm glass-btn-secondary" onclick="selectAllTasks()">
+              <button class="modern-btn modern-btn-sm modern-btn-secondary" onclick="selectAllTasks()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="9,11 12,14 22,4"/>
                   <path d="M21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"/>
                 </svg>
                 全選
               </button>
-              <button class="glass-btn glass-btn-sm glass-btn-secondary" onclick="deselectAllTasks()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3,6 5,6 21,6"/>
-                  <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6"/>
-                </svg>
-                取消全選
-              </button>
-              <button class="glass-btn glass-btn-sm glass-btn-warning" onclick="selectPendingTasks()">
+              <button class="modern-btn modern-btn-sm modern-btn-warning" onclick="selectPendingTasks()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10"/>
                   <polyline points="12,6 12,12 16,14"/>
                 </svg>
                 選擇待下載
               </button>
-              <button class="glass-btn glass-btn-sm glass-btn-success" onclick="startSelectedDownloads()" id="start-download-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="5,3 19,12 5,21 5,3"/>
-                </svg>
-                啟動下載
-              </button>
-              <button class="glass-btn glass-btn-sm glass-btn-info" onclick="cleanDownloadedItems()">
+              <button class="modern-btn modern-btn-sm modern-btn-secondary" onclick="deselectAllTasks()">取消全選</button>
+              <button class="modern-btn modern-btn-sm modern-btn-success" onclick="cleanDownloadedItems()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M3 6h18"/>
                   <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
@@ -345,7 +247,7 @@
                 </svg>
                 清理已下載
               </button>
-              <button class="glass-btn glass-btn-sm glass-btn-danger" onclick="removeSelectedTasks()">
+              <button class="modern-btn modern-btn-sm modern-btn-danger" onclick="removeSelectedTasks()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3,6 5,6 21,6"/>
                   <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6M8,6V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
@@ -357,17 +259,42 @@
             </div>
           </div>
           <div class="modern-card-body">
-            <!-- Filter Toolbar -->
-            <div class="history-filter-toolbar">
-              <div class="filter-row">
-                <div class="filter-controls">
-                  <div class="filter-item">
-                    <select id="group-filter" class="modern-form-select filter-select">
+            <!-- Filter Controls -->
+            <div class="modern-card mb-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+              <div class="modern-card-body">
+                <h3 class="mb-md" style="color: white; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                  </svg>
+                  智能篩選控制台
+                </h3>
+                
+                <div class="modern-grid modern-grid-3 gap-md">
+                  <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 8px; padding: 16px;">
+                    <label style="color: rgba(255,255,255,0.9); font-size: 13px; margin-bottom: 8px; display: block; font-weight: 500;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                      </svg>
+                      群組篩選
+                    </label>
+                    <select id="group-filter" class="modern-form-select" style="background: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.3);">
                       <option value="">🔍 全部群組</option>
                     </select>
                   </div>
-                  <div class="filter-item">
-                    <select id="status-filter" class="modern-form-select filter-select">
+                  
+                  <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 8px; padding: 16px;">
+                    <label style="color: rgba(255,255,255,0.9); font-size: 13px; margin-bottom: 8px; display: block; font-weight: 500;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                        <line x1="4" y1="22" x2="4" y2="15"/>
+                      </svg>
+                      狀態篩選
+                    </label>
+                    <select id="status-filter" class="modern-form-select" style="background: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.3);">
                       <option value="">📊 全部狀態</option>
                       <option value="pending">⏳ 待下載</option>
                       <option value="downloading">⚡ 下載中</option>
@@ -375,29 +302,38 @@
                       <option value="failed">❌ 失敗</option>
                     </select>
                   </div>
-                  <div class="filter-item">
-                    <button class="glass-btn glass-btn-sm glass-btn-secondary" onclick="clearFilters()">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M1 4v6h6"/>
-                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                  
+                  <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 8px; padding: 16px;">
+                    <label style="color: rgba(255,255,255,0.9); font-size: 13px; margin-bottom: 8px; display: block; font-weight: 500;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                        <polyline points="9,11 12,14 22,4"/>
+                        <path d="M21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"/>
                       </svg>
-                      清除篩選
-                    </button>
+                      操作
+                    </label>
+                    <div class="flex gap-sm">
+                      <button class="modern-btn modern-btn-primary" onclick="applyFilters()" style="flex: 1; background: rgba(0, 122, 255, 0.8); border: none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="11" cy="11" r="8"/>
+                          <path d="M21 21l-4.35-4.35"/>
+                        </svg>
+                        篩選
+                      </button>
+                      <button class="modern-btn modern-btn-secondary" onclick="clearFilters()" style="flex: 1; background: rgba(255,255,255,0.2); border: none; color: white;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M1 4v6h6"/>
+                          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                        </svg>
+                        清除
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div class="filter-stats">
-                  <span id="filtered-count" class="stats-badge">
+                
+                <div class="text-center mt-lg" style="padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2);">
+                  <span id="filtered-count" style="color: white; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; backdrop-filter: blur(5px); font-size: 14px;">
                     📋 顯示：0 項目
                   </span>
-                  <div class="pagination-controls">
-                    <label for="items-per-page">每頁：</label>
-                    <select id="items-per-page" class="modern-form-select items-per-page-select">
-                      <option value="10">10</option>
-                      <option value="20" selected>20</option>
-                      <option value="30">30</option>
-                      <option value="50">50</option>
-                    </select>
-                  </div>
                 </div>
               </div>
             </div>
@@ -442,14 +378,14 @@
               
               <div class="modern-form-group">
                 <div class="flex gap-md">
-                  <button type="submit" class="glass-btn glass-btn-success">
+                  <button type="submit" class="modern-btn modern-btn-success">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="12" y1="5" x2="12" y2="19"/>
                       <line x1="5" y1="12" x2="19" y2="12"/>
                     </svg>
                     新增群組
                   </button>
-                  <button type="button" class="glass-btn glass-btn-secondary" onclick="checkGroupAccess()">
+                  <button type="button" class="modern-btn modern-btn-secondary" onclick="checkGroupAccess()">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M9 12l2 2 4-4"/>
                       <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
@@ -467,15 +403,15 @@
           <div class="modern-card-header">
             <h2 class="modern-card-title">群組管理</h2>
             <div class="modern-card-actions">
-              <button class="glass-btn glass-btn-sm glass-btn-secondary" onclick="selectAllGroups()">全選</button>
-              <button class="glass-btn glass-btn-sm glass-btn-danger" onclick="deleteSelectedGroups()">
+              <button class="modern-btn modern-btn-sm modern-btn-secondary" onclick="selectAllGroups()">全選</button>
+              <button class="modern-btn modern-btn-sm modern-btn-danger" onclick="deleteSelectedGroups()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3,6 5,6 21,6"/>
                   <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6M8,6V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
                 </svg>
                 批量刪除
               </button>
-              <button class="glass-btn glass-btn-sm glass-btn-warning" onclick="clearSelectedGroups()">
+              <button class="modern-btn modern-btn-sm modern-btn-warning" onclick="clearSelectedGroups()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M3 6h18"/>
                   <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
@@ -496,6 +432,10 @@
   </div>
 
   <!-- JavaScript Dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="{{ url_for('static', filename='aes/crypto-js-master/core.js') }}"></script>
+  <script src="{{ url_for('static', filename='aes/crypto-js-master/enc-base64.js') }}"></script>
+  <script src="{{ url_for('static', filename='aes/crypto-js-master/aes.js') }}"></script>
   <script src="{{ url_for('static', filename='request/index.js') }}"></script>
   
   <!-- Modern JavaScript Implementation -->

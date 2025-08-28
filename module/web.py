@@ -173,11 +173,23 @@ def web_set_download_state():
 
     if state == "continue" and get_download_state() is DownloadState.StopDownload:
         set_download_state(DownloadState.Downloading)
-        return "pause"
+        return "continue"
 
     if state == "pause" and get_download_state() is DownloadState.Downloading:
         set_download_state(DownloadState.StopDownload)
-        return "continue"
+        return "pause"
+        
+    if state == "cancel":
+        set_download_state(DownloadState.Cancelled)
+        # Reset download progress when cancelled
+        global download_progress, active_download_session
+        download_progress['completed_count'] = 0
+        download_progress['total_count'] = 0
+        download_progress['active'] = False
+        download_progress['current_files'] = {}
+        active_download_session['active'] = False
+        active_download_session['total_tasks'] = 0
+        return "cancelled"
 
     return state
 
@@ -735,6 +747,17 @@ def get_download_history():
         group_filter = request.args.get('group_filter', '')
         status_filter = request.args.get('status_filter', '')
         
+        # Check if this is a force refresh request (after download completion)
+        force_refresh = request.args.get('_t', '')
+        if force_refresh and _app:
+            # Force reload config to get the latest target_ids
+            print(f"Force refresh requested with timestamp: {force_refresh}")
+            try:
+                _app.load_config()
+                print("Config reloaded successfully")
+            except Exception as e:
+                print(f"Failed to reload config: {e}")
+        
         history = []
         
         # 獲取群組標籤映射
@@ -1217,6 +1240,40 @@ def update_download_progress(completed, total, status_text="下載中..."):
     download_progress['completed_count'] = completed
     download_progress['total_count'] = total
     download_progress['status_text'] = status_text
+    print(f"✅ Progress updated: {completed}/{total} - {status_text}")
+    
+    # 更新會話狀態
+    _update_download_session_status(completed, total)
+
+
+@_flask_app.route("/force_update_progress", methods=["POST"])
+@login_required
+def force_update_progress():
+    """強制更新進度 - 測試用途"""
+    try:
+        data = request.get_json()
+        completed = data.get('completed_count', 0)
+        total = data.get('total_count', 0)
+        status_text = data.get('status_text', '測試中...')
+        
+        update_download_progress(completed, total, status_text)
+        
+        # Also set active to true for testing
+        global download_progress
+        download_progress['active'] = True
+        
+        return jsonify({
+            'success': True,
+            'message': f'Progress forced to {completed}/{total}',
+            'current_progress': download_progress
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+
+def _update_download_session_status(completed, total):
+    """更新下載會話狀態"""
+    global download_progress, active_download_session
     download_progress['active'] = completed < total
     
     # 更新會話狀態
@@ -1235,7 +1292,7 @@ def update_download_progress(completed, total, status_text="下載中..."):
         active_download_session['target_ids'] = {}
         active_download_session['total_tasks'] = 0
     
-    print(f"Task progress updated: {completed}/{total} - {status_text}")
+    print(f"Task session status updated: {completed}/{total} - Active: {download_progress['active']}")
 
 
 def update_file_progress(file_name="", downloaded_bytes=0, total_bytes=0, download_speed=0, message_id=None):

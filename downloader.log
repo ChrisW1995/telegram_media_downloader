@@ -1,0 +1,275 @@
+[05:26:43] Telegram Media Downloader v2.2.5,                          meta.py:18
+           Copyright (C) 2025 tangyoha <https://github.com/tangyoha>            
+           Licensed under the terms of the MIT License                meta.py:21
+                                                                                
+2025-08-26 05:26:43.939 | INFO     | utils.meta:print_meta:22 - Device: CPython 3.11.5 - Telegram Media Downloader 2.2.5
+2025-08-26 05:26:43.939 | INFO     | utils.meta:print_meta:23 - System: Darwin 24.6.0 (EN)
+ * Serving Flask app 'module.web'
+ * Debug mode: off
+2025-08-26 05:26:45.155 | SUCCESS  | __main__:main:792 - Successfully started (Press Ctrl+C to stop)
+2025-08-26 05:26:45.156 | INFO     | __main__:download_all_chat:716 - Custom download is enabled, skipping regular chat download
+2025-08-26 05:26:47.032 | INFO     | module.bot:start:206 - Added allowed user ID: 7588743028
+2025-08-26 05:26:47.238 | INFO     | module.bot:start:220 - Bot initialized with admin ID: 493539630
+2025-08-26 05:26:47.239 | INFO     | module.bot:start:221 - Allowed user IDs: [7588743028]
+2025-08-26 05:26:47.239 | INFO     | module.bot:start:222 - All authorized users (admin + allowed): [493539630, 7588743028]
+2025-08-26 05:26:47.239 | INFO     | module.bot:start:223 - Pending user IDs: []
+2025-08-26 05:26:47.707 | INFO     | module.bot:start:348 - Sent initialization message to admin ID: 493539630
+2025-08-26 05:27:35.962 | INFO     | module.custom_download:run_custom_download_for_selected:543 - Starting selected download for 1 chats
+2025-08-26 05:27:35.970 | INFO     | module.custom_download:run_custom_download_for_selected:549 - Clearing failed download records for selected items...
+2025-08-26 05:27:35.974 | INFO     | module.custom_download:download_custom_messages:181 - Starting custom download for 1 chats
+2025-08-26 05:27:35.974 | INFO     | module.custom_download:download_custom_messages:190 - Chat -1002634361114: 1 total, 0 marked as downloaded (will be checked for file existence)
+2025-08-26 05:27:35.974 | INFO     | module.custom_download:download_custom_messages:197 - Found 1 messages to process (main download logic will skip existing files)
+2025-08-26 05:27:35.975 | INFO     | module.custom_download:_download_chat_messages:207 - Downloading 1 messages from chat -1002634361114
+2025-08-26 05:27:36.389 | INFO     | module.custom_download:_download_chat_messages:223 - Successfully accessed chat -1002634361114: A战士father2026.08
+2025-08-26 05:27:36.595 | SUCCESS  | module.custom_download:download_custom_messages:203 - Custom download completed
+2025-08-26 05:27:36.595 | INFO     | module.custom_download:update_download_status:321 - Waiting for 1 downloads to complete...
+2025-08-26 05:27:36.595 | DEBUG    | module.custom_download:update_download_status:365 - Web progress updated: 0/1 - 下載中... (1 下載中, 0 已完成)
+2025-08-26 05:27:36.596 | INFO     | module.custom_download:update_download_status:371 - Download status: 1 downloading, 0 pending, 0 completed, waited 0s
+2025-08-26 05:27:36.798 | INFO     | __main__:download_media:542 - id=394 No media content found - skipping download (text-only message)
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_groups API called ===
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 411)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Returning groups: [{'chat_id': '-1002504980730', 'name': '网红体育生会员群', 'pending_count': 0}, {'chat_id': '-1002634361114', 'name': 'A战士father2026.08', 'pending_count': 1}, {'chat_id': '-1001355003597', 'name': '03🔵日本【JP】new', 'pending_count': 0}, {'chat_id': '-1002234837448', 'name': '🫧战士father2024.08~2025.08', 'pending_count': 0}]
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 411)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 0, 'completed_count': 0, 'status_text': '準備中...', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== start_selected_download API called ===
+Selected target_ids: {'-1002634361114': [394]}
+✅ Progress updated: 0/1 - 開始下載...
+Task session status updated: 0/1 - Active: True
+Selected download task created in main event loop
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '開始下載...', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '開始下載...', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '開始下載...', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '開始下載...', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '開始下載...', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '開始下載...', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '開始下載...', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+✅ Progress updated: 0/1 - 下載中... (1 下載中, 0 已完成)
+Task session status updated: 0/1 - Active: True
+Progress Debug: completed=0, total=1, downloading=1, pending=0
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '下載中... (1 下載中, 0 已完成)', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '下載中... (1 下載中, 0 已完成)', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+2025-08-26 05:27:38.597 | DEBUG    | module.custom_download:update_download_status:365 - Web progress updated: 1/1 - 下載中... (0 下載中, 1 已完成)
+2025-08-26 05:27:38.598 | INFO     | module.custom_download:update_download_status:374 - All downloads completed
+2025-08-26 05:27:38.599 | SUCCESS  | module.custom_download:update_download_status:397 - Skipped (already exists) message 394 from chat -1002634361114
+2025-08-26 05:27:38.599 | DEBUG    | module.custom_download:is_downloaded:98 - Checking file existence for message 394 in chat A战士father2026.08 (-1002634361114)
+2025-08-26 05:27:38.599 | DEBUG    | module.custom_download:is_downloaded:106 - Checking regular path: TGDL/A战士father2026.08
+2025-08-26 05:27:38.601 | DEBUG    | module.custom_download:is_downloaded:114 - Checking date directory: TGDL/A战士father2026.08/2025_08
+2025-08-26 05:27:38.602 | DEBUG    | module.custom_download:is_downloaded:106 - Checking bot path: /Users/chriswang/Documents/Py/TGDL/downloads_bot/A战士father2026.08
+2025-08-26 05:27:38.602 | DEBUG    | module.custom_download:is_downloaded:114 - Checking date directory: /Users/chriswang/Documents/Py/TGDL/downloads_bot/A战士father2026.08/2025_08
+2025-08-26 05:27:38.607 | INFO     | module.custom_download:is_downloaded:139 - Removed missing file from history: message 394 from chat -1002634361114
+2025-08-26 05:27:38.612 | SUCCESS  | module.custom_download:update_download_status:475 - Download completed: All 1 items finished successfully (including skipped)
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '下載中... (1 下載中, 0 已完成)', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '下載中... (1 下載中, 0 已完成)', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '下載中... (1 下載中, 0 已完成)', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '下載中... (1 下載中, 0 已完成)', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '下載中... (1 下載中, 0 已完成)', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 0, 'status_text': '下載中... (1 下載中, 0 已完成)', 'active': True, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+✅ Progress updated: 1/1 - 下載中... (0 下載中, 1 已完成)
+Task session status updated: 1/1 - Active: False
+Progress Debug: completed=1, total=1, downloading=0, pending=0
+✅ Progress updated: 1/1 - 下載完成! 全部 1 項目已完成
+Task session status updated: 1/1 - Active: False
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', {'-1002634361114': [394]})])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157261031
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157262050
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157263523
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157264042
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157264971
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157265318
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157266444
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157267958
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157268226
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157270938
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157272071
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157275134
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157280133
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157282567
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157283136
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157285567
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157299928
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157302856
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157304798
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])
+Force refresh requested with timestamp: 1756157307805
+Config reloaded successfully
+Found target_ids in config: ordereddict([('-1002634361114', [394])])
+Added new pending item: -1002634361114:394
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+Progress API called: {'total_count': 1, 'completed_count': 1, 'status_text': '下載完成! 全部 1 項目已完成', 'active': False, 'current_files': {}, 'current_file': {'name': '', 'downloaded_bytes': 0, 'total_bytes': 0, 'download_speed': 0}}
+=== get_download_history API called ===
+_app: <module.app.Application object at 0x103fa4210>
+_app.config: ordereddict([('api_hash', '071ea901d6271a50e8f86b403b244826'), ('api_id', 29060182), ('bot_token', '8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8'), ('chat', [ordereddict([('chat_id', -1002634361114), ('last_read_message_id', 412)])]), ('custom_downloads', ordereddict([('enable', True), ('group_tags', ordereddict([('-1002504980730', '网红体育生会员群'), ('-1002634361114', 'A战士father2026.08'), ('-1001355003597', '03🔵日本【JP】new'), ('-1002234837448', '🫧战士father2024.08~2025.08')])), ('target_ids', ordereddict([('-1002634361114', [394])]))])), ('enable_download_txt', True), ('file_formats', ordereddict([('audio', ['all']), ('document', ['all']), ('video', ['all'])])), ('file_path_prefix', ['chat_title', 'media_datetime']), ('language', 'EN'), ('media_types', ['audio', 'video', 'video_note', 'voice']), ('save_path', 'TGDL'), ('web_port', 5001), ('bot_save_path', '/Users/chriswang/Documents/Py/TGDL/downloads_bot'), ('allowed_user_ids', [7588743028])])

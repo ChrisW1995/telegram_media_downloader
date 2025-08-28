@@ -88,10 +88,74 @@ class CustomDownloadManager:
         if not in_history:
             return False
         
-        # TODO: 這裡應該檢查實際檔案是否存在，但需要知道檔案路徑
-        # 暫時只依賴歷史記錄，但這會導致檔案被刪除後狀態不同步的問題
-        # 如果要完整檢查，需要重構檔案路徑生成邏輯
-        return True
+        # 檢查實際檔案是否存在
+        # 由於不知道確切的檔案名稱，我們需要檢查可能的路徑
+        try:
+            # 獲取群組標題
+            chat_title = self.app.config.get("custom_downloads", {}).get("group_tags", {}).get(chat_key, f"chat_{chat_key}")
+            chat_title = validate_title(chat_title)
+            
+            logger.debug(f"Checking file existence for message {message_id} in chat {chat_title} ({chat_key})")
+            
+            # 檢查兩種可能的保存路徑 (bot和regular)
+            for is_bot in [False, True]:
+                base_path = self.app.bot_save_path if is_bot else self.app.save_path
+                chat_path = os.path.join(base_path, chat_title)
+                path_type = "bot" if is_bot else "regular"
+                
+                logger.debug(f"Checking {path_type} path: {chat_path}")
+                
+                # 檢查聊天目錄是否存在
+                if os.path.exists(chat_path):
+                    def check_file_match(file_name):
+                        """檢查文件名是否匹配該訊息ID，支援兩種格式:
+                        1. {message_id} - {original_filename}
+                        2. {message_id}..{extension}
+                        """
+                        return (file_name.startswith(f"{message_id} - ") or 
+                                file_name.startswith(f"{message_id}.."))
+                    
+                    # 首先在群組根目錄中直接搜尋檔案
+                    try:
+                        for file_name in os.listdir(chat_path):
+                            file_path = os.path.join(chat_path, file_name)
+                            if os.path.isfile(file_path) and check_file_match(file_name):
+                                logger.debug(f"Found matching file in root: {file_path}")
+                                return True
+                    except OSError:
+                        pass
+                    
+                    # 然後搜尋所有子目錄 (包括日期目錄、web_downloads等)
+                    for sub_dir in os.listdir(chat_path):
+                        sub_path = os.path.join(chat_path, sub_dir)
+                        if os.path.isdir(sub_path):
+                            logger.debug(f"Checking subdirectory: {sub_path}")
+                            try:
+                                for file_name in os.listdir(sub_path):
+                                    if check_file_match(file_name):
+                                        file_path = os.path.join(sub_path, file_name)
+                                        logger.debug(f"Found matching file in subdir: {file_path}")
+                                        if os.path.isfile(file_path):
+                                            logger.debug(f"File exists and is valid: {file_path}")
+                                            return True
+                            except OSError:
+                                # 跳過無法讀取的目錄
+                                continue
+                else:
+                    logger.debug(f"Chat path does not exist: {chat_path}")
+        
+        except Exception as e:
+            logger.debug(f"Error checking file existence for message {message_id}: {e}")
+        
+        # 如果找不到檔案，從歷史記錄中移除
+        if chat_key in self.downloaded_ids and message_id in self.downloaded_ids[chat_key]:
+            self.downloaded_ids[chat_key].remove(message_id)
+            if not self.downloaded_ids[chat_key]:  # 如果列表為空，移除整個鍵
+                del self.downloaded_ids[chat_key]
+            self.save_history()
+            logger.info(f"Removed missing file from history: message {message_id} from chat {chat_id}")
+        
+        return False
 
     def get_pending_downloads(self, target_ids: Dict[Union[str, int], List[int]]) -> Dict[str, List[int]]:
         """Get list of message IDs that haven't been downloaded yet."""

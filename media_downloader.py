@@ -338,8 +338,22 @@ async def download_task(
         client, message, app.media_types, app.file_formats, node
     )
 
+    # Detailed message analysis for debugging
+    logger.info(f"id={message.id} Message analysis:")
+    logger.info(f"  - text: {repr(message.text)}")
+    logger.info(f"  - caption: {repr(message.caption)}")
+    logger.info(f"  - media: {message.media}")
+    logger.info(f"  - media type: {type(message.media)}")
+    if message.media:
+        logger.info(f"  - media attributes: {dir(message.media)}")
+    
+    logger.info(f"id={message.id} Text download check - enable_txt: {app.enable_download_txt}, has_text: {bool(message.text)}, has_media: {bool(message.media)}")
     if app.enable_download_txt and message.text and not message.media:
+        logger.info(f"id={message.id} Attempting to download text content")
         download_status, file_name = await save_msg_to_file(app, node.chat_id, message, node)
+        logger.info(f"id={message.id} Text download result: {download_status}, file: {file_name}")
+    else:
+        logger.info(f"id={message.id} Text download skipped - conditions not met")
 
     if not node.bot:
         app.set_download_id(node, message.id, download_status)
@@ -520,6 +534,7 @@ async def download_media(
                     if file_size or file_size == media_size:
                         logger.info(
                             f"id={message.id} {ui_file_name} "
+                            f"File path: {file_name} "
                             f"{_t('already download,download skipped')}.\n"
                         )
 
@@ -535,7 +550,20 @@ async def download_media(
             exc_info=True,
         )
         return DownloadStatus.FailedDownload, None
+    
+    # Debug message analysis
+    logger.info(f"id={message.id} Media analysis:")
+    logger.info(f"  - _media: {_media}")
+    logger.info(f"  - message.media: {message.media}")
+    logger.info(f"  - message.text: {repr(message.text)}")
+    logger.info(f"  - message.caption: {repr(message.caption)}")
+    logger.info(f"  - checked media_types: {media_types}")
+    for _type in media_types:
+        _type_value = getattr(message, _type, None)
+        logger.info(f"  - message.{_type}: {_type_value}")
+    
     if _media is None:
+        logger.info(f"id={message.id} No media content found - skipping download (text-only message)")
         return DownloadStatus.SkipDownload, None
 
     message_id = message.id
