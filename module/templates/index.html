@@ -25,12 +25,7 @@
       <div class="flex items-center justify-between">
         <div>
           <h1 class="app-title">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7,10 12,15 17,10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Telegram Media Downloader
+            📡 Telegram Media Downloader
           </h1>
           <p class="app-subtitle">現代化媒體下載管理平台</p>
         </div>
@@ -253,30 +248,30 @@
         </div>
 
         <!-- Batch Add Download IDs -->
-        <div class="modern-card">
-          <div class="modern-card-header">
-            <h2 class="modern-card-title">批量新增下載任務</h2>
+        <div class="glass-card">
+          <div class="glass-card-header">
+            <h2 class="glass-card-title">批量新增下載任務</h2>
           </div>
-          <div class="modern-card-body">
-            <form class="modern-form" id="custom-download-form">
-              <div class="modern-form-group">
-                <label class="modern-form-label" for="group-select">選擇群組</label>
-                <select name="chat_id" id="group-select" class="modern-form-select" required>
+          <div class="glass-card-body">
+            <form class="glass-form" id="custom-download-form">
+              <div class="glass-form-group">
+                <label class="glass-form-label" for="group-select">選擇群組</label>
+                <select name="chat_id" id="group-select" class="glass-form-select" required>
                   <option value="">請選擇群組...</option>
                 </select>
               </div>
               
-              <div class="modern-form-group">
-                <label class="modern-form-label" for="message-ids">訊息 ID</label>
-                <textarea name="message_ids" id="message-ids" class="modern-form-textarea" 
+              <div class="glass-form-group">
+                <label class="glass-form-label" for="message-ids">訊息 ID</label>
+                <textarea name="message_ids" id="message-ids" class="glass-form-textarea" 
                   placeholder="請輸入訊息ID，支援以下格式：&#10;單個ID：123&#10;多個ID：123,456,789&#10;範圍：123-130&#10;混合：123,456-460,789" 
                   rows="6"></textarea>
-                <div class="modern-form-help">
+                <div class="glass-form-help">
                   支援多種格式：單個ID、逗號分隔的多個ID、範圍（如123-130）或混合格式
                 </div>
               </div>
               
-              <div class="modern-form-group">
+              <div class="glass-form-group">
                 <div class="flex gap-md">
                   <button type="submit" class="glass-btn glass-btn-primary flex-1">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -301,62 +296,36 @@
         </div>
 
         <!-- Download History -->
-        <div class="modern-card">
-          <div class="modern-card-header">
-            <h2 class="modern-card-title">下載歷史管理</h2>
-            <div class="modern-card-actions">
+        <div class="glass-card">
+          <div class="glass-card-header">
+            <h2 class="glass-card-title">下載歷史管理</h2>
+            <div class="glass-card-actions">
               <div class="selected-count-display">
                 <span class="selected-count-badge" id="selected-count-badge">
                   已選中 <strong id="selected-count">0</strong> 個項目
                 </span>
               </div>
               <button class="glass-btn glass-btn-sm glass-btn-secondary" onclick="selectAllTasks()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="9,11 12,14 22,4"/>
-                  <path d="M21,12v7a2,2 0 0,1 -2,2H5a2,2 0 0,1 -2,-2V5a2,2 0 0,1 2,-2h11"/>
-                </svg>
                 全選
               </button>
               <button class="glass-btn glass-btn-sm glass-btn-secondary" onclick="deselectAllTasks()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3,6 5,6 21,6"/>
-                  <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6"/>
-                </svg>
                 取消全選
               </button>
               <button class="glass-btn glass-btn-sm glass-btn-warning" onclick="selectPendingTasks()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12,6 12,12 16,14"/>
-                </svg>
                 選擇待下載
               </button>
               <button class="glass-btn glass-btn-sm glass-btn-success" onclick="startSelectedDownloads()" id="start-download-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="5,3 19,12 5,21 5,3"/>
-                </svg>
-                啟動下載
+                ▶ 啟動下載
               </button>
               <button class="glass-btn glass-btn-sm glass-btn-info" onclick="cleanDownloadedItems()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 6h18"/>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                </svg>
-                清理已下載
+                🧹 清理已下載
               </button>
               <button class="glass-btn glass-btn-sm glass-btn-danger" onclick="removeSelectedTasks()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3,6 5,6 21,6"/>
-                  <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6M8,6V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
-                  <line x1="10" y1="11" x2="10" y2="17"/>
-                  <line x1="14" y1="11" x2="14" y2="17"/>
-                </svg>
-                移除選中
+                🗑 移除選中
               </button>
             </div>
           </div>
-          <div class="modern-card-body">
+          <div class="glass-card-body">
             <!-- Filter Toolbar -->
             <div class="history-filter-toolbar">
               <div class="filter-row">
@@ -403,7 +372,7 @@
             </div>
 
             <!-- Download History List -->
-            <div class="modern-list" id="download-history-list">
+            <div class="glass-list" id="download-history-list">
               <!-- History items will be dynamically generated here -->
             </div>
             
@@ -418,29 +387,29 @@
       <!-- Group Manager Tab -->
       <div id="group-manager" class="modern-tabs-panel">
         <!-- Add Group Form -->
-        <div class="modern-card">
-          <div class="modern-card-header">
-            <h2 class="modern-card-title">新增群組</h2>
+        <div class="glass-card">
+          <div class="glass-card-header">
+            <h2 class="glass-card-title">新增群組</h2>
           </div>
-          <div class="modern-card-body">
-            <form class="modern-form" id="add-group-form">
+          <div class="glass-card-body">
+            <form class="glass-form" id="add-group-form">
               <div class="modern-grid modern-grid-2 gap-md">
-                <div class="modern-form-group">
-                  <label class="modern-form-label" for="new-chat-id">群組 Chat ID</label>
-                  <input type="text" name="chat_id" id="new-chat-id" class="modern-form-input" 
+                <div class="glass-form-group">
+                  <label class="glass-form-label" for="new-chat-id">群組 Chat ID</label>
+                  <input type="text" name="chat_id" id="new-chat-id" class="glass-form-input" 
                     placeholder="輸入群組的 Chat ID" required>
-                  <div class="modern-form-help">可在 Telegram 中獲取群組的唯一 ID</div>
+                  <div class="glass-form-help">可在 Telegram 中獲取群組的唯一 ID</div>
                 </div>
                 
-                <div class="modern-form-group">
-                  <label class="modern-form-label" for="new-group-name">群組名稱</label>
-                  <input type="text" name="name" id="new-group-name" class="modern-form-input" 
+                <div class="glass-form-group">
+                  <label class="glass-form-label" for="new-group-name">群組名稱</label>
+                  <input type="text" name="name" id="new-group-name" class="glass-form-input" 
                     placeholder="輸入群組顯示名稱" required>
-                  <div class="modern-form-help">用於在介面中顯示的友好名稱</div>
+                  <div class="glass-form-help">用於在介面中顯示的友好名稱</div>
                 </div>
               </div>
               
-              <div class="modern-form-group">
+              <div class="glass-form-group">
                 <div class="flex gap-md">
                   <button type="submit" class="glass-btn glass-btn-success">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -463,10 +432,10 @@
         </div>
 
         <!-- Groups List -->
-        <div class="modern-card">
-          <div class="modern-card-header">
-            <h2 class="modern-card-title">群組管理</h2>
-            <div class="modern-card-actions">
+        <div class="glass-card">
+          <div class="glass-card-header">
+            <h2 class="glass-card-title">群組管理</h2>
+            <div class="glass-card-actions">
               <button class="glass-btn glass-btn-sm glass-btn-secondary" onclick="selectAllGroups()">全選</button>
               <button class="glass-btn glass-btn-sm glass-btn-danger" onclick="deleteSelectedGroups()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -485,8 +454,8 @@
               </button>
             </div>
           </div>
-          <div class="modern-card-body">
-            <div class="modern-list" id="groups-list">
+          <div class="glass-card-body">
+            <div class="glass-list" id="groups-list">
               <!-- Groups will be dynamically loaded here -->
             </div>
           </div>
