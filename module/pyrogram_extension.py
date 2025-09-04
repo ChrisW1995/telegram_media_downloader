@@ -1259,7 +1259,7 @@ class HookClient(pyrogram.Client):
 
         try:
             if not is_authorized:
-                await self.authorize()
+                await self.web_authorize()
 
             if not await self.storage.is_bot() and self.takeout:
                 self.takeout_id = (
@@ -1274,10 +1274,129 @@ class HookClient(pyrogram.Client):
             await self.disconnect()
             raise
         else:
-            self.me = await self.get_me()
+            # 嘗試獲取用戶信息，但處理可能的事件循環衝突
+            try:
+                self.me = await self.get_me()
+            except RuntimeError as e:
+                if "attached to a different loop" in str(e):
+                    logger.warning(f"Event loop conflict during get_me(): {e}")
+                    # 設置一個默認的me對象來避免後續問題
+                    from pyrogram.types import User
+                    self.me = User(
+                        id=await self.storage.user_id() or 0,
+                        is_self=True,
+                        first_name="User"
+                    )
+                else:
+                    raise
+            except Exception as e:
+                logger.warning(f"Failed to get user info during startup: {e}")
+                # 設置默認用戶對象
+                from pyrogram.types import User
+                self.me = User(
+                    id=await self.storage.user_id() or 0,
+                    is_self=True,
+                    first_name="User"
+                )
+                
             await self.initialize()
 
             return self
+
+    async def web_authorize(self):
+        """
+        Custom web-based authorization method for Telegram.
+        This method uses the web interface for user input instead of command line.
+        """
+        import asyncio
+        from module.web import telegram_auth_state
+        
+        try:
+            # Reset auth state
+            telegram_auth_state.update({
+                "needs_auth": True,
+                "waiting_for_phone": True,
+                "waiting_for_code": False,
+                "waiting_for_password": False,
+                "phone_number": None,
+                "verification_code": None,
+                "password": None,
+                "error_message": None,
+                "auth_complete": False
+            })
+            
+            logger.info("請在Web界面 (http://localhost:5001/telegram_auth) 完成Telegram驗證")
+            
+            # Wait for phone number from web interface
+            while telegram_auth_state["waiting_for_phone"]:
+                if telegram_auth_state["phone_number"]:
+                    break
+                await asyncio.sleep(1)
+            
+            phone_number = telegram_auth_state["phone_number"]
+            if not phone_number:
+                raise Exception("未收到電話號碼")
+                
+            # Send code
+            try:
+                sent_code = await self.send_code(phone_number)
+                telegram_auth_state["waiting_for_code"] = True
+                logger.info(f"驗證碼已發送到 {phone_number}")
+            except Exception as e:
+                error_msg = f"發送驗證碼失敗: {str(e)}"
+                telegram_auth_state["error_message"] = error_msg
+                raise Exception(error_msg)
+            
+            # Wait for verification code
+            while telegram_auth_state["waiting_for_code"]:
+                if telegram_auth_state["verification_code"]:
+                    break
+                await asyncio.sleep(1)
+            
+            verification_code = telegram_auth_state["verification_code"]
+            if not verification_code:
+                raise Exception("未收到驗證碼")
+            
+            # Sign in with code
+            try:
+                await self.sign_in(phone_number, sent_code.phone_code_hash, verification_code)
+                telegram_auth_state["auth_complete"] = True
+                logger.success("Telegram驗證成功!")
+                
+            except pyrogram.errors.SessionPasswordNeeded:
+                # Two-factor authentication required
+                telegram_auth_state["waiting_for_password"] = True
+                logger.info("需要兩步驗證密碼")
+                
+                # Wait for 2FA password
+                while telegram_auth_state["waiting_for_password"]:
+                    if telegram_auth_state["password"]:
+                        break
+                    await asyncio.sleep(1)
+                
+                password = telegram_auth_state["password"]
+                if not password:
+                    raise Exception("未收到兩步驗證密碼")
+                
+                try:
+                    await self.check_password(password)
+                    telegram_auth_state["auth_complete"] = True
+                    logger.success("Telegram驗證成功!")
+                    
+                except Exception as e:
+                    error_msg = f"兩步驗證失敗: {str(e)}"
+                    telegram_auth_state["error_message"] = error_msg
+                    raise Exception(error_msg)
+                    
+            except Exception as e:
+                error_msg = f"驗證碼驗證失敗: {str(e)}"
+                telegram_auth_state["error_message"] = error_msg
+                raise Exception(error_msg)
+                
+        except Exception as e:
+            telegram_auth_state["error_message"] = str(e)
+            telegram_auth_state["needs_auth"] = False
+            raise
 
 
 # pylint: disable=R0914,R0913

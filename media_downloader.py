@@ -798,12 +798,21 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     
     
+    # 使用用戶主目錄下的 session 存儲，避免權限問題
+    session_dir = os.path.join(os.path.expanduser("~"), ".telegram_sessions")
+    if not os.path.exists(session_dir):
+        os.makedirs(session_dir, exist_ok=True)
+    
+    # 設置完全權限
+    os.chmod(session_dir, 0o755)
+    print(f"Using session directory: {session_dir}")
+    
     client = HookClient(
         "media_downloader",
         api_id=app.api_id,
         api_hash=app.api_hash,
         proxy=app.proxy,
-        workdir=app.session_file_path,
+        workdir=session_dir,  # 使用用戶主目錄下的路徑
         start_timeout=app.start_timeout,
     )
     try:

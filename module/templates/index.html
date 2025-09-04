@@ -31,6 +31,17 @@
         </div>
         
         <div class="flex items-center gap-md">
+          <!-- Session Status Indicator -->
+          <div id="session-status-indicator" class="session-status">
+            <span class="session-status-icon" id="session-status-icon">🔄</span>
+            <span class="session-status-text" id="session-status-text">檢查連接中...</span>
+          </div>
+          
+          <!-- Session Control Buttons -->
+          <button id="reconnect-btn" class="glass-btn glass-btn-sm glass-btn-warning" style="display: none;" onclick="forceReconnect()">
+            🔄 重新連接
+          </button>
+          
           <!-- Global Download Control -->
           <button id="global-download-control" class="glass-btn glass-btn-secondary" style="display: none;" onclick="toggleGlobalDownloadState()"
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

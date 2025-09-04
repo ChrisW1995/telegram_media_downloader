@@ -432,6 +432,58 @@ body {
   flex: 1;
 }
 
+/* ==================== Session Status Indicator ==================== */
+.session-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all var(--transition-normal);
+}
+
+.session-status.valid {
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.2), rgba(48, 209, 88, 0.1));
+  border-color: rgba(52, 199, 89, 0.4);
+  color: #1B5E20;
+}
+
+.session-status.invalid {
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.2), rgba(255, 69, 58, 0.1));
+  border-color: rgba(255, 59, 48, 0.4);
+  color: #B71C1C;
+}
+
+.session-status.checking {
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.2), rgba(255, 204, 2, 0.1));
+  border-color: rgba(255, 149, 0, 0.4);
+  color: #E65100;
+}
+
+.session-status-icon {
+  font-size: 14px;
+  animation: none;
+}
+
+.session-status.checking .session-status-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.session-status-text {
+  white-space: nowrap;
+}
+
 /* ==================== iOS Liquid Glass Card Components ==================== */
 .glass-card {
   background: rgba(255, 255, 255, 0.5);

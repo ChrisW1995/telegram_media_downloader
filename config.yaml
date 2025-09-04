@@ -3,7 +3,7 @@ api_id: 29060182
 bot_token: 8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8
 chat:
 - chat_id: -1002634361114
-  last_read_message_id: 420
+  last_read_message_id: 489
 custom_downloads:
   enable: true
   group_tags:
@@ -12,13 +12,11 @@ custom_downloads:
     '-1001355003597': 03🔵日本【JP】new
     '-1002234837448': 🫧战士father2024.08~2025.08
   target_ids:
-    '-1002634361114':
-    - 395
-    - 400
     '-1002234837448':
     - 310
     - 311
     - 312
+    - 5531
 enable_download_txt: true
 file_formats:
   audio:
@@ -40,7 +38,7 @@ media_types:
 - document
 - sticker
 save_path: TGDL/unified_downloads
-web_port: 5001
+web_port: 5002
 bot_save_path: /Users/chriswang/Documents/Py/TGDL/TGDL/unified_downloads
 allowed_user_ids:
 - 7588743028

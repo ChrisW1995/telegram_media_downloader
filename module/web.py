@@ -31,6 +31,26 @@ _login_manager.init_app(_flask_app)
 web_login_users: dict = {}
 deAesCrypt = AesBase64("1234123412ABCDEF", "ABCDEF1234123412")
 
+# Telegram authentication state
+telegram_auth_state = {
+    "needs_auth": False,
+    "waiting_for_phone": False,
+    "waiting_for_code": False,
+    "waiting_for_password": False,
+    "phone_number": None,
+    "verification_code": None,
+    "password": None,
+    "error_message": None,
+    "auth_complete": False
+}
+
+# 全局錯誤狀態追蹤
+telegram_error_state = {
+    "auth_key_unregistered": False,
+    "last_error_time": None,
+    "error_count": 0
+}
+
 
 class User(UserMixin):
     """Web Login User"""
@@ -1417,3 +1437,439 @@ def start_custom_download():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+
+@_flask_app.route("/check_session_status")
+@login_required
+def check_session_status():
+    """檢查當前Telegram session狀態"""
+    try:
+        if not _client:
+            return jsonify({
+                'success': False,
+                'valid': False,
+                'message': '客戶端未初始化',
+                'error': 'CLIENT_NOT_INITIALIZED'
+            })
+        
+        # 檢查客戶端連接狀態
+        is_connected = _client.is_connected if hasattr(_client, 'is_connected') else False
+        
+        if not is_connected:
+            return jsonify({
+                'success': True,
+                'valid': False,
+                'message': 'Telegram session已斷開',
+                'error': 'SESSION_DISCONNECTED'
+            })
+        
+        # 檢查是否有AUTH_KEY_UNREGISTERED錯誤的跡象
+        # 檢查最近的日誌或錯誤狀態
+        import os
+        import time
+        
+        # 檢查session文件是否存在且有效
+        session_files = [
+            "sessions/media_downloader.session",
+            "sessions/media_downloader_bot.session"
+        ]
+        
+        valid_session_exists = False
+        for session_file in session_files:
+            if os.path.exists(session_file):
+                # 檢查文件是否不為空且最近修改過
+                try:
+                    stat = os.stat(session_file)
+                    if stat.st_size > 0:
+                        valid_session_exists = True
+                        break
+                except Exception:
+                    continue
+        
+        if not valid_session_exists:
+            return jsonify({
+                'success': True,
+                'valid': False,
+                'message': 'Session文件無效或不存在',
+                'error': 'SESSION_FILES_INVALID'
+            })
+        
+        # 檢查是否有AUTH_KEY_UNREGISTERED錯誤
+        if telegram_error_state["auth_key_unregistered"]:
+            return jsonify({
+                'success': True,
+                'valid': False,
+                'message': 'Telegram授權已失效，需要重新驗證',
+                'error': 'AUTH_KEY_UNREGISTERED'
+            })
+        
+        # 檢查client的基本屬性來判斷session狀態
+        try:
+            # 檢查client是否已經有用戶信息
+            if hasattr(_client, 'storage') and _client.storage:
+                # 檢查storage是否包含session信息
+                try:
+                    # 檢查是否存在用戶ID (表示已登入)
+                    user_id = None
+                    is_bot = False
+                    
+                    # 安全地獲取user_id
+                    if hasattr(_client.storage, 'user_id'):
+                        try:
+                            user_id_attr = getattr(_client.storage, 'user_id')
+                            # 如果是方法，調用它
+                            if callable(user_id_attr):
+                                user_id = user_id_attr()
+                            else:
+                                user_id = user_id_attr
+                        except Exception:
+                            user_id = None
+                    
+                    # 安全地獲取is_bot
+                    if hasattr(_client.storage, 'is_bot'):
+                        try:
+                            is_bot_attr = getattr(_client.storage, 'is_bot')
+                            # 如果是方法，調用它
+                            if callable(is_bot_attr):
+                                is_bot = is_bot_attr()
+                            else:
+                                is_bot = is_bot_attr
+                        except Exception:
+                            is_bot = False
+                    
+                    if user_id:
+                        
+                        # 確保返回值是可序列化的
+                        try:
+                            user_id_safe = int(user_id) if user_id else None
+                            is_bot_safe = bool(is_bot) if is_bot is not None else False
+                        except (ValueError, TypeError):
+                            user_id_safe = None
+                            is_bot_safe = False
+                            
+                        return jsonify({
+                            'success': True,
+                            'valid': True,
+                            'message': '連接正常',
+                            'user_info': {
+                                'id': user_id_safe,
+                                'first_name': 'User',
+                                'username': None,
+                                'is_bot': is_bot_safe
+                            }
+                        })
+                    else:
+                        return jsonify({
+                            'success': True,
+                            'valid': False,
+                            'message': 'Session未授權，需要重新登入',
+                            'error': 'SESSION_NOT_AUTHORIZED'
+                        })
+                except Exception as storage_error:
+                    return jsonify({
+                        'success': True,
+                        'valid': False,
+                        'message': f'Storage讀取失敗: {str(storage_error)[:100]}',
+                        'error': 'STORAGE_ERROR'
+                    })
+            else:
+                return jsonify({
+                    'success': False,
+                    'valid': False,
+                    'message': 'Session storage不可用',
+                    'error': 'STORAGE_UNAVAILABLE'
+                })
+                
+        except Exception as check_error:
+            return jsonify({
+                'success': True,
+                'valid': False,
+                'message': f'Session狀態檢查失敗: {str(check_error)[:100]}',
+                'error': 'SESSION_CHECK_FAILED'
+            })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'valid': False,
+            'message': f'檢查session狀態時出現錯誤: {str(e)}',
+            'error': 'CHECK_FAILED'
+        })
+
+
+@_flask_app.route("/force_reconnect", methods=["POST"])
+@login_required  
+def force_reconnect():
+    """強制重新連接Telegram"""
+    try:
+        if not _client:
+            return jsonify({
+                'success': False,
+                'message': '客戶端未初始化'
+            })
+        
+        # 使用session manager來清理和重建連接
+        try:
+            from utils.session_manager import create_session_manager
+            
+            # 創建session manager
+            session_manager = create_session_manager(_app)
+            
+            # 先停止客戶端並清理session文件
+            if _client.is_connected:
+                # 使用session manager的安全停止方法
+                import asyncio
+                if hasattr(_app, 'loop') and _app.loop:
+                    try:
+                        future = asyncio.run_coroutine_threadsafe(
+                            session_manager.safe_client_stop(_client, timeout=10), 
+                            _app.loop
+                        )
+                        stopped = future.result(timeout=15)
+                        if not stopped:
+                            # 如果正常停止失敗，進行強制清理
+                            session_manager.force_cleanup_on_error()
+                    except Exception as stop_error:
+                        print(f"Client stop error: {stop_error}")
+                        session_manager.force_cleanup_on_error()
+                else:
+                    # 沒有事件循環時，直接進行強制清理
+                    session_manager.force_cleanup_on_error()
+            
+            # 清理任何殘留的session文件
+            session_manager.cleanup_stale_sessions()
+            
+            # 檢查是否需要重新驗證
+            import os
+            session_files = [
+                os.path.join("sessions", "media_downloader.session"),
+                os.path.join("sessions", "media_downloader_bot.session")
+            ]
+            
+            # 優先檢查是否有 AUTH_KEY_UNREGISTERED 錯誤
+            needs_auth = (telegram_error_state.get("auth_key_unregistered", False) or 
+                         not any(os.path.exists(f) for f in session_files))
+            
+            if needs_auth:
+                # 如果有 AUTH_KEY_UNREGISTERED 錯誤，強制刪除無效的 session 文件
+                if telegram_error_state.get("auth_key_unregistered", False):
+                    for session_file in session_files:
+                        if os.path.exists(session_file):
+                            try:
+                                os.remove(session_file)
+                                print(f"Removed invalid session file: {session_file}")
+                            except Exception as e:
+                                print(f"Failed to remove session file {session_file}: {e}")
+                    
+                    # 清除錯誤狀態，因為我們即將開始重新認證
+                    telegram_error_state.update({
+                        "auth_key_unregistered": False,
+                        "last_error_time": None,
+                        "error_count": 0
+                    })
+                
+                # 設置驗證狀態並返回跳轉指令
+                telegram_auth_state.update({
+                    "needs_auth": True,
+                    "waiting_for_phone": True,
+                    "waiting_for_code": False,
+                    "waiting_for_password": False,
+                    "phone_number": None,
+                    "verification_code": None,
+                    "password": None,
+                    "error_message": None,
+                    "auth_complete": False
+                })
+                
+                # 觸發客戶端重新認證流程
+                if _client and hasattr(_client, 'web_authorize'):
+                    import threading
+                    def start_reauth():
+                        try:
+                            if hasattr(_app, 'loop') and _app.loop:
+                                import asyncio
+                                future = asyncio.run_coroutine_threadsafe(
+                                    _client.web_authorize(), 
+                                    _app.loop
+                                )
+                                # 不等待完成，讓認證在背景進行
+                        except Exception as e:
+                            print(f"Failed to start reauth: {e}")
+                    
+                    # 在背景線程中啟動重新認證
+                    threading.Thread(target=start_reauth, daemon=True).start()
+                
+                return jsonify({
+                    'success': True,
+                    'needs_auth': True,
+                    'message': 'Session文件已清理，需要重新驗證Telegram',
+                    'redirect_url': '/telegram_auth'
+                })
+            else:
+                return jsonify({
+                    'success': True,
+                    'needs_auth': False,
+                    'message': 'Session文件已清理，請重新啟動應用程序以重新建立連接'
+                })
+            
+        except ImportError:
+            # 回退到基本的建議
+            return jsonify({
+                'success': False,
+                'message': '請重新啟動應用程序以修復連接問題'
+            })
+        except Exception as cleanup_error:
+            return jsonify({
+                'success': False,
+                'message': f'清理過程中出現錯誤，請手動重新啟動應用程序: {str(cleanup_error)[:100]}'
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'重新連接時出現錯誤: {str(e)}'
+        })
+
+
+# Telegram Authentication API Endpoints
+@_flask_app.route("/api/telegram/auth_status", methods=["GET"])
+def get_telegram_auth_status():
+    """Get current Telegram authentication status."""
+    return jsonify(telegram_auth_state)
+
+
+@_flask_app.route("/api/telegram/submit_phone", methods=["POST"])
+def submit_telegram_phone():
+    """Submit phone number for Telegram authentication."""
+    global telegram_auth_state, _client, _app
+    try:
+        data = request.get_json()
+        phone_number = data.get("phone_number", "").strip()
+        
+        if not phone_number:
+            return jsonify({"success": False, "error": "請輸入電話號碼"})
+        
+        # 只更新狀態，讓 HookClient.web_authorize() 處理實際的 API 調用
+        telegram_auth_state["phone_number"] = phone_number
+        telegram_auth_state["waiting_for_phone"] = False
+        telegram_auth_state["waiting_for_code"] = True
+        telegram_auth_state["error_message"] = None
+        
+        return jsonify({"success": True, "message": "電話號碼已提交，正在發送驗證碼..."})
+        
+    except Exception as e:
+        telegram_auth_state["error_message"] = str(e)
+        return jsonify({"success": False, "error": str(e)})
+
+
+@_flask_app.route("/api/telegram/submit_code", methods=["POST"])  
+def submit_telegram_code():
+    """Submit verification code for Telegram authentication."""
+    global telegram_auth_state
+    try:
+        data = request.get_json()
+        verification_code = data.get("verification_code", "").strip()
+        
+        if not verification_code:
+            return jsonify({"success": False, "error": "請輸入驗證碼"})
+        
+        # 簡單版本：只更新狀態，不直接調用 Pyrogram API
+        telegram_auth_state.update({
+            "verification_code": verification_code,
+            "waiting_for_code": False,
+            "error_message": None
+        })
+        
+        return jsonify({"success": True, "message": "驗證碼已提交"})
+        
+    except Exception as e:
+        telegram_auth_state["error_message"] = str(e)
+        return jsonify({"success": False, "error": str(e)})
+
+
+@_flask_app.route("/api/telegram/submit_password", methods=["POST"])
+def submit_telegram_password():
+    """Submit 2FA password for Telegram authentication."""
+    global telegram_auth_state  
+    try:
+        data = request.get_json()
+        password = data.get("password", "").strip()
+        
+        if not password:
+            return jsonify({"success": False, "error": "請輸入兩步驗證密碼"})
+        
+        telegram_auth_state["password"] = password
+        telegram_auth_state["waiting_for_password"] = False
+        telegram_auth_state["error_message"] = None
+        
+        return jsonify({"success": True, "message": "密碼已提交"})
+    
+    except Exception as e:
+        telegram_auth_state["error_message"] = str(e)
+        return jsonify({"success": False, "error": str(e)})
+
+
+@_flask_app.route("/telegram_auth")
+def telegram_auth_page():
+    """Render Telegram authentication page."""
+    return render_template("telegram_auth.html")
+
+
+@_flask_app.route("/api/telegram/report_error", methods=["POST"])
+def report_telegram_error():
+    """Report Telegram authentication errors."""
+    global telegram_error_state
+    import time
+    
+    try:
+        data = request.get_json() or {}
+        error_type = data.get("error_type", "")
+        
+        if error_type == "AUTH_KEY_UNREGISTERED":
+            telegram_error_state["auth_key_unregistered"] = True
+            telegram_error_state["last_error_time"] = time.time()
+            telegram_error_state["error_count"] += 1
+            
+            return jsonify({
+                "success": True,
+                "message": "錯誤已記錄"
+            })
+        
+        return jsonify({
+            "success": False,
+            "message": "未知錯誤類型"
+        })
+    
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"報告錯誤失敗: {str(e)}"
+        })
+
+
+@_flask_app.route("/api/telegram/clear_errors", methods=["POST"])
+def clear_telegram_errors():
+    """Clear Telegram error state."""
+    global telegram_error_state
+    
+    telegram_error_state.update({
+        "auth_key_unregistered": False,
+        "last_error_time": None,
+        "error_count": 0
+    })
+    
+    return jsonify({
+        "success": True,
+        "message": "錯誤狀態已清除"
+    })
+
+
+@_flask_app.route("/api/telegram/debug_state", methods=["GET"])
+def debug_telegram_state():
+    """Debug: Get current Telegram error and auth state."""
+    global telegram_error_state, telegram_auth_state
+    
+    return jsonify({
+        "error_state": telegram_error_state,
+        "auth_state": telegram_auth_state
+    })

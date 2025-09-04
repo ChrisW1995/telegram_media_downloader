@@ -323,17 +323,23 @@
 }
 
 .summary-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
+  background: linear-gradient(145deg, #2D3748 0%, #1A202C 100%);  /* 漸變深色背景 */
+  border: 1px solid #4A5568;
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   text-align: center;
   transition: all var(--transition-fast);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 
+              0 1px 3px rgba(0, 0, 0, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.05);  /* 內陰影提供深度感 */
 }
 
 .summary-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), 
+              0 4px 10px rgba(0, 0, 0, 0.12),
+              inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: #718096;
 }
 
 .summary-card-value {
@@ -343,26 +349,43 @@
 }
 
 .summary-card-label {
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: 13px;
+  color: #E2E8F0;  /* 使用淺色文字提供更好的對比 */
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
+.summary-card-pending {
+  border-left: 4px solid #FBD38D;
+}
+
 .summary-card-pending .summary-card-value {
-  color: var(--warning-orange);
+  color: #FBD38D;  /* 更亮的橘色，在深背景上更突出 */
+}
+
+.summary-card-downloading {
+  border-left: 4px solid #63B3ED;
 }
 
 .summary-card-downloading .summary-card-value {
-  color: var(--primary-blue);
+  color: #63B3ED;  /* 更亮的藍色 */
+}
+
+.summary-card-completed {
+  border-left: 4px solid #68D391;
 }
 
 .summary-card-completed .summary-card-value {
-  color: var(--success-green);
+  color: #68D391;  /* 更亮的綠色 */
+}
+
+.summary-card-failed {
+  border-left: 4px solid #FC8181;
 }
 
 .summary-card-failed .summary-card-value {
-  color: var(--error-red);
+  color: #FC8181;  /* 更亮的紅色 */
 }
 
 /* ==================== Empty State ==================== */

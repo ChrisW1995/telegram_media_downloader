@@ -43,6 +43,7 @@ const ModernTelegramDownloader = {
     this.loadGroups();
     this.loadDownloadHistory();
     this.startProgressUpdates();
+    this.initSessionMonitoring();
     console.log('Modern Telegram Downloader initialized');
   },
 
@@ -1213,6 +1214,141 @@ const ModernTelegramDownloader = {
         }, 200);
       }
     }, 5000);
+  },
+
+  // Session monitoring methods
+  initSessionMonitoring() {
+    // 立即檢查session狀態
+    this.checkSessionStatus();
+    
+    // 每10秒檢查一次session狀態（更頻繁的檢查）
+    this.sessionCheckInterval = setInterval(() => {
+      this.checkSessionStatus();
+    }, 10000);
+    
+    console.log('Session monitoring initialized');
+  },
+
+  async checkSessionStatus() {
+    const indicator = document.getElementById('session-status-indicator');
+    const icon = document.getElementById('session-status-icon');
+    const text = document.getElementById('session-status-text');
+    const reconnectBtn = document.getElementById('reconnect-btn');
+    
+    if (!indicator || !icon || !text) return;
+    
+    // 設置檢查中狀態
+    indicator.className = 'session-status checking';
+    icon.textContent = '🔄';
+    text.textContent = '檢查連接中...';
+    
+    try {
+      const response = await fetch('/check_session_status');
+      const data = await response.json();
+      
+      if (data.success && data.valid) {
+        // Session有效
+        indicator.className = 'session-status valid';
+        icon.textContent = '✅';
+        text.textContent = data.user_info ? 
+          `已連接 (${data.user_info.first_name})` : '連接正常';
+        reconnectBtn.style.display = 'none';
+      } else {
+        // Session無效
+        indicator.className = 'session-status invalid';
+        icon.textContent = '❌';
+        text.textContent = data.message || 'Session無效';
+        reconnectBtn.style.display = 'inline-flex';
+        
+        // 根據錯誤類型顯示不同的處理方式
+        if (data.error === 'AUTH_KEY_UNREGISTERED') {
+          // 授權失效，自動觸發重新連接流程
+          text.textContent = 'Telegram授權已失效，正在重新驗證...';
+          this.showNotification('Telegram授權已失效，正在跳轉到驗證頁面...', 'warning', 3000);
+          
+          // 自動觸發重新連接，這將會跳轉到驗證頁面
+          setTimeout(() => {
+            this.forceReconnect();
+          }, 1000);
+          
+          if (reconnectBtn) {
+            reconnectBtn.textContent = '🔐 重新驗證';
+          }
+        } else {
+          // 其他錯誤，顯示原來的邏輯
+          this.showNotification(`Telegram連接問題: ${data.message}`, 'warning', 5000);
+        }
+      }
+    } catch (error) {
+      // 檢查失敗
+      indicator.className = 'session-status invalid';
+      icon.textContent = '⚠️';
+      text.textContent = '連接檢查失敗';
+      reconnectBtn.style.display = 'inline-flex';
+      
+      console.error('Session check failed:', error);
+    }
+  },
+
+  async forceReconnect() {
+    const reconnectBtn = document.getElementById('reconnect-btn');
+    const indicator = document.getElementById('session-status-indicator');
+    const icon = document.getElementById('session-status-icon');
+    const text = document.getElementById('session-status-text');
+    
+    if (!reconnectBtn) return;
+    
+    // 禁用按鈕並顯示載入狀態
+    reconnectBtn.disabled = true;
+    reconnectBtn.innerHTML = '🔄 重連中...';
+    
+    if (indicator && icon && text) {
+      indicator.className = 'session-status checking';
+      icon.textContent = '🔄';
+      text.textContent = '正在重新連接...';
+    }
+    
+    try {
+      const response = await fetch('/force_reconnect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        if (data.needs_auth) {
+          // 需要重新驗證，跳轉到驗證頁面
+          this.showNotification(data.message, 'info');
+          setTimeout(() => {
+            window.location.href = data.redirect_url;
+          }, 1500);
+        } else {
+          // 正常重連
+          this.showNotification(data.message, 'success');
+          // 重新檢查session狀態
+          setTimeout(() => {
+            this.checkSessionStatus();
+          }, 2000);
+        }
+      } else {
+        this.showNotification(`重連失敗: ${data.message}`, 'error');
+        
+        // 如果需要重啟應用程序
+        if (data.message.includes('重新啟動')) {
+          this.showNotification('請重新啟動應用程序以修復連接問題', 'warning', 10000);
+        }
+      }
+    } catch (error) {
+      this.showNotification('重連請求失敗', 'error');
+      console.error('Reconnect failed:', error);
+    } finally {
+      // 恢復按鈕狀態
+      reconnectBtn.disabled = false;
+      reconnectBtn.innerHTML = '🔄 重新連接';
+    }
   }
 };
 
@@ -1945,4 +2081,9 @@ if (originalUpdateProgressMethod) {
     
     return result;
   };
+}
+
+// Global functions for HTML onclick handlers
+function forceReconnect() {
+  ModernTelegramDownloader.forceReconnect();
 }

@@ -240,6 +240,32 @@ class CustomDownloadManager:
                 logger.info(f"Successfully accessed chat {chat_id}: {chat_info.title if hasattr(chat_info, 'title') else 'Unknown'}")
             except Exception as access_error:
                 logger.error(f"Cannot access chat {chat_id}: {access_error}")
+                
+                # Check if this is an AUTH_KEY_UNREGISTERED error
+                error_str = str(access_error)
+                if "AUTH_KEY_UNREGISTERED" in error_str or "401" in error_str:
+                    # Notify web interface about authentication failure
+                    try:
+                        import requests
+                        import threading
+                        
+                        def notify_auth_error():
+                            try:
+                                requests.post(
+                                    "http://localhost:5001/api/telegram/report_error",
+                                    json={"error_type": "AUTH_KEY_UNREGISTERED"},
+                                    timeout=5
+                                )
+                            except Exception as notify_error:
+                                logger.debug(f"Failed to notify web interface: {notify_error}")
+                        
+                        # Run notification in background to not block the main process
+                        threading.Thread(target=notify_auth_error, daemon=True).start()
+                        
+                    except ImportError:
+                        # requests not available, use basic notification
+                        pass
+                
                 # Mark all messages as failed due to access issues
                 for msg_id in message_ids:
                     self.mark_failed(chat_id, msg_id)
@@ -271,6 +297,30 @@ class CustomDownloadManager:
         except Exception as e:
             error_message = str(e)
             logger.error(f"Error downloading messages from chat {chat_id}: {e}")
+            
+            # Check if this is an AUTH_KEY_UNREGISTERED error
+            if "AUTH_KEY_UNREGISTERED" in error_message or "401" in error_message:
+                # Notify web interface about authentication failure
+                try:
+                    import requests
+                    import threading
+                    
+                    def notify_auth_error():
+                        try:
+                            requests.post(
+                                "http://localhost:5001/api/telegram/report_error",
+                                json={"error_type": "AUTH_KEY_UNREGISTERED"},
+                                timeout=5
+                            )
+                        except Exception as notify_error:
+                            logger.debug(f"Failed to notify web interface: {notify_error}")
+                    
+                    # Run notification in background to not block the main process
+                    threading.Thread(target=notify_auth_error, daemon=True).start()
+                    
+                except ImportError:
+                    # requests not available, use basic notification
+                    pass
             
             # Provide specific guidance for different error types
             if "CHANNEL_INVALID" in error_message:
