@@ -7,7 +7,8 @@ from loguru import logger
 import pyrogram
 from pyrogram.types import Message
 
-from module.app import Application, TaskNode, DownloadStatus
+from module.app_db import DatabaseApplication as Application
+from module.app import TaskNode, DownloadStatus
 from module.language import _t
 from utils.meta_data import MetaData
 from module.pyrogram_extension import set_meta_data

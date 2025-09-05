@@ -920,21 +920,35 @@ class Application:
         set_language(self.language)
     
     def _cleanup_session_files(self):
-        """Clean up stale session files that might cause database locks."""
-        session_files = [
-            "media_downloader.session-journal",
-            "media_downloader.session-wal", 
-            "media_downloader.session-shm"
+        """Safely clean up only temporary SQLite session files to prevent database locks."""
+        # Only clean up SQLite temporary files, NOT the main .session file
+        temp_session_files = [
+            "media_downloader.session-journal",   # SQLite rollback journal
+            "media_downloader.session-wal",       # Write-Ahead Logging file  
+            "media_downloader.session-shm",       # Shared memory file
+            "media_downloader_bot.session-journal",
+            "media_downloader_bot.session-wal", 
+            "media_downloader_bot.session-shm"
         ]
         
-        for filename in session_files:
+        cleaned_count = 0
+        for filename in temp_session_files:
             filepath = os.path.join(self.session_file_path, filename)
             if os.path.exists(filepath):
                 try:
-                    os.remove(filepath)
-                    logger.info(f"Cleaned up stale session file: {filename}")
+                    # Test if file can be renamed (not locked by another process)
+                    temp_path = filepath + '.cleanup'
+                    os.rename(filepath, temp_path)
+                    os.remove(temp_path)
+                    cleaned_count += 1
+                    logger.info(f"Cleaned up stale session temp file: {filename}")
                 except OSError as e:
-                    logger.warning(f"Failed to remove session file {filename}: {e}")
+                    logger.warning(f"Cannot clean session temp file {filename}: {e} (may be in use)")
+        
+        if cleaned_count > 0:
+            logger.info(f"Session cleanup completed: {cleaned_count} temporary files removed")
+        else:
+            logger.debug("No stale session temporary files found")
 
     def set_caption_name(
         self, chat_id: Union[int, str], media_group_id: Optional[str], caption: str

@@ -13,7 +13,8 @@ from loguru import logger
 from pyrogram.types import Audio, Document, Photo, Video, VideoNote, Voice
 from rich.logging import RichHandler
 
-from module.app import Application, ChatDownloadConfig, DownloadStatus, TaskNode
+from module.app_db import DatabaseApplication as Application
+from module.app import ChatDownloadConfig, DownloadStatus, TaskNode
 from module.bot import start_download_bot, stop_download_bot
 from module.download_stat import update_download_status
 from module.get_chat_history_v2 import get_chat_history_v2
