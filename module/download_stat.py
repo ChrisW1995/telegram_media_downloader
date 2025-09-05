@@ -11,16 +11,18 @@ from module.app import TaskNode
 class DownloadState(Enum):
     """Download state"""
 
+    Idle = 0
     Downloading = 1
     StopDownload = 2
     Cancelled = 3
+    Completed = 4
 
 
 _download_result: dict = {}
 _total_download_speed: int = 0
 _total_download_size: int = 0
 _last_download_time: float = time.time()
-_download_state: DownloadState = DownloadState.Downloading
+_download_state: DownloadState = DownloadState.Idle
 
 
 def get_download_result() -> dict:
@@ -66,7 +68,19 @@ async def update_download_status(
 
     chat_id = node.chat_id
 
+    # Check for cancelled state first
+    if get_download_state() == DownloadState.Cancelled:
+        node.is_stop_transmission = True
+        client.stop_transmission()
+        return
+    
+    # Handle pause state
     while get_download_state() == DownloadState.StopDownload:
+        # Check if cancelled while paused
+        if get_download_state() == DownloadState.Cancelled:
+            node.is_stop_transmission = True
+            client.stop_transmission()
+            return
         if node.is_stop_transmission:
             client.stop_transmission()
         await asyncio.sleep(1)
@@ -140,18 +154,20 @@ async def update_download_status(
             message_id=message_id
         )
         
-        # Check if download is complete and clear file progress after a delay
+        # Check if download is complete and clear specific file progress after a delay
         if down_byte >= total_size and total_size > 0:
             import threading
-            def clear_progress():
+            def clear_specific_progress():
                 try:
                     import time
                     time.sleep(5)  # Wait 5 seconds before clearing
-                    update_file_progress("", 0, 0, 0)  # Clear the progress
+                    # Only clear this specific file, not all files
+                    from module.web import clear_specific_file_progress
+                    clear_specific_file_progress(message_id, os.path.basename(file_name))
                 except:
                     pass
             
-            threading.Thread(target=clear_progress, daemon=True).start()
+            threading.Thread(target=clear_specific_progress, daemon=True).start()
     except Exception as e:
         # Don't let web update errors break downloads
         pass

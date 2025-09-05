@@ -214,6 +214,19 @@ def web_set_download_state():
     return state
 
 
+@_flask_app.route("/get_download_state")
+def get_download_state_api():
+    """Get current download state"""
+    current_state = get_download_state()
+    state_map = {
+        DownloadState.Downloading: "downloading",
+        DownloadState.StopDownload: "paused", 
+        DownloadState.Cancelled: "cancelled",
+        DownloadState.Completed: "completed",
+        DownloadState.Idle: "idle"
+    }
+    return state_map.get(current_state, "idle")
+
 @_flask_app.route("/get_app_version")
 def get_app_version():
     """Get telegram_media_downloader version"""
@@ -1166,6 +1179,10 @@ def start_selected_download():
                     for msg_id in message_ids:
                         newly_added_items.discard((chat_id, msg_id))
                 
+                # 設置下載狀態為下載中
+                from module.download_stat import set_download_state, DownloadState
+                set_download_state(DownloadState.Downloading)
+                
                 # 初始化進度追蹤
                 update_download_progress(0, total_tasks, "開始下載...")
                 
@@ -1223,13 +1240,17 @@ def get_download_progress():
     global download_progress
     print(f"Progress API called: {download_progress}")
     
-    # 選擇一個活躍的下載作為主要顯示
-    active_files = [f for f in download_progress['current_files'].values() 
-                   if f['total_bytes'] > 0 and f['downloaded_bytes'] < f['total_bytes']]
+    # 選擇一個活躍的下載作為主要顯示（包括正在下載和剛完成的）
+    all_files = [f for f in download_progress['current_files'].values() if f['total_bytes'] > 0]
+    active_files = [f for f in all_files if f['downloaded_bytes'] < f['total_bytes']]
     
     if active_files:
-        # 選擇下載進度最大的檔案作為主要顯示
+        # 優先選擇正在下載的檔案
         main_file = max(active_files, key=lambda x: x['downloaded_bytes'] / max(x['total_bytes'], 1))
+        download_progress['current_file'] = main_file
+    elif all_files:
+        # 如果沒有正在下載的，選擇最近完成的
+        main_file = max(all_files, key=lambda x: x['downloaded_bytes'] / max(x['total_bytes'], 1))
         download_progress['current_file'] = main_file
     
     # 獲取總下載速度，參考原始設計
@@ -1243,7 +1264,7 @@ def get_download_progress():
         'active': download_progress['active'],
         'current_file': download_progress['current_file'],
         'current_files': download_progress['current_files'],  # 返回所有並發文件信息
-        'concurrent_downloads': len(active_files),  # 新增：並發下載數量
+        'concurrent_downloads': len(all_files),  # 新增：顯示所有檔案數量（包括完成的）
         'total_download_speed': total_download_speed,  # 新增：總下載速度
         'session': {
             'active': active_download_session['active'],
@@ -1305,7 +1326,11 @@ def _update_download_session_status(completed, total):
             active_download_session['session_id'] = str(int(time.time()))
             active_download_session['start_time'] = time.time()
     elif completed >= total and total > 0:
-        # 下載完成，清除會話
+        # 下載完成，設置狀態並清除會話
+        from module.download_stat import set_download_state, DownloadState, get_download_state
+        if get_download_state() != DownloadState.Cancelled:  # 只有非取消狀態才設為完成
+            set_download_state(DownloadState.Completed)
+        
         active_download_session['active'] = False
         active_download_session['session_id'] = None
         active_download_session['start_time'] = None
@@ -1330,18 +1355,9 @@ def update_file_progress(file_name="", downloaded_bytes=0, total_bytes=0, downlo
             'message_id': message_id
         }
         
-        # 如果下載完成，從並發列表中移除
+        # 如果下載完成，標記為完成但保持顯示一會兒
         if downloaded_bytes >= total_bytes and total_bytes > 0:
-            import threading
-            def remove_completed():
-                import time
-                time.sleep(3)  # 等待3秒後移除
-                try:
-                    if file_key in download_progress['current_files']:
-                        del download_progress['current_files'][file_key]
-                except:
-                    pass
-            threading.Thread(target=remove_completed, daemon=True).start()
+            download_progress['current_files'][file_key]['completed'] = True
         
         print(f"File progress updated: {file_name} (ID:{message_id}) - {downloaded_bytes}/{total_bytes} bytes @ {download_speed} B/s")
     else:
@@ -1350,12 +1366,16 @@ def update_file_progress(file_name="", downloaded_bytes=0, total_bytes=0, downlo
             download_progress['current_files'].clear()
         
         # 兼容舊的單一文件進度更新
-        download_progress['current_file'] = {
-            'name': file_name,
-            'downloaded_bytes': downloaded_bytes,
-            'total_bytes': total_bytes,
-            'download_speed': download_speed
-        }
+
+
+def clear_specific_file_progress(message_id, file_name):
+    """清除特定檔案的進度，而不影響其他正在下載的檔案"""
+    global download_progress
+    file_key = f"{message_id}_{file_name}"
+    
+    if file_key in download_progress['current_files']:
+        del download_progress['current_files'][file_key]
+        print(f"Cleared completed file progress: {file_name} (ID:{message_id})")
 
 
 @_flask_app.route("/test", methods=["GET"])
@@ -1419,6 +1439,10 @@ def start_custom_download():
         try:
             import asyncio
             from module.custom_download import run_custom_download
+            
+            # 設置下載狀態為下載中
+            from module.download_stat import set_download_state, DownloadState
+            set_download_state(DownloadState.Downloading)
             
             # 獲取當前的事件循環並在其中調度任務
             if hasattr(_app, 'loop') and _app.loop:

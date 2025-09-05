@@ -1711,3 +1711,106 @@ body {
     flex: none;
   }
 }
+
+/* ==================== Progress Summary Cards ==================== */
+.progress-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.summary-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.summary-card-value {
+  font-size: 48px;
+  font-weight: 700;
+  margin-bottom: var(--space-sm);
+  line-height: 1;
+}
+
+.summary-card-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Card-specific colors */
+.summary-card-pending::before {
+  background: var(--status-pending);
+}
+
+.summary-card-pending .summary-card-value {
+  color: var(--status-pending);
+}
+
+.summary-card-downloading::before {
+  background: var(--status-downloading);
+}
+
+.summary-card-downloading .summary-card-value {
+  color: var(--status-downloading);
+}
+
+.summary-card-completed::before {
+  background: var(--status-completed);
+}
+
+.summary-card-completed .summary-card-value {
+  color: var(--status-completed);
+}
+
+.summary-card-failed::before {
+  background: var(--status-failed);
+}
+
+.summary-card-failed .summary-card-value {
+  color: var(--status-failed);
+}
+
+/* Mobile responsiveness for summary cards */
+@media (max-width: 768px) {
+  .progress-summary {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
+  }
+  
+  .summary-card {
+    padding: var(--space-md);
+  }
+  
+  .summary-card-value {
+    font-size: 32px;
+  }
+  
+  .summary-card-label {
+    font-size: 12px;
+  }
+}

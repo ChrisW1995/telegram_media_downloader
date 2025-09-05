@@ -660,6 +660,12 @@ async def worker(client: pyrogram.client.Client):
             message = item[0]
             node: TaskNode = item[1]
 
+            # Check for cancelled state
+            from module.download_stat import get_download_state, DownloadState
+            if get_download_state() == DownloadState.Cancelled:
+                node.is_stop_transmission = True
+                continue
+
             if node.is_stop_transmission:
                 continue
 
@@ -698,6 +704,12 @@ async def download_chat_task(
             await add_download_task(message, node)
 
     async for message in messages_iter:  # type: ignore
+        # Check for cancelled state during message processing
+        from module.download_stat import get_download_state, DownloadState
+        if get_download_state() == DownloadState.Cancelled:
+            logger.info("Download cancelled by user, stopping message processing")
+            break
+            
         meta_data = MetaData()
 
         caption = message.caption

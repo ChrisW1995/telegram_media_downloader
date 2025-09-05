@@ -1490,7 +1490,7 @@ window.cancelDownload = async () => {
   }
 
   try {
-    const response = await fetch('/set_download_state?state=pause', {
+    const response = await fetch('/set_download_state?state=cancel', {
       method: 'POST'
     });
 
@@ -1499,6 +1499,12 @@ window.cancelDownload = async () => {
     if (response.ok) {
       ModernTelegramDownloader.showNotification('已取消下載', 'warning');
       updateDownloadControls('cancelled');
+      updateFloatingProgressControls('cancelled');
+      // Hide floating progress window
+      const floatingProgress = document.querySelector('.floating-progress');
+      if (floatingProgress) {
+        floatingProgress.style.display = 'none';
+      }
       ModernTelegramDownloader.loadDownloadHistory();
     } else {
       ModernTelegramDownloader.showNotification('取消下載失敗', 'error');
@@ -1775,6 +1781,10 @@ function updateFloatingProgressControls(state) {
         break;
       case 'cancelled':
       case 'completed':
+        floatingPauseBtn.style.display = 'none';
+        floatingResumeBtn.style.display = 'none';
+        floatingCancelBtn.style.display = 'none';
+        break;
       default:
         floatingPauseBtn.style.display = 'flex';
         floatingResumeBtn.style.display = 'none';
@@ -1787,6 +1797,19 @@ function updateFloatingProgressControls(state) {
 // Direct API-based progress sync for floating modal
 async function syncFloatingProgressFromAPI() {
   try {
+    // Check download state first
+    const stateResponse = await fetch('/get_download_state');
+    const stateText = await stateResponse.text();
+    
+    // Don't show floating progress if download is cancelled or not active
+    if (stateText === 'cancelled' || stateText === 'completed' || stateText === 'idle') {
+      const floatingProgress = document.querySelector('.floating-progress');
+      if (floatingProgress) {
+        floatingProgress.style.display = 'none';
+      }
+      return { success: false, message: 'Download not active' };
+    }
+    
     const response = await fetch('/get_download_progress');
     const data = await response.json();
     
