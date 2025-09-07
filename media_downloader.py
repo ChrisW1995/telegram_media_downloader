@@ -902,6 +902,14 @@ def main():
             )
         except Exception as e:
             logger.warning(f"Error updating config: {e}")
+        
+        # Clean up database connections
+        try:
+            from database.database_manager import close_database
+            close_database()
+            logger.debug("Database connections closed")
+        except Exception as e:
+            logger.warning(f"Error closing database: {e}")
 
 
 if __name__ == "__main__":

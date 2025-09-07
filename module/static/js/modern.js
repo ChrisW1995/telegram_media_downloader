@@ -49,12 +49,31 @@ const ModernTelegramDownloader = {
 
   // Event listeners setup
   setupEventListeners() {
-    // Tab navigation
+    // Modern tab navigation (legacy)
     document.querySelectorAll('.modern-tabs-link').forEach(link => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
         const tabId = e.target.getAttribute('data-tab') || e.target.closest('[data-tab]').getAttribute('data-tab');
         this.switchTab(tabId);
+      });
+    });
+
+    // Compact tab navigation (new)
+    document.querySelectorAll('.compact-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tabId = e.target.getAttribute('data-tab');
+        this.switchTab(tabId);
+        
+        // Update active state for compact tabs
+        document.querySelectorAll('.compact-tab').forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        // Update slider animation
+        const tabsContainer = document.querySelector('.compact-tabs');
+        if (tabsContainer) {
+          tabsContainer.setAttribute('data-active-tab', tabId);
+        }
       });
     });
 

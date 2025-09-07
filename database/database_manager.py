@@ -34,17 +34,37 @@ class DatabaseManager:
     def _get_connection(self) -> sqlite3.Connection:
         """Get thread-local database connection."""
         if not hasattr(self._local, 'connection') or self._local.connection is None:
-            self._local.connection = sqlite3.connect(
-                self.db_path,
-                check_same_thread=False,
-                timeout=30.0  # 30 seconds timeout
-            )
-            # Enable foreign key constraints
-            self._local.connection.execute("PRAGMA foreign_keys = ON")
-            # Enable Write-Ahead Logging for better concurrency
-            self._local.connection.execute("PRAGMA journal_mode = WAL")
-            # Set row factory to return dictionaries
-            self._local.connection.row_factory = sqlite3.Row
+            try:
+                self._local.connection = sqlite3.connect(
+                    self.db_path,
+                    check_same_thread=False,
+                    timeout=60.0  # Increased timeout to 60 seconds
+                )
+                # Enable foreign key constraints
+                self._local.connection.execute("PRAGMA foreign_keys = ON")
+                # Enable Write-Ahead Logging for better concurrency
+                self._local.connection.execute("PRAGMA journal_mode = WAL")
+                # Set busy timeout to handle locks better
+                self._local.connection.execute("PRAGMA busy_timeout = 30000")  # 30 seconds
+                # Set row factory to return dictionaries
+                self._local.connection.row_factory = sqlite3.Row
+            except sqlite3.OperationalError as e:
+                if "database is locked" in str(e):
+                    logger.warning(f"Database is locked, retrying in 2 seconds: {e}")
+                    import time
+                    time.sleep(2)
+                    # Retry once
+                    self._local.connection = sqlite3.connect(
+                        self.db_path,
+                        check_same_thread=False,
+                        timeout=60.0
+                    )
+                    self._local.connection.execute("PRAGMA foreign_keys = ON")
+                    self._local.connection.execute("PRAGMA journal_mode = WAL") 
+                    self._local.connection.execute("PRAGMA busy_timeout = 30000")
+                    self._local.connection.row_factory = sqlite3.Row
+                else:
+                    raise
             
         return self._local.connection
     
@@ -271,8 +291,15 @@ class DatabaseManager:
     def close_all_connections(self):
         """Close all thread-local connections."""
         if hasattr(self._local, 'connection') and self._local.connection:
-            self._local.connection.close()
-            self._local.connection = None
+            try:
+                # Commit any pending transactions
+                self._local.connection.commit()
+                # Close the connection
+                self._local.connection.close()
+            except sqlite3.Error as e:
+                logger.warning(f"Error closing connection: {e}")
+            finally:
+                self._local.connection = None
     
     def get_database_stats(self) -> dict:
         """

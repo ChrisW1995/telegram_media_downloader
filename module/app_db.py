@@ -4,6 +4,7 @@ import asyncio
 import os
 import time
 import json
+import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
@@ -324,36 +325,52 @@ class DatabaseApplication:
 
     def save_config_to_database(self):
         """Save configuration to database instead of YAML files."""
-        try:
-            # Save basic configuration
-            config_mappings = {
-                'api_id': self.api_id,
-                'api_hash': self.api_hash,
-                'bot_token': self.bot_token,
-                'save_path': self.save_path,
-                'bot_save_path': self.bot_save_path,
-                'web_port': self.web_port,
-                'media_types': self.media_types,
-                'file_formats': self.file_formats,
-                'file_path_prefix': self.file_path_prefix,
-                'file_name_prefix': self.file_name_prefix,
-                'enable_download_txt': self.enable_download_txt,
-                'max_download_task': self.max_download_task,
-                'date_format': self.date_format,
-                'language': self.language.name,
-                'allowed_user_ids': self.allowed_user_ids
-            }
-            
-            for key, value in config_mappings.items():
-                self.app_config_repo.set_config_value(key, value)
-            
-            # Save chat configurations
-            self._save_chat_configs()
-            
-            logger.debug("Configuration saved to database")
-            
-        except Exception as e:
-            logger.error(f"Failed to save config to database: {e}")
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                # Save basic configuration
+                config_mappings = {
+                    'api_id': self.api_id,
+                    'api_hash': self.api_hash,
+                    'bot_token': self.bot_token,
+                    'save_path': self.save_path,
+                    'bot_save_path': self.bot_save_path,
+                    'web_port': self.web_port,
+                    'media_types': self.media_types,
+                    'file_formats': self.file_formats,
+                    'file_path_prefix': self.file_path_prefix,
+                    'file_name_prefix': self.file_name_prefix,
+                    'enable_download_txt': self.enable_download_txt,
+                    'max_download_task': self.max_download_task,
+                    'date_format': self.date_format,
+                    'language': self.language.name,
+                    'allowed_user_ids': self.allowed_user_ids
+                }
+                
+                for key, value in config_mappings.items():
+                    self.app_config_repo.set_config_value(key, value)
+                
+                # Save chat configurations
+                self._save_chat_configs()
+                
+                logger.debug("Configuration saved to database")
+                return  # Success, exit the retry loop
+                
+            except sqlite3.OperationalError as e:
+                if "database is locked" in str(e) and retry_count < max_retries - 1:
+                    retry_count += 1
+                    wait_time = 2 ** retry_count  # Exponential backoff: 2, 4, 8 seconds
+                    logger.warning(f"Database locked, retrying in {wait_time}s (attempt {retry_count}/{max_retries})")
+                    import time
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"Failed to save config to database after {max_retries} attempts: {e}")
+                    break
+            except Exception as e:
+                logger.error(f"Failed to save config to database: {e}")
+                break
 
     def _save_chat_configs(self):
         """Save chat configurations to database."""

@@ -7,9 +7,9 @@
   <title>Telegram Media Downloader</title>
   
   <!-- Modern CSS Framework -->
-  <link href="{{ url_for('static', filename='css/modern.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/progress.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/mobile.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/modern.css') }}?v=2.6.4" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/progress.css') }}?v=2.2.5" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/mobile.css') }}?v=2.2.5" rel="stylesheet">
   
   <!-- Icons -->
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
@@ -20,46 +20,40 @@
 
 <body>
   <div class="app-container">
-    <!-- App Header -->
-    <header class="app-header">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="app-title">
-            📡 Telegram Media Downloader
-          </h1>
-        </div>
-        
-        <div class="flex items-center gap-md">
-          <!-- Session Status Indicator -->
-          <div id="session-status-indicator" class="session-status">
-            <span class="session-status-icon" id="session-status-icon">🔄</span>
-            <span class="session-status-text" id="session-status-text">檢查連接中...</span>
-          </div>
-          
-          <!-- Session Control Buttons -->
-          <button id="reconnect-btn" class="glass-btn glass-btn-sm glass-btn-warning" style="display: none;" onclick="forceReconnect()">
-            🔄 重新連接
-          </button>
-          
-          <!-- Global Download Control -->
-          <button id="global-download-control" class="glass-btn glass-btn-secondary" style="display: none;" onclick="toggleGlobalDownloadState()"
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="6" y="4" width="4" height="16"/>
-              <rect x="14" y="4" width="4" height="16"/>
-            </svg>
-            <span id="global-download-text">暫停下載</span>
-          </button>
-          
-          <!-- Version Info -->
-          <div class="text-secondary" style="font-size: 12px;">
-            版本 <span id="app-version">載入中...</span>
-          </div>
+    <!-- Compact Navigation Header -->
+    <nav class="compact-header">
+      <div class="compact-header-left">
+        <h1 class="compact-title">📡 TGDL</h1>
+        <div class="compact-tabs" data-active-tab="download-manager">
+          <button class="compact-tab active" data-tab="download-manager">下載管理</button>
+          <button class="compact-tab" data-tab="group-manager">群組管理</button>
         </div>
       </div>
-    </header>
+      
+      <div class="compact-header-right">
+        <!-- Session Status -->
+        <div id="session-status-indicator" class="compact-status">
+          <span class="compact-status-icon" id="session-status-icon">🔄</span>
+          <span class="compact-status-text" id="session-status-text">檢查中</span>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="compact-actions">
+          <button id="reconnect-btn" class="compact-btn compact-btn-warning" style="display: none;" onclick="forceReconnect()" title="重新連接">
+            🔄
+          </button>
+          <button id="global-download-control" class="compact-btn compact-btn-secondary" style="display: none;" onclick="toggleGlobalDownloadState()" title="暫停下載">
+            ⏸️
+          </button>
+        </div>
+        
+        <!-- Version -->
+        <div class="compact-version">v<span id="app-version">2.2.5</span></div>
+      </div>
+    </nav>
 
-    <!-- Navigation Tabs -->
-    <nav class="modern-tabs">
+    <!-- Legacy tabs structure (hidden, for compatibility) -->
+    <div class="modern-tabs" style="display: none;">
       <ul class="modern-tabs-nav">
         <li class="modern-tabs-item">
           <a href="#download-manager" class="modern-tabs-link active" data-tab="download-manager">
@@ -83,7 +77,7 @@
           </a>
         </li>
       </ul>
-    </nav>
+    </div>
 
     <div class="modern-tabs-content">
       <!-- Download Manager Tab -->
