@@ -7,7 +7,7 @@
   <title>Telegram Media Downloader</title>
   
   <!-- Modern CSS Framework -->
-  <link href="{{ url_for('static', filename='css/modern.css') }}?v=2.6.4" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/modern.css') }}?v=2.7.0" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/progress.css') }}?v=2.2.5" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/mobile.css') }}?v=2.2.5" rel="stylesheet">
   
@@ -27,6 +27,7 @@
         <div class="compact-tabs" data-active-tab="download-manager">
           <button class="compact-tab active" data-tab="download-manager">下載管理</button>
           <button class="compact-tab" data-tab="group-manager">群組管理</button>
+          <button class="compact-tab" data-tab="fast-test">快速測試</button>
         </div>
       </div>
       
@@ -461,6 +462,203 @@
           <div class="glass-card-body">
             <div class="glass-list" id="groups-list">
               <!-- Groups will be dynamically loaded here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fast Test Tab -->
+      <div id="fast-test" class="modern-tabs-panel">
+        <!-- Authentication Section (shown when not logged in) -->
+        <div id="fast-test-login" class="glass-card" style="display: block;">
+          <div class="glass-card-header">
+            <h2 class="glass-card-title">🚀 快速測試</h2>
+            <p class="glass-card-subtitle">登入您的 Telegram 帳號以開始使用快速測試功能</p>
+          </div>
+          <div class="glass-card-body">
+            <!-- Login Form -->
+            <div id="login-form" class="fast-test-section">
+              <div class="glass-form-group">
+                <label class="glass-form-label" for="phone-number">電話號碼</label>
+                <input type="tel" id="phone-number" class="glass-form-input" 
+                  placeholder="+886912345678" required>
+                <div class="glass-form-help">請輸入完整的國際電話號碼格式</div>
+              </div>
+              <button type="button" id="send-code-btn" class="glass-btn glass-btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="m22 2-7 20-4-9-9-4 20-7z"/>
+                </svg>
+                發送驗證碼
+              </button>
+            </div>
+
+            <!-- Code Verification Form -->
+            <div id="code-form" class="fast-test-section" style="display: none;">
+              <div class="glass-form-group">
+                <label class="glass-form-label" for="verification-code">驗證碼</label>
+                <input type="text" id="verification-code" class="glass-form-input" 
+                  placeholder="輸入 Telegram 驗證碼" required>
+                <div class="glass-form-help">請檢查您的 Telegram 應用程式以獲取驗證碼</div>
+              </div>
+              <div class="flex gap-md">
+                <button type="button" id="verify-code-btn" class="glass-btn glass-btn-success">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20,6 9,17 4,12"/>
+                  </svg>
+                  驗證
+                </button>
+                <button type="button" id="back-to-phone-btn" class="glass-btn glass-btn-secondary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m12 19-7-7 7-7"/>
+                    <path d="M19 12H5"/>
+                  </svg>
+                  返回
+                </button>
+              </div>
+            </div>
+
+            <!-- Password Form (for 2FA) -->
+            <div id="password-form" class="fast-test-section" style="display: none;">
+              <div class="glass-form-group">
+                <label class="glass-form-label" for="two-fa-password">兩步驗證密碼</label>
+                <input type="password" id="two-fa-password" class="glass-form-input" 
+                  placeholder="輸入兩步驗證密碼" required>
+                <div class="glass-form-help">您的帳號已啟用兩步驗證，請輸入密碼</div>
+              </div>
+              <button type="button" id="verify-password-btn" class="glass-btn glass-btn-success">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 12l2 2 4-4"/>
+                  <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+                </svg>
+                確認
+              </button>
+            </div>
+
+            <!-- Status Display -->
+            <div id="auth-status" class="fast-test-status" style="display: none;"></div>
+          </div>
+        </div>
+
+        <!-- Main Interface (shown when logged in) -->
+        <div id="fast-test-main" class="fast-test-main" style="display: none;">
+          <!-- User Info -->
+          <div class="glass-card glass-card-compact">
+            <div class="glass-card-body">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-md">
+                  <div class="user-avatar">👤</div>
+                  <div>
+                    <div class="user-name" id="user-display-name">載入中...</div>
+                    <div class="user-phone" id="user-display-phone"></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-sm">
+                  <button type="button" id="sync-groups-btn" class="glass-btn glass-btn-sm glass-btn-secondary" title="同步群組">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M23 4v6h-6"/>
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                  </button>
+                  <button type="button" id="logout-btn" class="glass-btn glass-btn-sm glass-btn-danger" title="登出">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                      <polyline points="16,17 21,12 16,7"/>
+                      <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Group Selection -->
+          <div class="glass-card">
+            <div class="glass-card-header">
+              <h3 class="glass-card-title">選擇群組</h3>
+              <div class="glass-card-actions">
+                <button type="button" id="refresh-groups-btn" class="glass-btn glass-btn-sm glass-btn-secondary" title="重新整理">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"/>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="glass-card-body">
+              <div class="glass-form-group">
+                <label class="glass-form-label" for="group-selector">選擇要瀏覽的群組</label>
+                <select id="group-selector" class="glass-form-select">
+                  <option value="">-- 請選擇群組 --</option>
+                </select>
+                <div class="glass-form-help">選擇群組後將載入最新的訊息內容</div>
+              </div>
+              <button type="button" id="load-messages-btn" class="glass-btn glass-btn-primary" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                載入訊息
+              </button>
+            </div>
+          </div>
+
+          <!-- Messages Display -->
+          <div id="messages-container" class="glass-card" style="display: none;">
+            <div class="glass-card-header">
+              <h3 class="glass-card-title">訊息列表</h3>
+              <div class="glass-card-actions">
+                <div class="flex items-center gap-sm">
+                  <label class="glass-checkbox">
+                    <input type="checkbox" id="media-only-filter">
+                    <span class="glass-checkbox-mark"></span>
+                    僅顯示媒體
+                  </label>
+                  <button type="button" id="select-all-messages" class="glass-btn glass-btn-sm glass-btn-secondary">全選</button>
+                  <button type="button" id="start-download-btn" class="glass-btn glass-btn-sm glass-btn-success" disabled>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7,10 12,15 17,10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    開始下載
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="glass-card-body">
+              <div id="selected-count" class="fast-test-status" style="display: none;">
+                已選擇 <span id="selected-count-number">0</span> 個訊息
+              </div>
+              <div id="messages-list" class="messages-list">
+                <!-- Messages will be loaded here -->
+              </div>
+              <div id="load-more-container" style="display: none;">
+                <button type="button" id="load-more-btn" class="glass-btn glass-btn-secondary glass-btn-full">
+                  載入更多訊息
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Download Progress -->
+          <div id="download-progress-container" class="glass-card" style="display: none;">
+            <div class="glass-card-header">
+              <h3 class="glass-card-title">下載進度</h3>
+            </div>
+            <div class="glass-card-body">
+              <div class="download-summary">
+                <div class="download-stat">
+                  <span class="download-stat-label">總計</span>
+                  <span class="download-stat-value" id="total-downloads">0</span>
+                </div>
+                <div class="download-stat">
+                  <span class="download-stat-label">已完成</span>
+                  <span class="download-stat-value" id="completed-downloads">0</span>
+                </div>
+                <div class="download-stat">
+                  <span class="download-stat-label">失敗</span>
+                  <span class="download-stat-value" id="failed-downloads">0</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -858,7 +858,7 @@ body::before {
   font-size: 14px;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(20px);
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(0, 0, 0, 0.9);
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -897,10 +897,10 @@ body::before {
 .modern-form-select:focus,
 .modern-form-textarea:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(0, 122, 255, 0.6);
+  background: rgba(255, 255, 255, 0.9);
   box-shadow: 
-    0 0 0 3px rgba(255, 255, 255, 0.1),
+    0 0 0 3px rgba(0, 122, 255, 0.1),
     0 4px 16px rgba(0, 0, 0, 0.15);
   transform: translateY(-1px);
 }
@@ -2153,4 +2153,124 @@ body::before {
   .compact-version {
     font-size: 10px;
   }
+}
+
+/* ==================== Fast Test Page Styles ==================== */
+/* Fix color contrast issues for Fast Test page */
+
+/* Fast Test message items */
+.message-item {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  margin-bottom: var(--space-sm);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  user-select: none;
+}
+
+.message-item:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 122, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.message-item.selected {
+  background: rgba(0, 122, 255, 0.1) !important;
+  border-color: rgba(0, 122, 255, 0.5) !important;
+  box-shadow: 0 4px 16px rgba(0, 122, 255, 0.2) !important;
+}
+
+/* Fast Test message content */
+.message-content {
+  color: rgba(0, 0, 0, 0.9) !important;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.message-content * {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Fast Test specific sections */
+.fast-test-section {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+.fast-test-section * {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+.fast-test-status {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+.fast-test-status * {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+.fast-test-main {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+.fast-test-main * {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Fix form elements in Fast Test */
+#fast-test .glass-form-input,
+#fast-test .glass-form-select,
+#fast-test .glass-form-textarea {
+  color: rgba(0, 0, 0, 0.9) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+#fast-test .glass-form-label {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Fix glass card content in Fast Test */
+#fast-test .glass-card-body {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+#fast-test .glass-card-body * {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Fast Test message metadata */
+.message-date {
+  color: rgba(0, 0, 0, 0.6) !important;
+  font-size: 12px;
+  margin-bottom: var(--space-xs);
+}
+
+.message-media-info {
+  color: rgba(0, 0, 0, 0.7) !important;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: var(--space-xs);
+}
+
+/* Fix any remaining white text in Fast Test */
+#fast-test p,
+#fast-test span,
+#fast-test div:not(.modern-checkbox-mark),
+#fast-test label,
+#fast-test h1,
+#fast-test h2,
+#fast-test h3,
+#fast-test h4,
+#fast-test h5,
+#fast-test h6 {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Exception for buttons which should keep their original colors */
+#fast-test .modern-btn,
+#fast-test .glass-btn,
+#fast-test button {
+  color: inherit !important;
 }

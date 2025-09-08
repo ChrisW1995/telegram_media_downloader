@@ -4,8 +4,9 @@ import logging
 import os
 import threading
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, session
 from flask_login import LoginManager, UserMixin, login_required, login_user
+from loguru import logger
 
 import utils
 from module.app_db import DatabaseApplication as Application
@@ -25,6 +26,9 @@ log.setLevel(logging.ERROR)
 _flask_app = Flask(__name__)
 
 _flask_app.secret_key = "tdl"
+# Configure persistent sessions (30 days)
+from datetime import timedelta
+_flask_app.permanent_session_lifetime = timedelta(days=30)
 _login_manager = LoginManager()
 _login_manager.login_view = "login"
 _login_manager.init_app(_flask_app)
@@ -887,9 +891,9 @@ def get_download_history():
                         item['timestamp'] = f'加入佇列 - {current_time}'
                         item['add_time'] = datetime.now().timestamp()
                     
-                    # 檢查是否為新添加的項目
+                    # 檢查是否為新添加的項目或待下載項目
                     global newly_added_items
-                    item['auto_select'] = item_key in newly_added_items
+                    item['auto_select'] = (item_key in newly_added_items) or (item['status'] == 'pending')
                     print(f"Updated item: {item['chat_id']}:{item['message_id']} -> {item['status']}")
             
             # 添加不在歷史中的新項目
@@ -933,7 +937,7 @@ def get_download_history():
                                 'status': 'pending',
                                 'timestamp': f'加入佇列 - {current_time}',
                                 'add_time': datetime.now().timestamp(),  # 用於排序
-                                'auto_select': (chat_id, msg_id) in newly_added_items  # 檢查是否為新添加
+                                'auto_select': True  # pending 狀態的項目總是自動選取
                             })
                             print(f"Added new pending item: {chat_id}:{msg_id}")
         
@@ -1897,3 +1901,468 @@ def debug_telegram_state():
         "error_state": telegram_error_state,
         "auth_state": telegram_auth_state
     })
+
+
+# =============================================================================
+# Multi-user Authentication APIs for Fast Test
+# =============================================================================
+
+# Global storage for fast test auth sessions
+fast_test_auth_sessions = {}
+
+
+def run_async_in_thread(coro):
+    """Run async coroutine using the app's main event loop"""
+    import asyncio
+    import concurrent.futures
+    
+    # Always try to use the app's main event loop
+    if hasattr(_app, 'loop') and _app.loop and not _app.loop.is_closed():
+        try:
+            # Submit coroutine to the app's event loop in a thread-safe way
+            future = asyncio.run_coroutine_threadsafe(coro, _app.loop)
+            return future.result(timeout=30)  # 30 second timeout
+        except Exception as e:
+            logger.error(f"Failed to run coroutine in app loop: {e}")
+            # Fall back to creating a new loop
+    
+    # Fallback: run in new event loop in separate thread
+    def run_in_new_loop():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            try:
+                loop.close()
+            except:
+                pass
+    
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future = executor.submit(run_in_new_loop)
+        return future.result()
+
+@_flask_app.route("/api/auth/send_code", methods=["POST"])
+def send_verification_code():
+    """Send verification code for fast test authentication"""
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number', '').strip()
+        
+        if not phone_number:
+            return jsonify({'success': False, 'error': '請輸入電話號碼'})
+        
+        # Get API credentials from main app config
+        api_id = _app.api_id
+        api_hash = _app.api_hash
+        
+        if not api_id or not api_hash:
+            return jsonify({'success': False, 'error': 'API 憑證未設定'})
+        
+        # Initialize auth manager if not exists
+        from module.multiuser_auth import TelegramAuthManager
+        auth_manager = TelegramAuthManager()
+        
+        # Start auth process
+        result = run_async_in_thread(
+            auth_manager.start_auth_process(phone_number, api_id, api_hash)
+        )
+        
+        if result['success']:
+            # Store session info
+            session_key = result['session_key']
+            fast_test_auth_sessions[session_key] = {
+                'phone_number': phone_number,
+                'phone_code_hash': result['phone_code_hash'],
+                'auth_manager': auth_manager
+            }
+            
+            # Store session key in Flask session for this user
+            session['fast_test_session_key'] = session_key
+            session.permanent = True  # Make session persistent
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to send verification code: {e}")
+        return jsonify({'success': False, 'error': f'發送驗證碼失敗: {str(e)}'})
+
+
+@_flask_app.route("/api/auth/verify_code", methods=["POST"])
+def verify_verification_code():
+    """Verify phone code for fast test authentication"""
+    try:
+        data = request.get_json()
+        verification_code = data.get('verification_code', '').strip()
+        
+        # Get session key from Flask session
+        session_key = session.get('fast_test_session_key')
+        
+        if not session_key or session_key not in fast_test_auth_sessions:
+            return jsonify({'success': False, 'error': '會話已過期，請重新開始'})
+        
+        if not verification_code:
+            return jsonify({'success': False, 'error': '請輸入驗證碼'})
+        
+        session_info = fast_test_auth_sessions[session_key]
+        auth_manager = session_info['auth_manager']
+        phone_code_hash = session_info['phone_code_hash']
+        
+        # Verify code
+        result = run_async_in_thread(
+            auth_manager.verify_code(session_key, verification_code, phone_code_hash)
+        )
+        
+        if result['success'] and not result.get('requires_password'):
+            # Authentication completed successfully
+            session['fast_test_authenticated'] = True
+            session['fast_test_user_info'] = result.get('user_info', {})
+            session.permanent = True  # Make session persistent
+            
+            # Store user session in database for persistence
+            if 'user_id' in result:
+                session['fast_test_user_id'] = result['user_id']
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to verify code: {e}")
+        return jsonify({'success': False, 'error': f'驗證碼驗證失敗: {str(e)}'})
+
+
+@_flask_app.route("/api/auth/verify_password", methods=["POST"])
+def verify_two_factor_password():
+    """Verify 2FA password for fast test authentication"""
+    try:
+        data = request.get_json()
+        password = data.get('password', '')
+        
+        # Get session key from Flask session
+        session_key = session.get('fast_test_session_key')
+        
+        if not session_key or session_key not in fast_test_auth_sessions:
+            return jsonify({'success': False, 'error': '會話已過期，請重新開始'})
+        
+        if not password:
+            return jsonify({'success': False, 'error': '請輸入兩步驗證密碼'})
+        
+        session_info = fast_test_auth_sessions[session_key]
+        auth_manager = session_info['auth_manager']
+        
+        # Verify password
+        result = run_async_in_thread(
+            auth_manager.verify_password(session_key, password)
+        )
+        
+        if result['success']:
+            # Authentication completed successfully
+            session['fast_test_authenticated'] = True
+            session['fast_test_user_info'] = result.get('user_info', {})
+            session.permanent = True  # Make session persistent
+            
+            # Store user session in database for persistence
+            if 'user_id' in result:
+                session['fast_test_user_id'] = result['user_id']
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to verify password: {e}")
+        return jsonify({'success': False, 'error': f'密碼驗證失敗: {str(e)}'})
+
+
+@_flask_app.route("/api/auth/status", methods=["GET"])
+def get_auth_status():
+    """Get current authentication status for fast test"""
+    try:
+        authenticated = session.get('fast_test_authenticated', False)
+        user_info = session.get('fast_test_user_info', {})
+        user_id = session.get('fast_test_user_id')
+        
+        # If session shows authenticated but we don't have an active session_key,
+        # try to restore it from database
+        if authenticated and user_id and not session.get('fast_test_session_key'):
+            try:
+                # Try to restore the Telegram client session for this user
+                from module.multiuser_auth import TelegramAuthManager
+                auth_manager = TelegramAuthManager()
+                
+                # Create a session key for this restored session
+                import uuid
+                new_session_key = f"restored_{user_id}_{str(uuid.uuid4())[:8]}"
+                
+                # Try to get client for this user using our async helper
+                client = run_async_in_thread(auth_manager.get_user_client(user_id))
+                
+                if client:
+                    # Restore session
+                    session['fast_test_session_key'] = new_session_key
+                    fast_test_auth_sessions[new_session_key] = {
+                        'phone_number': user_info.get('phone_number', ''),
+                        'auth_manager': auth_manager
+                    }
+                    auth_manager.active_clients[new_session_key] = client
+                    
+                    logger.info(f"Restored session for user {user_id}")
+                else:
+                    # Session is invalid, clear authentication
+                    authenticated = False
+                    session.pop('fast_test_authenticated', None)
+                    session.pop('fast_test_user_info', None)
+                    session.pop('fast_test_user_id', None)
+                    session.pop('fast_test_session_key', None)
+                    user_info = {}
+                    
+                    logger.warning(f"Failed to restore session for user {user_id}, clearing auth")
+                    
+            except Exception as restore_error:
+                logger.error(f"Failed to restore session for user {user_id}: {restore_error}")
+                # Don't clear auth here, just log the error
+        
+        return jsonify({
+            'success': True,
+            'authenticated': authenticated,
+            'user_info': user_info
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get auth status: {e}")
+        return jsonify({'success': False, 'error': f'獲取認證狀態失敗: {str(e)}'})
+
+
+@_flask_app.route("/api/auth/logout", methods=["POST"])
+def fast_test_logout():
+    """Logout from fast test authentication"""
+    try:
+        # Get session key and clean up
+        session_key = session.get('fast_test_session_key')
+        
+        if session_key and session_key in fast_test_auth_sessions:
+            # Clean up auth session
+            session_info = fast_test_auth_sessions[session_key]
+            auth_manager = session_info.get('auth_manager')
+            
+            # Disconnect client if exists
+            import asyncio
+            if auth_manager and hasattr(auth_manager, 'disconnect_session'):
+                if hasattr(_app, 'loop') and _app.loop:
+                    _app.loop.run_until_complete(
+                        auth_manager.disconnect_session(session_key)
+                    )
+                else:
+                    asyncio.run(auth_manager.disconnect_session(session_key))
+            
+            # Remove from global storage
+            del fast_test_auth_sessions[session_key]
+        
+        # Clear Flask session
+        session.pop('fast_test_session_key', None)
+        session.pop('fast_test_authenticated', None)
+        session.pop('fast_test_user_info', None)
+        
+        return jsonify({'success': True, 'message': '已成功登出'})
+        
+    except Exception as e:
+        logger.error(f"Failed to logout: {e}")
+        return jsonify({'success': False, 'error': f'登出失敗: {str(e)}'})
+
+
+def require_fast_test_auth(f):
+    """Decorator to require fast test authentication"""
+    from functools import wraps
+    
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('fast_test_authenticated', False):
+            return jsonify({'success': False, 'error': '需要先進行認證'})
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# =============================================================================
+# Group Management APIs for Fast Test
+# =============================================================================
+
+@_flask_app.route("/api/groups/list", methods=["GET"])
+@require_fast_test_auth
+def get_groups_list():
+    """Get list of joined groups for fast test"""
+    try:
+        # Get authenticated user's session
+        session_key = session.get('fast_test_session_key')
+        
+        if not session_key or session_key not in fast_test_auth_sessions:
+            return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
+        
+        session_info = fast_test_auth_sessions[session_key]
+        auth_manager = session_info['auth_manager']
+        
+        # Get client for this user using our async helper
+        groups = run_async_in_thread(
+            auth_manager.get_user_groups(session_key)
+        )
+        
+        return jsonify({
+            'success': True,
+            'groups': groups
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get groups list: {e}")
+        return jsonify({'success': False, 'error': f'獲取群組列表失敗: {str(e)}'})
+
+
+@_flask_app.route("/api/groups/messages", methods=["POST"])
+@require_fast_test_auth
+def get_group_messages():
+    """Get messages from a specific group for fast test"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        limit = data.get('limit', 50)  # Default 50 messages
+        offset_id = data.get('offset_id', 0)  # For pagination
+        media_only = data.get('media_only', False)  # Filter for media messages only
+        
+        if not chat_id:
+            return jsonify({'success': False, 'error': '請提供群組 ID'})
+        
+        # Get authenticated user's session
+        session_key = session.get('fast_test_session_key')
+        
+        if not session_key or session_key not in fast_test_auth_sessions:
+            return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
+        
+        session_info = fast_test_auth_sessions[session_key]
+        auth_manager = session_info['auth_manager']
+        
+        # Get messages for this group using our async helper
+        result = run_async_in_thread(
+            auth_manager.get_group_messages(
+                session_key, chat_id, limit, offset_id, media_only
+            )
+        )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to get group messages: {e}")
+        return jsonify({'success': False, 'error': f'獲取群組訊息失敗: {str(e)}'})
+
+
+@_flask_app.route("/api/groups/load_more", methods=["POST"])
+@require_fast_test_auth
+def load_more_messages():
+    """Load more messages for pagination"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        offset_id = data.get('offset_id')
+        limit = data.get('limit', 50)
+        media_only = data.get('media_only', False)
+        
+        if not chat_id or not offset_id:
+            return jsonify({'success': False, 'error': '缺少必要參數'})
+        
+        # Get authenticated user's session
+        session_key = session.get('fast_test_session_key')
+        
+        if not session_key or session_key not in fast_test_auth_sessions:
+            return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
+        
+        session_info = fast_test_auth_sessions[session_key]
+        auth_manager = session_info['auth_manager']
+        
+        # Load more messages using our async helper
+        result = run_async_in_thread(
+            auth_manager.get_group_messages(
+                session_key, chat_id, limit, offset_id, media_only
+            )
+        )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Failed to load more messages: {e}")
+        return jsonify({'success': False, 'error': f'載入更多訊息失敗: {str(e)}'})
+
+
+# =============================================================================
+# Fast Download APIs
+# =============================================================================
+
+@_flask_app.route("/api/fast_download/add_tasks", methods=["POST"])
+@require_fast_test_auth
+def add_fast_download_tasks():
+    """Add selected messages to download queue from fast test"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        message_ids = data.get('message_ids', [])
+        
+        if not chat_id or not message_ids:
+            return jsonify({'success': False, 'error': '請提供群組 ID 和訊息 ID 列表'})
+        
+        # Add to existing custom download system
+        from collections import OrderedDict
+        
+        # Update target_ids in config
+        if not hasattr(_app.config, 'custom_downloads'):
+            _app.config.custom_downloads = {}
+        
+        if 'target_ids' not in _app.config.custom_downloads:
+            _app.config.custom_downloads['target_ids'] = OrderedDict()
+        
+        # Add message IDs to target chat
+        if chat_id not in _app.config.custom_downloads['target_ids']:
+            _app.config.custom_downloads['target_ids'][chat_id] = []
+        
+        # Add new message IDs (avoid duplicates)
+        existing_ids = set(_app.config.custom_downloads['target_ids'][chat_id])
+        new_ids = [msg_id for msg_id in message_ids if msg_id not in existing_ids]
+        
+        if new_ids:
+            _app.config.custom_downloads['target_ids'][chat_id].extend(new_ids)
+            
+            # Mark as newly added for auto-select
+            global newly_added_items
+            for msg_id in new_ids:
+                newly_added_items.add((chat_id, msg_id))
+            
+            # Update config file
+            _app.update_config()
+            
+            return jsonify({
+                'success': True,
+                'message': f'已新增 {len(new_ids)} 個下載任務',
+                'added_count': len(new_ids)
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'message': '所選訊息已在下載佇列中',
+                'added_count': 0
+            })
+        
+    except Exception as e:
+        logger.error(f"Failed to add fast download tasks: {e}")
+        return jsonify({'success': False, 'error': f'添加下載任務失敗: {str(e)}'})
+
+
+@_flask_app.route("/api/fast_download/status", methods=["GET"])
+@require_fast_test_auth
+def get_fast_download_status():
+    """Get download status for fast test interface"""
+    try:
+        # Use existing download progress system
+        global download_progress, active_download_session
+        
+        return jsonify({
+            'success': True,
+            'progress': download_progress,
+            'session': active_download_session,
+            'download_state': get_download_state().name
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get download status: {e}")
+        return jsonify({'success': False, 'error': f'獲取下載狀態失敗: {str(e)}'})

@@ -348,13 +348,14 @@ const ModernTelegramDownloader = {
       const statusClass = this.getStatusClass(item.status);
       const statusText = this.getStatusText(item.status);
       const isSelected = this.state.selectedTasks.has(`${item.chat_id}_${item.message_id}`);
+      const shouldBeChecked = isSelected || item.auto_select;
       
       return `
-        <div class="modern-list-item ${isSelected ? 'selected' : ''} ${item.auto_select ? 'animate-fade-in' : ''}" 
+        <div class="modern-list-item ${shouldBeChecked ? 'selected' : ''} ${item.auto_select ? 'animate-fade-in' : ''}" 
              data-task-id="${item.chat_id}_${item.message_id}">
           <div class="modern-checkbox">
             <input type="checkbox" class="modern-checkbox-input task-checkbox" 
-                   value="${item.chat_id}_${item.message_id}" ${isSelected ? 'checked' : ''}>
+                   value="${item.chat_id}_${item.message_id}" ${shouldBeChecked ? 'checked' : ''}>
             <div class="modern-checkbox-mark"></div>
           </div>
           
@@ -381,6 +382,13 @@ const ModernTelegramDownloader = {
         </div>
       `;
     }).join('');
+
+    // Auto-select items with auto_select flag
+    this.state.downloadHistory.forEach(item => {
+      if (item.auto_select) {
+        this.state.selectedTasks.add(`${item.chat_id}_${item.message_id}`);
+      }
+    });
 
     // Add event listeners for task checkboxes
     container.querySelectorAll('.task-checkbox').forEach(checkbox => {
@@ -2129,3 +2137,591 @@ if (originalUpdateProgressMethod) {
 function forceReconnect() {
   ModernTelegramDownloader.forceReconnect();
 }
+
+
+// =============================================================================
+// Fast Test Page JavaScript Implementation
+// =============================================================================
+
+class FastTestManager {
+  constructor() {
+    this.currentState = 'login'; // login, code, password, authenticated
+    this.phoneNumber = '';
+    this.groups = [];
+    this.selectedGroup = null;
+    this.messages = [];
+    this.selectedMessages = new Set();
+    this.hasMoreMessages = true;
+    this.lastMessageId = 0;
+    this.mediaOnly = false;
+    
+    this.bindEvents();
+    this.checkAuthStatus();
+  }
+  
+  bindEvents() {
+    // Auth form events
+    document.getElementById('send-code-btn')?.addEventListener('click', () => this.sendCode());
+    document.getElementById('verify-code-btn')?.addEventListener('click', () => this.verifyCode());
+    document.getElementById('verify-password-btn')?.addEventListener('click', () => this.verifyPassword());
+    document.getElementById('back-to-phone-btn')?.addEventListener('click', () => this.backToPhone());
+    document.getElementById('logout-btn')?.addEventListener('click', () => this.logout());
+    
+    // Group management events
+    document.getElementById('sync-groups-btn')?.addEventListener('click', () => this.syncGroups());
+    document.getElementById('refresh-groups-btn')?.addEventListener('click', () => this.loadGroups());
+    document.getElementById('group-selector')?.addEventListener('change', (e) => this.selectGroup(e.target.value));
+    document.getElementById('load-messages-btn')?.addEventListener('click', () => this.loadMessages());
+    
+    // Message list events
+    document.getElementById('media-only-filter')?.addEventListener('change', (e) => {
+      this.mediaOnly = e.target.checked;
+      this.loadMessages(true); // Reset to first page
+    });
+    document.getElementById('select-all-messages')?.addEventListener('click', () => this.selectAllMessages());
+    document.getElementById('start-download-btn')?.addEventListener('click', () => this.startDownload());
+    document.getElementById('load-more-btn')?.addEventListener('click', () => this.loadMoreMessages());
+    
+    // Enter key handlers
+    document.getElementById('phone-number')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.sendCode();
+    });
+    document.getElementById('verification-code')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.verifyCode();
+    });
+    document.getElementById('two-fa-password')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.verifyPassword();
+    });
+  }
+  
+  async checkAuthStatus() {
+    try {
+      const response = await fetch('/api/auth/status');
+      const data = await response.json();
+      
+      if (data.success && data.authenticated) {
+        this.showMainInterface(data.user_info);
+        this.loadGroups();
+      } else {
+        this.showLoginInterface();
+      }
+    } catch (error) {
+      console.error('Failed to check auth status:', error);
+      this.showLoginInterface();
+    }
+  }
+  
+  async sendCode() {
+    const phoneNumber = document.getElementById('phone-number').value.trim();
+    
+    if (!phoneNumber) {
+      this.showError('請輸入電話號碼');
+      return;
+    }
+    
+    this.phoneNumber = phoneNumber;
+    this.setLoading('send-code-btn', true, '發送中...');
+    
+    try {
+      const response = await fetch('/api/auth/send_code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone_number: phoneNumber
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        this.showCodeForm();
+        this.showMessage('驗證碼已發送到您的 Telegram', 'success');
+      } else {
+        this.showError(data.error || '發送驗證碼失敗');
+      }
+    } catch (error) {
+      console.error('Send code error:', error);
+      this.showError('網路錯誤，請重試');
+    } finally {
+      this.setLoading('send-code-btn', false, '發送驗證碼');
+    }
+  }
+  
+  async verifyCode() {
+    const verificationCode = document.getElementById('verification-code').value.trim();
+    
+    if (!verificationCode) {
+      this.showError('請輸入驗證碼');
+      return;
+    }
+    
+    this.setLoading('verify-code-btn', true, '驗證中...');
+    
+    try {
+      const response = await fetch('/api/auth/verify_code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          verification_code: verificationCode
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        if (data.requires_password) {
+          this.showPasswordForm();
+          this.showMessage('請輸入兩步驗證密碼', 'info');
+        } else {
+          this.showMainInterface(data.user_info);
+          this.showMessage('登入成功！', 'success');
+          this.loadGroups();
+        }
+      } else {
+        this.showError(data.error || '驗證碼錯誤');
+      }
+    } catch (error) {
+      console.error('Verify code error:', error);
+      this.showError('網路錯誤，請重試');
+    } finally {
+      this.setLoading('verify-code-btn', false, '驗證');
+    }
+  }
+  
+  async verifyPassword() {
+    const password = document.getElementById('two-fa-password').value;
+    
+    if (!password) {
+      this.showError('請輸入兩步驗證密碼');
+      return;
+    }
+    
+    this.setLoading('verify-password-btn', true, '驗證中...');
+    
+    try {
+      const response = await fetch('/api/auth/verify_password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          password: password
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        this.showMainInterface(data.user_info);
+        this.showMessage('登入成功！', 'success');
+        this.loadGroups();
+      } else {
+        this.showError(data.error || '密碼錯誤');
+      }
+    } catch (error) {
+      console.error('Verify password error:', error);
+      this.showError('網路錯誤，請重試');
+    } finally {
+      this.setLoading('verify-password-btn', false, '確認');
+    }
+  }
+  
+  async logout() {
+    this.setLoading('logout-btn', true);
+    
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        this.showLoginInterface();
+        this.showMessage('已成功登出', 'success');
+      } else {
+        this.showError(data.error || '登出失敗');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      this.showError('網路錯誤');
+    } finally {
+      this.setLoading('logout-btn', false);
+    }
+  }
+  
+  async loadGroups() {
+    this.setLoading('refresh-groups-btn', true);
+    
+    try {
+      const response = await fetch('/api/groups/list');
+      const data = await response.json();
+      
+      if (data.success) {
+        this.groups = data.groups;
+        this.renderGroupOptions();
+        this.showMessage(`載入 ${data.groups.length} 個群組`, 'success');
+      } else {
+        this.showError(data.error || '載入群組失敗');
+      }
+    } catch (error) {
+      console.error('Load groups error:', error);
+      this.showError('網路錯誤');
+    } finally {
+      this.setLoading('refresh-groups-btn', false);
+    }
+  }
+  
+  async loadMessages(reset = false) {
+    if (!this.selectedGroup) return;
+    
+    if (reset) {
+      this.messages = [];
+      this.selectedMessages.clear();
+      this.lastMessageId = 0;
+      this.hasMoreMessages = true;
+    }
+    
+    this.setLoading('load-messages-btn', true, '載入中...');
+    
+    try {
+      const response = await fetch('/api/groups/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: this.selectedGroup.id,
+          limit: 50,
+          offset_id: this.lastMessageId,
+          media_only: this.mediaOnly
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        if (reset) {
+          this.messages = data.messages;
+        } else {
+          this.messages = [...this.messages, ...data.messages];
+        }
+        
+        this.hasMoreMessages = data.messages.length === 50;
+        if (data.messages.length > 0) {
+          this.lastMessageId = data.messages[data.messages.length - 1].message_id;
+        }
+        
+        this.renderMessages();
+        this.showMessagesContainer();
+        this.showMessage(`載入 ${data.messages.length} 個訊息`, 'success');
+      } else {
+        this.showError(data.error || '載入訊息失敗');
+      }
+    } catch (error) {
+      console.error('Load messages error:', error);
+      this.showError('網路錯誤');
+    } finally {
+      this.setLoading('load-messages-btn', false, '載入訊息');
+    }
+  }
+  
+  async loadMoreMessages() {
+    if (!this.hasMoreMessages) return;
+    
+    this.setLoading('load-more-btn', true, '載入中...');
+    
+    try {
+      const response = await fetch('/api/groups/load_more', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: this.selectedGroup.id,
+          offset_id: this.lastMessageId,
+          limit: 50,
+          media_only: this.mediaOnly
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        this.messages = [...this.messages, ...data.messages];
+        this.hasMoreMessages = data.messages.length === 50;
+        
+        if (data.messages.length > 0) {
+          this.lastMessageId = data.messages[data.messages.length - 1].message_id;
+        }
+        
+        this.renderMessages();
+        this.showMessage(`載入 ${data.messages.length} 個更多訊息`, 'success');
+      } else {
+        this.showError(data.error || '載入更多訊息失敗');
+      }
+    } catch (error) {
+      console.error('Load more messages error:', error);
+      this.showError('網路錯誤');
+    } finally {
+      this.setLoading('load-more-btn', false, '載入更多訊息');
+    }
+  }
+  
+  async startDownload() {
+    if (this.selectedMessages.size === 0) {
+      this.showError('請選擇要下載的訊息');
+      return;
+    }
+    
+    const messageIds = Array.from(this.selectedMessages);
+    this.setLoading('start-download-btn', true, '添加中...');
+    
+    try {
+      const response = await fetch('/api/fast_download/add_tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: this.selectedGroup.id,
+          message_ids: messageIds
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        this.showMessage(`已新增 ${data.added_count} 個下載任務`, 'success');
+        this.selectedMessages.clear();
+        this.updateSelectedCount();
+        this.renderMessages(); // Re-render to update checkboxes
+      } else {
+        this.showError(data.error || '添加下載任務失敗');
+      }
+    } catch (error) {
+      console.error('Start download error:', error);
+      this.showError('網路錯誤');
+    } finally {
+      this.setLoading('start-download-btn', false, '開始下載');
+    }
+  }
+  
+  // UI Helper Methods
+  showLoginInterface() {
+    document.getElementById('fast-test-login').style.display = 'block';
+    document.getElementById('fast-test-main').style.display = 'none';
+    this.showLoginForm();
+  }
+  
+  showMainInterface(userInfo) {
+    document.getElementById('fast-test-login').style.display = 'none';
+    document.getElementById('fast-test-main').style.display = 'block';
+    
+    if (userInfo) {
+      document.getElementById('user-display-name').textContent = 
+        userInfo.first_name + (userInfo.last_name ? ' ' + userInfo.last_name : '');
+      document.getElementById('user-display-phone').textContent = userInfo.phone_number || '';
+    }
+  }
+  
+  showLoginForm() {
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('code-form').style.display = 'none';
+    document.getElementById('password-form').style.display = 'none';
+    document.getElementById('auth-status').style.display = 'none';
+  }
+  
+  showCodeForm() {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('code-form').style.display = 'block';
+    document.getElementById('password-form').style.display = 'none';
+    document.getElementById('verification-code').focus();
+  }
+  
+  showPasswordForm() {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('code-form').style.display = 'none';
+    document.getElementById('password-form').style.display = 'block';
+    document.getElementById('two-fa-password').focus();
+  }
+  
+  backToPhone() {
+    this.showLoginForm();
+    document.getElementById('phone-number').focus();
+  }
+  
+  selectGroup(groupId) {
+    this.selectedGroup = this.groups.find(g => g.id === groupId);
+    document.getElementById('load-messages-btn').disabled = !this.selectedGroup;
+    
+    if (this.selectedGroup) {
+      this.hideMessagesContainer();
+    }
+  }
+  
+  showMessagesContainer() {
+    document.getElementById('messages-container').style.display = 'block';
+    this.updateLoadMoreButton();
+  }
+  
+  hideMessagesContainer() {
+    document.getElementById('messages-container').style.display = 'none';
+  }
+  
+  selectAllMessages() {
+    const allMessages = this.messages.filter(msg => msg.media_type);
+    const allSelected = allMessages.every(msg => this.selectedMessages.has(msg.message_id));
+    
+    if (allSelected) {
+      // Deselect all
+      allMessages.forEach(msg => this.selectedMessages.delete(msg.message_id));
+    } else {
+      // Select all
+      allMessages.forEach(msg => this.selectedMessages.add(msg.message_id));
+    }
+    
+    this.renderMessages();
+    this.updateSelectedCount();
+  }
+  
+  toggleMessageSelection(messageId) {
+    if (this.selectedMessages.has(messageId)) {
+      this.selectedMessages.delete(messageId);
+    } else {
+      this.selectedMessages.add(messageId);
+    }
+    this.updateSelectedCount();
+  }
+  
+  updateSelectedCount() {
+    const count = this.selectedMessages.size;
+    document.getElementById('selected-count-number').textContent = count;
+    document.getElementById('selected-count').style.display = count > 0 ? 'block' : 'none';
+    document.getElementById('start-download-btn').disabled = count === 0;
+  }
+  
+  updateLoadMoreButton() {
+    const container = document.getElementById('load-more-container');
+    const btn = document.getElementById('load-more-btn');
+    
+    if (this.hasMoreMessages && this.messages.length > 0) {
+      container.style.display = 'block';
+    } else {
+      container.style.display = 'none';
+    }
+  }
+  
+  renderGroupOptions() {
+    const select = document.getElementById('group-selector');
+    select.innerHTML = '<option value="">-- 請選擇群組 --</option>';
+    
+    this.groups.forEach(group => {
+      const option = document.createElement('option');
+      option.value = group.id;
+      option.textContent = `${group.title} (${group.type})`;
+      select.appendChild(option);
+    });
+  }
+  
+  renderMessages() {
+    const container = document.getElementById('messages-list');
+    
+    if (this.messages.length === 0) {
+      container.innerHTML = '<div class="messages-empty">沒有找到訊息</div>';
+      return;
+    }
+    
+    container.innerHTML = this.messages.map(message => {
+      const isSelected = this.selectedMessages.has(message.message_id);
+      const hasMedia = message.media_type;
+      const date = new Date(message.date).toLocaleString();
+      
+      return `
+        <div class="message-item ${isSelected ? 'selected' : ''} ${!hasMedia ? 'no-media' : ''}">
+          <div class="message-checkbox">
+            <input type="checkbox" 
+                   ${hasMedia ? '' : 'disabled'} 
+                   ${isSelected ? 'checked' : ''} 
+                   onchange="fastTestManager.toggleMessageSelection(${message.message_id})"
+                   class="glass-checkbox-input">
+            <div class="glass-checkbox-mark"></div>
+          </div>
+          
+          <div class="message-content">
+            <div class="message-header">
+              <span class="message-id">#${message.message_id}</span>
+              <span class="message-date">${date}</span>
+              ${hasMedia ? `<span class="media-badge">${message.media_type}</span>` : ''}
+            </div>
+            
+            ${message.text ? `<div class="message-text">${this.escapeHtml(message.text)}</div>` : ''}
+            
+            ${message.file_name ? `
+              <div class="message-file">
+                <span class="file-name">${this.escapeHtml(message.file_name)}</span>
+                ${message.file_size ? `<span class="file-size">(${this.formatFileSize(message.file_size)})</span>` : ''}
+              </div>
+            ` : ''}
+            
+            ${message.caption ? `<div class="message-caption">${this.escapeHtml(message.caption)}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    this.updateSelectedCount();
+  }
+  
+  // Utility Methods
+  setLoading(buttonId, loading, text = null) {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
+    
+    if (loading) {
+      button.disabled = true;
+      if (text) button.textContent = text;
+      button.classList.add('loading');
+    } else {
+      button.disabled = false;
+      if (text) button.textContent = text;
+      button.classList.remove('loading');
+    }
+  }
+  
+  showMessage(message, type = 'info') {
+    // You can implement toast notifications here
+    console.log(`${type.toUpperCase()}: ${message}`);
+  }
+  
+  showError(message) {
+    this.showMessage(message, 'error');
+    console.error('Fast Test Error:', message);
+  }
+  
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
+  formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+}
+
+// Initialize Fast Test Manager when DOM is loaded
+let fastTestManager;
+document.addEventListener('DOMContentLoaded', function() {
+  if (document.getElementById('fast-test')) {
+    fastTestManager = new FastTestManager();
+  }
+});
