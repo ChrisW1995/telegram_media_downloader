@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast Test - 快速測試下載</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/modern.css') }}" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        
+        .header-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            margin-bottom: 2rem;
+        }
+        
+        .main-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            min-height: 70vh;
+        }
+        
+        .group-selector {
+            background: rgba(108, 117, 125, 0.1);
+            border: 1px solid rgba(108, 117, 125, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .messages-container {
+            max-height: 60vh;
+            overflow-y: auto;
+            background: rgba(248, 249, 250, 0.5);
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .action-buttons {
+            padding: 1rem;
+            background: rgba(248, 249, 250, 0.3);
+            border-radius: 15px;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+            color: white;
+        }
+        
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .alert {
+            border-radius: 15px;
+            border: none;
+            backdrop-filter: blur(10px);
+        }
+        
+        .nav-link {
+            color: #495057 !important;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Card -->
+        <div class="card header-card">
+            <div class="card-body text-center">
+                <h1 class="card-title mb-3">
+                    <i class="fas fa-rocket text-primary"></i>
+                    Fast Test 快速測試下載
+                </h1>
+                <p class="text-muted mb-3">選擇群組和訊息，快速預覽並下載媒體內容</p>
+                <nav class="d-flex justify-content-center gap-3">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-home"></i> 返回首頁
+                    </a>
+                    <button type="button" onclick="window.close()" class="nav-link" style="border: none; background: transparent;">
+                        <i class="fas fa-times"></i> 關閉
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="card main-card">
+            <div class="card-body">
+                <!-- Group Selection -->
+                <div class="group-selector">
+                    <h5 class="mb-3">
+                        <i class="fas fa-users text-primary"></i>
+                        選擇群組
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <select id="group-select" class="form-select">
+                                <option value="">請選擇群組...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button id="load-messages-btn" class="btn btn-secondary w-100" disabled>
+                                <i class="fas fa-download"></i>
+                                載入訊息
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="loading-spinner" class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">載入中...</span>
+                    </div>
+                    <p class="mt-2">正在載入群組訊息...</p>
+                </div>
+
+                <!-- Messages Container -->
+                <div id="messages-container" class="messages-container" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comments text-primary"></i>
+                            群組訊息
+                        </h5>
+                        <div>
+                            <button id="select-all-btn" class="btn btn-sm btn-outline-primary me-2">全選</button>
+                            <button id="clear-selection-btn" class="btn btn-sm btn-outline-secondary">清除選擇</button>
+                        </div>
+                    </div>
+                    
+                    <div id="messages-list">
+                        <!-- Messages will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons" style="display: none;" id="action-buttons">
+                    <button id="fast-test-download-btn" class="btn btn-primary" disabled>
+                        <i class="fas fa-download"></i>
+                        開始下載 (<span id="selected-count">0</span>)
+                    </button>
+                    <button id="refresh-messages-btn" class="btn btn-secondary">
+                        <i class="fas fa-refresh"></i>
+                        重新載入
+                    </button>
+                </div>
+
+                <!-- Status Alert -->
+                <div id="status-alert" class="alert alert-info" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let selectedMessages = [];
+        let currentChatId = null;
+        let allMessages = [];
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGroups();
+            initializeEventListeners();
+        });
+
+        function initializeEventListeners() {
+            // Group selection change
+            document.getElementById('group-select').addEventListener('change', function() {
+                const selectedValue = this.value;
+                const loadBtn = document.getElementById('load-messages-btn');
+                
+                if (selectedValue) {
+                    loadBtn.disabled = false;
+                    currentChatId = selectedValue;
+                } else {
+                    loadBtn.disabled = true;
+                    currentChatId = null;
+                    hideMessages();
+                }
+            });
+
+            // Load messages button
+            document.getElementById('load-messages-btn').addEventListener('click', loadMessages);
+
+            // Refresh messages button
+            document.getElementById('refresh-messages-btn').addEventListener('click', loadMessages);
+
+            // Select all button
+            document.getElementById('select-all-btn').addEventListener('click', selectAllMessages);
+
+            // Clear selection button
+            document.getElementById('clear-selection-btn').addEventListener('click', clearSelection);
+
+            // Download button
+            document.getElementById('fast-test-download-btn').addEventListener('click', startDownload);
+        }
+
+        async function loadGroups() {
+            try {
+                const response = await fetch('/api/get_user_groups');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('group-select');
+                    select.innerHTML = '<option value="">請選擇群組...</option>';
+                    
+                    data.groups.forEach(group => {
+                        const option = document.createElement('option');
+                        option.value = group.chat_id;
+                        option.textContent = group.name;
+                        select.appendChild(option);
+                    });
+                } else {
+                    showAlert('載入群組失敗: ' + data.message, 'danger');
+                }
+            } catch (error) {
+                console.error('載入群組錯誤:', error);
+                showAlert('載入群組時發生錯誤', 'danger');
+            }
+        }
+
+        async function loadMessages() {
+            if (!currentChatId) return;
+
+            showLoading(true);
+            hideMessages();
+            
+            try {
+                const response = await fetch(`/api/get_group_messages?chat_id=${currentChatId}`);
+                const data = await response.json();
+                
+                if (data.success && data.messages) {
+                    allMessages = data.messages;
+                    renderMessages(allMessages);
+                    showMessages();
+                } else {
+                    showAlert('載入訊息失敗: ' + (data.message || '未知錯誤'), 'danger');
+                }
+            } catch (error) {
+                console.error('載入訊息錯誤:', error);
+                showAlert('載入訊息時發生錯誤', 'danger');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderMessages(messages) {
+            const container = document.getElementById('messages-list');
+            container.innerHTML = '';
+
+            if (!messages || messages.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted p-4">沒有找到訊息</div>';
+                return;
+            }
+
+            messages.forEach(message => {
+                const messageElement = createMessageElement(message);
+                container.appendChild(messageElement);
+            });
+        }
+
+        function createMessageElement(message) {
+            const div = document.createElement('div');
+            div.className = 'chat-bubble';
+            div.dataset.messageId = message.message_id;
+            
+            // Get media type and file info
+            const mediaInfo = getMediaInfo(message);
+            const mediaIcon = getMediaIcon(mediaInfo.type);
+            
+            div.innerHTML = `
+                <div class="message-header">
+                    <div class="message-checkbox">
+                        <input type="checkbox" class="message-select" 
+                               onchange="updateSelection(this, ${message.message_id})"
+                               onclick="event.stopPropagation()">
+                    </div>
+                    <div class="message-info">
+                        <span class="message-id">#${message.message_id}</span>
+                        <span class="message-date">${formatDate(message.date)}</span>
+                        <span class="media-badge ${mediaInfo.type}">
+                            ${mediaIcon} ${mediaInfo.type.toUpperCase()}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="message-content">
+                    ${message.caption ? `<div class="message-text">${escapeHtml(message.caption)}</div>` : ''}
+                    
+                    <div class="media-placeholder ${mediaInfo.type}">
+                        <div class="media-icon">
+                            ${mediaIcon}
+                        </div>
+                        <div class="media-info">
+                            <div class="media-filename">${mediaInfo.filename || 'Unknown file'}</div>
+                            <div class="media-size">${mediaInfo.size || 'Unknown size'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add click event for row selection
+            div.onclick = function(event) {
+                if (event.target.type !== 'checkbox') {
+                    const checkbox = div.querySelector('.message-select');
+                    checkbox.checked = !checkbox.checked;
+                    updateSelection(checkbox, message.message_id);
+                }
+            };
+
+            return div;
+        }
+
+        function getMediaInfo(message) {
+            let type = 'document';
+            let filename = '';
+            let size = '';
+
+            if (message.photo) {
+                type = 'photo';
+                filename = 'Photo';
+                size = message.photo.file_size ? formatFileSize(message.photo.file_size) : '';
+            } else if (message.video) {
+                type = 'video';
+                filename = message.video.file_name || 'Video';
+                size = message.video.file_size ? formatFileSize(message.video.file_size) : '';
+            } else if (message.audio) {
+                type = 'audio';
+                filename = message.audio.file_name || 'Audio';
+                size = message.audio.file_size ? formatFileSize(message.audio.file_size) : '';
+            } else if (message.document) {
+                type = 'document';
+                filename = message.document.file_name || 'Document';
+                size = message.document.file_size ? formatFileSize(message.document.file_size) : '';
+            } else if (message.voice) {
+                type = 'audio';
+                filename = 'Voice Message';
+                size = message.voice.file_size ? formatFileSize(message.voice.file_size) : '';
+            } else if (message.video_note) {
+                type = 'video';
+                filename = 'Video Note';
+                size = message.video_note.file_size ? formatFileSize(message.video_note.file_size) : '';
+            } else if (message.sticker) {
+                type = 'photo';
+                filename = 'Sticker';
+                size = message.sticker.file_size ? formatFileSize(message.sticker.file_size) : '';
+            } else if (message.animation) {
+                type = 'video';
+                filename = 'Animation';
+                size = message.animation.file_size ? formatFileSize(message.animation.file_size) : '';
+            }
+
+            return { type, filename, size };
+        }
+
+        function getMediaIcon(type) {
+            const icons = {
+                'photo': '<i class="fas fa-image"></i>',
+                'video': '<i class="fas fa-video"></i>',
+                'audio': '<i class="fas fa-music"></i>',
+                'document': '<i class="fas fa-file"></i>'
+            };
+            return icons[type] || '<i class="fas fa-file"></i>';
+        }
+
+        function updateSelection(checkbox, messageId) {
+            if (checkbox.checked) {
+                if (!selectedMessages.includes(messageId)) {
+                    selectedMessages.push(messageId);
+                }
+            } else {
+                selectedMessages = selectedMessages.filter(id => id !== messageId);
+            }
+
+            updateSelectionUI();
+        }
+
+        function updateSelectionUI() {
+            const count = selectedMessages.length;
+            document.getElementById('selected-count').textContent = count;
+            document.getElementById('fast-test-download-btn').disabled = count === 0;
+        }
+
+        function selectAllMessages() {
+            const checkboxes = document.querySelectorAll('.message-select');
+            selectedMessages = [];
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                const messageId = parseInt(checkbox.closest('[data-message-id]').dataset.messageId);
+                selectedMessages.push(messageId);
+            });
+            
+            updateSelectionUI();
+        }
+
+        function clearSelection() {
+            const checkboxes = document.querySelectorAll('.message-select');
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+            selectedMessages = [];
+            updateSelectionUI();
+        }
+
+        async function startDownload() {
+            if (!currentChatId || selectedMessages.length === 0) {
+                showAlert('請選擇要下載的訊息', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/add_fast_download_tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chat_id: currentChatId,
+                        message_ids: selectedMessages
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(`成功加入 ${data.added_count} 個下載任務`, 'success');
+                    clearSelection();
+                } else {
+                    showAlert('下載失敗: ' + data.message, 'danger');
+                }
+            } catch (error) {
+                console.error('下載錯誤:', error);
+                showAlert('下載時發生錯誤', 'danger');
+            }
+        }
+
+        // Utility functions
+        function showLoading(show) {
+            const spinner = document.getElementById('loading-spinner');
+            spinner.style.display = show ? 'block' : 'none';
+        }
+
+        function showMessages() {
+            document.getElementById('messages-container').style.display = 'block';
+            document.getElementById('action-buttons').style.display = 'block';
+        }
+
+        function hideMessages() {
+            document.getElementById('messages-container').style.display = 'none';
+            document.getElementById('action-buttons').style.display = 'none';
+            clearSelection();
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('status-alert');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-TW') + ' ' + date.toLocaleTimeString('zh-TW', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

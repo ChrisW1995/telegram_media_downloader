@@ -178,6 +178,164 @@ def index():
     )
 
 
+@_flask_app.route("/fast_test")
+@login_required
+def fast_test():
+    """Fast Test 獨立頁面"""
+    return render_template("fast_test.html")
+
+
+@_flask_app.route("/api/get_user_groups")
+@login_required
+def get_user_groups():
+    """獲取用戶群組列表 - 用於Fast Test頁面"""
+    try:
+        # 使用配置文件中的群組資訊
+        groups = [
+            {'chat_id': str(chat_id), 'name': group_name}
+            for chat_id, group_name in _app.config['custom_downloads']['group_tags'].items()
+        ]
+            
+        return jsonify({
+            'success': True,
+            'groups': groups
+        })
+            
+    except Exception as e:
+        logger.error(f"獲取用戶群組失敗: {e}")
+        return jsonify({
+            'success': False, 
+            'message': f'獲取群組失敗: {str(e)}'
+        })
+
+
+@_flask_app.route("/api/get_group_messages")
+@login_required
+def get_fast_test_group_messages():
+    """獲取群組訊息 - 用於Fast Test頁面"""
+    try:
+        chat_id = request.args.get('chat_id')
+        if not chat_id:
+            return jsonify({'success': False, 'message': '缺少chat_id參數'})
+            
+        # 使用現有的multiuser_auth模塊獲取訊息
+        if hasattr(_app, 'auth_manager') and _app.auth_manager:
+            # 創建一個臨時session_key (使用第一個可用的用戶ID)
+            temp_session_key = None
+            if hasattr(_app.auth_manager, 'active_clients') and _app.auth_manager.active_clients:
+                temp_session_key = f"temp_auth_{list(_app.auth_manager.active_clients.keys())[0]}"
+            
+            if temp_session_key:
+                try:
+                    # 獲取群組訊息
+                    messages_data = _app.auth_manager.get_group_messages(chat_id, temp_session_key)
+                    
+                    if messages_data and 'messages' in messages_data:
+                        return jsonify({
+                            'success': True,
+                            'messages': messages_data['messages']
+                        })
+                    else:
+                        return jsonify({
+                            'success': False,
+                            'message': '無法獲取訊息'
+                        })
+                        
+                except Exception as e:
+                    logger.error(f"獲取群組訊息錯誤: {e}")
+                    return jsonify({
+                        'success': False,
+                        'message': f'獲取訊息失敗: {str(e)}'
+                    })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': '沒有有效的認證會話'
+                })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '認證管理器未初始化'
+            })
+            
+    except Exception as e:
+        logger.error(f"獲取群組訊息API錯誤: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'API錯誤: {str(e)}'
+        })
+
+
+@_flask_app.route("/api/add_fast_download_tasks", methods=["POST"])
+@login_required
+def add_fast_test_download_tasks():
+    """添加快速下載任務 - 用於Fast Test頁面"""
+    try:
+        data = request.get_json()
+        chat_id = data.get('chat_id')
+        message_ids = data.get('message_ids', [])
+        
+        logger.info(f"Fast Test API called with chat_id: {chat_id}, message_ids: {message_ids}")
+        
+        if not chat_id or not message_ids:
+            return jsonify({
+                'success': False,
+                'message': '缺少必要參數'
+            })
+        
+        # 獲取現有的配置
+        if not _app.config.get('custom_downloads'):
+            _app.config['custom_downloads'] = {'enable': True, 'group_tags': {}, 'target_ids': {}}
+        
+        # 確保target_ids存在
+        if 'target_ids' not in _app.config['custom_downloads']:
+            _app.config['custom_downloads']['target_ids'] = {}
+        
+        # 獲取該群組現有的message_ids
+        existing_ids = set(_app.config['custom_downloads']['target_ids'].get(chat_id, []))
+        logger.info(f"Existing message IDs for {chat_id}: {existing_ids}")
+        
+        # 添加新的message_ids，過濾掉已存在的
+        new_ids = []
+        for msg_id in message_ids:
+            if msg_id not in existing_ids:
+                new_ids.append(msg_id)
+                existing_ids.add(msg_id)
+        
+        if new_ids:
+            # 更新配置
+            _app.config['custom_downloads']['target_ids'][chat_id] = list(existing_ids)
+            
+            # 保存配置到數據庫
+            _app.update_config()
+            
+            logger.info(f"Added {len(new_ids)} new download tasks for chat {chat_id}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'已新增 {len(new_ids)} 個下載任務',
+                'added_count': len(new_ids),
+                'total_count': len(existing_ids)
+            })
+        else:
+            logger.info("All selected messages are already in the download queue")
+            return jsonify({
+                'success': True,
+                'message': '所選訊息已在下載佇列中',
+                'added_count': 0,
+                'total_count': len(existing_ids)
+            })
+            
+    except Exception as e:
+        logger.error(f"Failed to add fast download tasks: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': f'添加下載任務失敗: {str(e)}'
+        })
+
+
 @_flask_app.route("/get_download_status")
 @login_required
 def get_download_speed():
@@ -2299,29 +2457,42 @@ def add_fast_download_tasks():
         chat_id = data.get('chat_id')
         message_ids = data.get('message_ids', [])
         
+        logger.info(f"Fast Test API called with chat_id: {chat_id}, message_ids: {message_ids}")
+        
         if not chat_id or not message_ids:
+            logger.error(f"Missing data - chat_id: {chat_id}, message_ids: {message_ids}")
             return jsonify({'success': False, 'error': '請提供群組 ID 和訊息 ID 列表'})
         
         # Add to existing custom download system
         from collections import OrderedDict
         
         # Update target_ids in config
-        if not hasattr(_app.config, 'custom_downloads'):
-            _app.config.custom_downloads = {}
+        # Ensure _app.config is properly initialized
+        if not hasattr(_app, 'config') or _app.config is None:
+            logger.error("_app.config is not initialized")
+            return jsonify({'success': False, 'error': '應用配置未初始化'})
+            
+        # Ensure custom_downloads section exists
+        if 'custom_downloads' not in _app.config:
+            _app.config['custom_downloads'] = {'enable': True, 'target_ids': {}, 'group_tags': {}}
         
-        if 'target_ids' not in _app.config.custom_downloads:
-            _app.config.custom_downloads['target_ids'] = OrderedDict()
+        # Ensure target_ids exists
+        custom_downloads = _app.config['custom_downloads']
+        if 'target_ids' not in custom_downloads:
+            custom_downloads['target_ids'] = OrderedDict()
         
         # Add message IDs to target chat
-        if chat_id not in _app.config.custom_downloads['target_ids']:
-            _app.config.custom_downloads['target_ids'][chat_id] = []
+        target_ids = custom_downloads['target_ids']
+        if chat_id not in target_ids:
+            target_ids[chat_id] = []
         
         # Add new message IDs (avoid duplicates)
-        existing_ids = set(_app.config.custom_downloads['target_ids'][chat_id])
+        existing_ids = set(target_ids[chat_id])
         new_ids = [msg_id for msg_id in message_ids if msg_id not in existing_ids]
         
         if new_ids:
-            _app.config.custom_downloads['target_ids'][chat_id].extend(new_ids)
+            target_ids[chat_id].extend(new_ids)
+            logger.info(f"Added {len(new_ids)} new message IDs: {new_ids}")
             
             # Mark as newly added for auto-select
             global newly_added_items
@@ -2329,7 +2500,13 @@ def add_fast_download_tasks():
                 newly_added_items.add((chat_id, msg_id))
             
             # Update config file
-            _app.update_config()
+            try:
+                _app.update_config()
+                logger.info("Configuration updated successfully")
+            except Exception as update_error:
+                logger.error(f"Failed to update config: {update_error}")
+                # Don't fail the request if config update fails
+                pass
             
             return jsonify({
                 'success': True,
@@ -2337,6 +2514,7 @@ def add_fast_download_tasks():
                 'added_count': len(new_ids)
             })
         else:
+            logger.info(f"All message IDs already exist in queue: existing={existing_ids}, requested={message_ids}")
             return jsonify({
                 'success': True,
                 'message': '所選訊息已在下載佇列中',
@@ -2344,7 +2522,11 @@ def add_fast_download_tasks():
             })
         
     except Exception as e:
+        import traceback
         logger.error(f"Failed to add fast download tasks: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"_app type: {type(_app)}")
+        logger.error(f"_app.config type: {type(_app.config) if _app else 'N/A'}")
         return jsonify({'success': False, 'error': f'添加下載任務失敗: {str(e)}'})
 
 

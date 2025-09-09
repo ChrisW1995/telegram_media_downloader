@@ -127,3 +127,4 @@ Test files are organized in `tests/` with coverage for:
 - **PyYAML**: Configuration file parsing
 - **Rich/Loguru**: Enhanced logging and console output
 - **Cryptographic Libraries**: For Telegram protocol support
+- 不用管media_types變動

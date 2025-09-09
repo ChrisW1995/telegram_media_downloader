@@ -3,7 +3,7 @@ api_id: 29060182
 bot_token: 8479394911:AAEXCK8xX0jXYnOF_gcA9wSsu7Z68AjzbR8
 chat:
 - chat_id: -1002634361114
-  last_read_message_id: 488
+  last_read_message_id: 631
 custom_downloads:
   enable: true
   group_tags:
@@ -11,12 +11,7 @@ custom_downloads:
     '-1002634361114': A战士father2026.08
     '-1001355003597': 03🔵日本【JP】new
     '-1002234837448': 🫧战士father2024.08~2025.08
-  target_ids:
-    '-1002234837448':
-    - 310
-    - 311
-    - 312
-    - 5531
+  target_ids: {}
 enable_download_txt: true
 file_formats:
   audio:
