@@ -371,7 +371,11 @@ class TelegramAuthManager:
                         'file_name': None,
                         'file_size': None,
                         'file_unique_id': None,
-                        'caption': message.caption[:300] if message.caption else ''
+                        'caption': message.caption[:300] if message.caption else '',
+                        'thumbnail_url': None,
+                        'duration': None,
+                        'width': None,
+                        'height': None
                     }
                     
                     # Extract media information
@@ -379,36 +383,50 @@ class TelegramAuthManager:
                         if message.photo:
                             msg_data['media_type'] = 'photo'
                             msg_data['file_unique_id'] = message.photo.file_unique_id
+                            msg_data['width'] = message.photo.width
+                            msg_data['height'] = message.photo.height
                         elif message.video:
                             msg_data['media_type'] = 'video'
                             msg_data['file_name'] = message.video.file_name or f"video_{message.id}.mp4"
                             msg_data['file_size'] = message.video.file_size
                             msg_data['file_unique_id'] = message.video.file_unique_id
+                            msg_data['duration'] = message.video.duration
+                            msg_data['width'] = message.video.width
+                            msg_data['height'] = message.video.height
                         elif message.audio:
                             msg_data['media_type'] = 'audio'
                             msg_data['file_name'] = message.audio.file_name or f"audio_{message.id}.mp3"
                             msg_data['file_size'] = message.audio.file_size
                             msg_data['file_unique_id'] = message.audio.file_unique_id
+                            msg_data['duration'] = message.audio.duration
                         elif message.document:
                             msg_data['media_type'] = 'document'
                             msg_data['file_name'] = message.document.file_name or f"document_{message.id}"
                             msg_data['file_size'] = message.document.file_size
                             msg_data['file_unique_id'] = message.document.file_unique_id
+                            # Check if document is actually a video or gif
+                            if message.document.mime_type and 'video' in message.document.mime_type:
+                                msg_data['media_type'] = 'animation' if 'gif' in message.document.mime_type else 'video'
                         elif message.voice:
                             msg_data['media_type'] = 'voice'
                             msg_data['file_name'] = f"voice_{message.id}.ogg"
                             msg_data['file_size'] = message.voice.file_size
                             msg_data['file_unique_id'] = message.voice.file_unique_id
+                            msg_data['duration'] = message.voice.duration
                         elif message.animation:
                             msg_data['media_type'] = 'animation'
                             msg_data['file_name'] = message.animation.file_name or f"animation_{message.id}.gif"
                             msg_data['file_size'] = message.animation.file_size
                             msg_data['file_unique_id'] = message.animation.file_unique_id
+                            msg_data['width'] = message.animation.width
+                            msg_data['height'] = message.animation.height
                         elif message.sticker:
                             msg_data['media_type'] = 'sticker'
                             msg_data['file_name'] = f"sticker_{message.id}.webp"
                             msg_data['file_size'] = message.sticker.file_size
                             msg_data['file_unique_id'] = message.sticker.file_unique_id
+                            msg_data['width'] = message.sticker.width
+                            msg_data['height'] = message.sticker.height
                     
                     messages.append(msg_data)
                     

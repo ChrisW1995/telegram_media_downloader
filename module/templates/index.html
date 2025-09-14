@@ -27,7 +27,7 @@
         <div class="compact-tabs" data-active-tab="download-manager">
           <button class="compact-tab active" data-tab="download-manager">下載管理</button>
           <button class="compact-tab" data-tab="group-manager">群組管理</button>
-          <button class="compact-tab" data-tab="fast-test">快速測試</button>
+          <button class="compact-tab" onclick="window.open('/fast_test', '_blank')" style="cursor: pointer;">快速測試 🚀</button>
         </div>
       </div>
       
@@ -613,7 +613,7 @@
                     僅顯示媒體
                   </label>
                   <button type="button" id="select-all-messages" class="glass-btn glass-btn-sm glass-btn-secondary">全選</button>
-                  <button type="button" id="start-download-btn" class="glass-btn glass-btn-sm glass-btn-success" disabled>
+                  <button type="button" id="fast-test-download-btn" class="glass-btn glass-btn-sm glass-btn-success" disabled>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                       <polyline points="7,10 12,15 17,10"/>

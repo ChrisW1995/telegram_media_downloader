@@ -1,0 +1,465 @@
+/* Mobile-First Responsive Design Enhancements */
+
+/* ==================== Mobile-Specific Improvements ==================== */
+@media (max-width: 768px) {
+  
+  /* App Container */
+  .app-container {
+    padding: var(--space-sm);
+    min-height: 100vh;
+  }
+  
+  /* Header Optimizations */
+  .app-header {
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+  }
+  
+  .app-title {
+    font-size: 18px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+  
+  .app-title svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .app-subtitle {
+    font-size: 12px;
+  }
+
+  /* Tab Navigation */
+  .modern-tabs {
+    margin-bottom: var(--space-md);
+  }
+  
+  .modern-tabs-nav {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+  
+  .modern-tabs-link {
+    padding: var(--space-md) var(--space-md);
+    font-size: 14px;
+  }
+
+  /* Card Layout */
+  .modern-card {
+    margin-bottom: var(--space-md);
+    border-radius: var(--radius-md);
+  }
+  
+  .modern-card-header {
+    padding: var(--space-md);
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-md);
+  }
+  
+  .modern-card-title {
+    font-size: 16px;
+  }
+  
+  .modern-card-body {
+    padding: var(--space-md);
+  }
+  
+  .modern-card-actions {
+    justify-content: stretch;
+    flex-direction: column;
+  }
+
+  /* Button Adaptations */
+  .modern-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  
+  .modern-btn-sm {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  /* Form Improvements */
+  .modern-form-input,
+  .modern-form-select,
+  .modern-form-textarea {
+    padding: 14px 16px;
+    font-size: 16px; /* Prevent zoom on iOS */
+    border-radius: var(--radius-lg);
+  }
+  
+  .modern-form-textarea {
+    min-height: 120px;
+  }
+
+  /* Grid System Mobile Adjustments */
+  .modern-grid-2,
+  .modern-grid-3,
+  .modern-grid-4 {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+
+  /* Progress Summary Cards */
+  .progress-summary {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
+  }
+  
+  .summary-card {
+    padding: var(--space-md);
+  }
+  
+  .summary-card-value {
+    font-size: 20px;
+  }
+  
+  .summary-card-label {
+    font-size: 11px;
+  }
+
+  /* Download Progress */
+  .download-progress-container {
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+  }
+  
+  .overall-progress-section {
+    padding: var(--space-md);
+  }
+  
+  .overall-progress-stats {
+    flex-direction: column;
+    gap: var(--space-sm);
+    align-items: flex-start;
+  }
+  
+  .progress-stat {
+    font-size: 12px;
+  }
+
+  /* List Items */
+  .modern-list-item {
+    padding: var(--space-lg);
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-md);
+  }
+  
+  .modern-list-content {
+    order: 2;
+    margin-left: 0;
+  }
+  
+  .modern-list-actions {
+    order: 3;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-left: 0;
+    margin-top: var(--space-md);
+  }
+  
+  .modern-list-actions .modern-btn {
+    flex: 1;
+    min-width: 100px;
+    width: auto;
+  }
+  
+  .modern-checkbox {
+    order: 1;
+    align-self: flex-start;
+    margin-bottom: var(--space-sm);
+  }
+
+  /* File Progress Items */
+  .file-progress-item {
+    padding: var(--space-sm);
+  }
+  
+  .file-progress-header {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+  
+  .file-stats {
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    font-size: 11px;
+  }
+  
+  .file-name {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Concurrent Downloads */
+  .concurrent-downloads-header {
+    flex-direction: column;
+    gap: var(--space-sm);
+    align-items: flex-start;
+  }
+  
+  .concurrent-downloads-title {
+    font-size: 14px;
+  }
+
+  /* Filter Controls */
+  .modern-grid.modern-grid-3 {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+  
+  /* Legacy filter styles removed - now using history-filter-toolbar */
+  
+  .pagination-controls {
+    text-align: center;
+  }
+  
+  .stats-badge {
+    padding: var(--space-sm) var(--space-md);
+    font-size: 13px;
+  }
+
+  /* Pagination */
+  #pagination-container .flex {
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    justify-content: center;
+  }
+  
+  #pagination-container .modern-btn {
+    width: auto;
+    min-width: 44px;
+    padding: 8px 12px;
+  }
+}
+
+/* ==================== Small Mobile (< 480px) ==================== */
+@media (max-width: 480px) {
+  
+  :root {
+    --space-xs: 2px;
+    --space-sm: 6px;
+    --space-md: 12px;
+    --space-lg: 18px;
+    --space-xl: 24px;
+  }
+  
+  .app-container {
+    padding: var(--space-xs);
+  }
+  
+  .app-header {
+    padding: var(--space-sm);
+  }
+  
+  .app-title {
+    font-size: 16px;
+  }
+  
+  .modern-card-header,
+  .modern-card-body {
+    padding: var(--space-sm);
+  }
+  
+  /* Single column layout for summary cards */
+  .progress-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .summary-card {
+    padding: var(--space-sm);
+  }
+  
+  .summary-card-value {
+    font-size: 18px;
+  }
+  
+  /* Smaller progress bars */
+  .modern-progress-enhanced {
+    height: 16px;
+  }
+  
+  .progress-text {
+    font-size: 11px;
+  }
+  
+  /* Compact list items */
+  .modern-list-item {
+    padding: var(--space-sm);
+  }
+  
+  .modern-list-title {
+    font-size: 13px;
+  }
+  
+  .modern-list-subtitle {
+    font-size: 11px;
+  }
+  
+  /* Smaller buttons in tight spaces */
+  .modern-list-actions .modern-btn {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+  
+  /* Form adjustments */
+  .modern-form-group {
+    margin-bottom: var(--space-md);
+  }
+  
+  .modern-form-label {
+    font-size: 13px;
+    margin-bottom: var(--space-xs);
+  }
+}
+
+/* ==================== Touch Improvements ==================== */
+@media (hover: none) {
+  /* Remove hover effects on touch devices */
+  .modern-btn:hover,
+  .modern-list-item:hover,
+  .file-progress-item:hover,
+  .summary-card:hover {
+    transform: none;
+    box-shadow: inherit;
+  }
+  
+  /* Increase touch targets */
+  .modern-checkbox-mark {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .modern-btn {
+    min-height: 44px;
+  }
+  
+  .modern-tabs-link {
+    min-height: 44px;
+  }
+}
+
+/* ==================== Landscape Orientation ==================== */
+@media (max-width: 768px) and (orientation: landscape) {
+  .app-header {
+    padding: var(--space-sm) var(--space-md);
+  }
+  
+  .app-title {
+    font-size: 16px;
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  /* Use horizontal space better */
+  .progress-summary {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .modern-grid.modern-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ==================== High DPI Displays ==================== */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Ensure icons and borders look crisp on high-DPI displays */
+  .modern-badge,
+  .modern-btn,
+  .modern-card,
+  .modern-list-item {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Slightly thinner borders on high-DPI */
+  .modern-card,
+  .modern-list,
+  .modern-form-input,
+  .modern-form-select {
+    border-width: 0.5px;
+  }
+}
+
+/* ==================== Accessibility Improvements ==================== */
+@media (prefers-reduced-motion: reduce) {
+  /* Reduce animations for users who prefer less motion */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .modern-progress-bar-enhanced::before {
+    animation: none;
+  }
+}
+
+/* ==================== Dark Mode Support ==================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1C1C1E;
+    --bg-card: #2C2C2E;
+    --text-primary: #FFFFFF;
+    --text-secondary: #98989D;
+    --border-light: #38383A;
+    --border-medium: #48484A;
+  }
+  
+  /* Adjust progress bars for dark mode */
+  .modern-progress {
+    background-color: var(--border-light);
+  }
+  
+  /* Adjust notification backgrounds for dark mode */
+  .notification {
+    backdrop-filter: blur(20px);
+  }
+}
+
+/* ==================== Safe Area Support (iPhone X+) ==================== */
+@supports (padding: max(0px)) {
+  .app-container {
+    padding-left: max(var(--space-sm), env(safe-area-inset-left));
+    padding-right: max(var(--space-sm), env(safe-area-inset-right));
+    padding-bottom: max(var(--space-sm), env(safe-area-inset-bottom));
+  }
+  
+  .notification {
+    top: max(20px, env(safe-area-inset-top) + 20px);
+    right: max(20px, env(safe-area-inset-right) + 20px);
+  }
+}
+
+/* ==================== Print Styles ==================== */
+@media print {
+  .app-header,
+  .modern-tabs,
+  .modern-card-actions,
+  .modern-list-actions,
+  #pagination-container {
+    display: none;
+  }
+  
+  .modern-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+  
+  .app-container {
+    padding: 0;
+  }
+}

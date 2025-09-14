@@ -3,6 +3,7 @@
 import logging
 import os
 import threading
+import time
 
 from flask import Flask, jsonify, render_template, request, session
 from flask_login import LoginManager, UserMixin, login_required, login_user
@@ -190,15 +191,65 @@ def fast_test():
 def get_user_groups():
     """獲取用戶群組列表 - 用於Fast Test頁面"""
     try:
-        # 使用配置文件中的群組資訊
+        # 嘗試從實際的Telegram客戶端獲取群組
+        if hasattr(_app, 'client') and _app.client:
+            logger.info("嘗試從Telegram客戶端獲取群組...")
+            groups = []
+            
+            try:
+                # 使用異步函數獲取對話框
+                import asyncio
+                
+                async def get_telegram_groups():
+                    dialogs_list = []
+                    async for dialog in _app.client.get_dialogs():
+                        chat = dialog.chat
+                        # 只獲取群組、超群組和頻道
+                        if chat.type.name in ['GROUP', 'SUPERGROUP', 'CHANNEL']:
+                            dialogs_list.append({
+                                'chat_id': str(chat.id),
+                                'name': chat.title or f'Chat {chat.id}',
+                                'type': chat.type.name.lower(),
+                                'username': chat.username,
+                                'members_count': getattr(chat, 'members_count', 0)
+                            })
+                    return dialogs_list
+                
+                # 使用應用的事件循環
+                if hasattr(_app, 'loop') and _app.loop:
+                    groups = _app.loop.run_until_complete(get_telegram_groups())
+                else:
+                    # 創建新的事件循環
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        groups = loop.run_until_complete(get_telegram_groups())
+                    finally:
+                        loop.close()
+                
+                logger.info(f"從Telegram獲取到 {len(groups)} 個群組")
+                
+                if groups:
+                    return jsonify({
+                        'success': True,
+                        'groups': groups,
+                        'source': 'telegram'
+                    })
+                
+            except Exception as telegram_error:
+                logger.warning(f"從Telegram獲取群組失敗: {telegram_error}")
+        
+        # 備援方案：使用配置文件中的群組資訊
+        logger.info("使用配置文件中的群組作為備援...")
         groups = [
-            {'chat_id': str(chat_id), 'name': group_name}
+            {'chat_id': str(chat_id), 'name': group_name, 'type': 'config'}
             for chat_id, group_name in _app.config['custom_downloads']['group_tags'].items()
         ]
             
         return jsonify({
             'success': True,
-            'groups': groups
+            'groups': groups,
+            'source': 'config'
         })
             
     except Exception as e:
@@ -1398,6 +1449,15 @@ active_download_session = {
 @_flask_app.route("/get_download_progress", methods=["GET"])
 @login_required
 def get_download_progress():
+    """舊版API，兼容性保留"""
+    return _get_download_progress_data()
+
+@_flask_app.route("/api/download_progress", methods=["GET"])
+def get_download_progress_api():
+    """新版API，為fast_test頁面專用"""
+    return _get_download_progress_data()
+
+def _get_download_progress_data():
     """獲取當前下載進度"""
     global download_progress
     print(f"Progress API called: {download_progress}")
@@ -1420,19 +1480,21 @@ def get_download_progress():
     
     return jsonify({
         'success': True,
-        'total_count': download_progress['total_count'],
-        'completed_count': download_progress['completed_count'],
-        'status_text': download_progress['status_text'],
-        'active': download_progress['active'],
-        'current_file': download_progress['current_file'],
-        'current_files': download_progress['current_files'],  # 返回所有並發文件信息
-        'concurrent_downloads': len(all_files),  # 新增：顯示所有檔案數量（包括完成的）
-        'total_download_speed': total_download_speed,  # 新增：總下載速度
-        'session': {
-            'active': active_download_session['active'],
-            'session_id': active_download_session['session_id'],
-            'start_time': active_download_session['start_time'],
-            'total_tasks': active_download_session['total_tasks']
+        'progress': {
+            'total_task': download_progress['total_count'],
+            'completed_task': download_progress['completed_count'],
+            'status_text': download_progress['status_text'],
+            'active': download_progress['active'],
+            'current_file': download_progress['current_file'],
+            'current_files': download_progress['current_files'],
+            'concurrent_downloads': len(all_files),
+            'total_download_speed': total_download_speed,
+            'session': {
+                'active': active_download_session['active'],
+                'session_id': active_download_session['session_id'],
+                'start_time': active_download_session['start_time'],
+                'total_tasks': active_download_session['total_tasks']
+            }
         }
     })
 
@@ -2065,8 +2127,51 @@ def debug_telegram_state():
 # Multi-user Authentication APIs for Fast Test
 # =============================================================================
 
-# Global storage for fast test auth sessions
+# Import session storage and auth manager
+from .session_storage import get_session_storage
+from .multiuser_auth import get_auth_manager
+
+# Global storage for fast test auth sessions (now backed by persistent storage)
 fast_test_auth_sessions = {}
+
+
+def restore_session_if_needed(session_key: str) -> bool:
+    """Restore session from persistent storage if not in memory."""
+    if session_key in fast_test_auth_sessions:
+        return True
+    
+    try:
+        session_storage = get_session_storage()
+        stored_session = session_storage.get_session(session_key)
+        if not stored_session or stored_session.get('status') != 'authenticated':
+            return False
+        
+        # Restore session to memory
+        auth_manager = get_auth_manager()
+        fast_test_auth_sessions[session_key] = {
+            'phone_number': stored_session['phone_number'],
+            'auth_manager': auth_manager
+        }
+        
+        # Try to restore Telegram client connection if authenticated
+        if stored_session.get('user_id'):
+            user_id = stored_session['user_id']
+            try:
+                # Get or create client for this user
+                client = run_async_in_thread(auth_manager.get_user_client(user_id))
+                if client:
+                    # Store client in active_clients with session_key for compatibility
+                    auth_manager.active_clients[session_key] = client
+                    logger.info(f"Restored Telegram client for user {user_id} with session_key {session_key}")
+                else:
+                    logger.warning(f"Failed to restore client for user {user_id}")
+            except Exception as e:
+                logger.error(f"Error restoring client for user {user_id}: {e}")
+        
+        return True
+    except Exception as e:
+        logger.error(f"Failed to restore session {session_key}: {e}")
+        return False
 
 
 def run_async_in_thread(coro):
@@ -2129,11 +2234,23 @@ def send_verification_code():
         if result['success']:
             # Store session info
             session_key = result['session_key']
+            
+            # Store in memory for immediate access
             fast_test_auth_sessions[session_key] = {
                 'phone_number': phone_number,
                 'phone_code_hash': result['phone_code_hash'],
                 'auth_manager': auth_manager
             }
+            
+            # Store in persistent storage
+            session_storage = get_session_storage()
+            session_storage.create_session(session_key, {
+                'phone_number': phone_number,
+                'phone_code_hash': result['phone_code_hash'],
+                'status': 'awaiting_code',
+                'user_id': None,
+                'user_info': None
+            })
             
             # Store session key in Flask session for this user
             session['fast_test_session_key'] = session_key
@@ -2156,8 +2273,23 @@ def verify_verification_code():
         # Get session key from Flask session
         session_key = session.get('fast_test_session_key')
         
-        if not session_key or session_key not in fast_test_auth_sessions:
+        if not session_key:
             return jsonify({'success': False, 'error': '會話已過期，請重新開始'})
+        
+        # Check session in memory first, then restore from persistent storage
+        if session_key not in fast_test_auth_sessions:
+            session_storage = get_session_storage()
+            stored_session = session_storage.get_session(session_key)
+            if not stored_session:
+                return jsonify({'success': False, 'error': '會話已過期，請重新開始'})
+            
+            # Restore session to memory
+            auth_manager = get_auth_manager()
+            fast_test_auth_sessions[session_key] = {
+                'phone_number': stored_session['phone_number'],
+                'phone_code_hash': stored_session['phone_code_hash'],
+                'auth_manager': auth_manager
+            }
         
         if not verification_code:
             return jsonify({'success': False, 'error': '請輸入驗證碼'})
@@ -2180,6 +2312,16 @@ def verify_verification_code():
             # Store user session in database for persistence
             if 'user_id' in result:
                 session['fast_test_user_id'] = result['user_id']
+                
+                # Update persistent storage with authentication success
+                import time
+                session_storage = get_session_storage()
+                session_storage.update_session(session_key, {
+                    'status': 'authenticated',
+                    'user_id': result['user_id'],
+                    'user_info': result.get('user_info', {}),
+                    'authenticated_at': time.time()
+                })
         
         return jsonify(result)
         
@@ -2198,8 +2340,23 @@ def verify_two_factor_password():
         # Get session key from Flask session
         session_key = session.get('fast_test_session_key')
         
-        if not session_key or session_key not in fast_test_auth_sessions:
+        if not session_key:
             return jsonify({'success': False, 'error': '會話已過期，請重新開始'})
+        
+        # Check session in memory first, then restore from persistent storage
+        if session_key not in fast_test_auth_sessions:
+            session_storage = get_session_storage()
+            stored_session = session_storage.get_session(session_key)
+            if not stored_session:
+                return jsonify({'success': False, 'error': '會話已過期，請重新開始'})
+            
+            # Restore session to memory
+            auth_manager = get_auth_manager()
+            fast_test_auth_sessions[session_key] = {
+                'phone_number': stored_session['phone_number'],
+                'phone_code_hash': stored_session['phone_code_hash'],
+                'auth_manager': auth_manager
+            }
         
         if not password:
             return jsonify({'success': False, 'error': '請輸入兩步驗證密碼'})
@@ -2221,6 +2378,16 @@ def verify_two_factor_password():
             # Store user session in database for persistence
             if 'user_id' in result:
                 session['fast_test_user_id'] = result['user_id']
+                
+                # Update persistent storage with authentication success
+                import time
+                session_storage = get_session_storage()
+                session_storage.update_session(session_key, {
+                    'status': 'authenticated',
+                    'user_id': result['user_id'],
+                    'user_info': result.get('user_info', {}),
+                    'authenticated_at': time.time()
+                })
         
         return jsonify(result)
         
@@ -2238,40 +2405,78 @@ def get_auth_status():
         user_id = session.get('fast_test_user_id')
         
         # If session shows authenticated but we don't have an active session_key,
-        # try to restore it from database
+        # try to restore it from persistent storage
         if authenticated and user_id and not session.get('fast_test_session_key'):
             try:
-                # Try to restore the Telegram client session for this user
-                from module.multiuser_auth import TelegramAuthManager
-                auth_manager = TelegramAuthManager()
+                # First try to find existing session in persistent storage
+                session_storage = get_session_storage()
+                existing_sessions = session_storage.list_active_sessions()
                 
-                # Create a session key for this restored session
-                import uuid
-                new_session_key = f"restored_{user_id}_{str(uuid.uuid4())[:8]}"
+                restored_session_key = None
+                for stored_key, stored_data in existing_sessions.items():
+                    if (stored_data.get('user_id') == user_id and 
+                        stored_data.get('status') == 'authenticated'):
+                        restored_session_key = stored_key
+                        break
                 
-                # Try to get client for this user using our async helper
-                client = run_async_in_thread(auth_manager.get_user_client(user_id))
-                
-                if client:
-                    # Restore session
-                    session['fast_test_session_key'] = new_session_key
-                    fast_test_auth_sessions[new_session_key] = {
-                        'phone_number': user_info.get('phone_number', ''),
-                        'auth_manager': auth_manager
-                    }
-                    auth_manager.active_clients[new_session_key] = client
+                if restored_session_key:
+                    # Restore from existing persistent session
+                    auth_manager = get_auth_manager()
+                    client = run_async_in_thread(auth_manager.get_user_client(user_id))
                     
-                    logger.info(f"Restored session for user {user_id}")
+                    if client:
+                        # Restore session to memory
+                        session['fast_test_session_key'] = restored_session_key
+                        stored_data = session_storage.get_session(restored_session_key)
+                        fast_test_auth_sessions[restored_session_key] = {
+                            'phone_number': stored_data.get('phone_number', ''),
+                            'auth_manager': auth_manager
+                        }
+                        auth_manager.active_clients[restored_session_key] = client
+                        
+                        logger.info(f"Restored session from persistent storage for user {user_id}")
+                    else:
+                        # Clean up invalid session
+                        session_storage.delete_session(restored_session_key)
+                        authenticated = False
+                        session.clear()
+                        user_info = {}
+                        logger.warning(f"Invalid persistent session for user {user_id}, clearing auth")
                 else:
-                    # Session is invalid, clear authentication
-                    authenticated = False
-                    session.pop('fast_test_authenticated', None)
-                    session.pop('fast_test_user_info', None)
-                    session.pop('fast_test_user_id', None)
-                    session.pop('fast_test_session_key', None)
-                    user_info = {}
+                    # Try to create new session from user_sessions.json
+                    auth_manager = get_auth_manager()
+                    client = run_async_in_thread(auth_manager.get_user_client(user_id))
                     
-                    logger.warning(f"Failed to restore session for user {user_id}, clearing auth")
+                    if client:
+                        # Create new session key
+                        import uuid
+                        new_session_key = f"restored_{user_id}_{str(uuid.uuid4())[:8]}"
+                        
+                        # Create new persistent session
+                        import time
+                        session_storage.create_session(new_session_key, {
+                            'phone_number': user_info.get('phone_number', ''),
+                            'status': 'authenticated',
+                            'user_id': user_id,
+                            'user_info': user_info,
+                            'authenticated_at': time.time()
+                        })
+                        
+                        # Restore to memory
+                        session['fast_test_session_key'] = new_session_key
+                        fast_test_auth_sessions[new_session_key] = {
+                            'phone_number': user_info.get('phone_number', ''),
+                            'auth_manager': auth_manager
+                        }
+                        auth_manager.active_clients[new_session_key] = client
+                        
+                        logger.info(f"Created new persistent session for user {user_id}")
+                    else:
+                        # Session is invalid, clear authentication
+                        authenticated = False
+                        session.clear()
+                        user_info = {}
+                        logger.warning(f"Failed to restore session for user {user_id}, clearing auth")
                     
             except Exception as restore_error:
                 logger.error(f"Failed to restore session for user {user_id}: {restore_error}")
@@ -2313,10 +2518,16 @@ def fast_test_logout():
             # Remove from global storage
             del fast_test_auth_sessions[session_key]
         
+        # Clean up persistent storage
+        if session_key:
+            session_storage = get_session_storage()
+            session_storage.delete_session(session_key)
+        
         # Clear Flask session
         session.pop('fast_test_session_key', None)
         session.pop('fast_test_authenticated', None)
         session.pop('fast_test_user_info', None)
+        session.pop('fast_test_user_id', None)
         
         return jsonify({'success': True, 'message': '已成功登出'})
         
@@ -2349,7 +2560,11 @@ def get_groups_list():
         # Get authenticated user's session
         session_key = session.get('fast_test_session_key')
         
-        if not session_key or session_key not in fast_test_auth_sessions:
+        if not session_key:
+            return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
+        
+        # Restore session if needed
+        if not restore_session_if_needed(session_key):
             return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
         
         session_info = fast_test_auth_sessions[session_key]
@@ -2387,7 +2602,11 @@ def get_group_messages():
         # Get authenticated user's session
         session_key = session.get('fast_test_session_key')
         
-        if not session_key or session_key not in fast_test_auth_sessions:
+        if not session_key:
+            return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
+        
+        # Restore session if needed
+        if not restore_session_if_needed(session_key):
             return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
         
         session_info = fast_test_auth_sessions[session_key]
@@ -2424,7 +2643,11 @@ def load_more_messages():
         # Get authenticated user's session
         session_key = session.get('fast_test_session_key')
         
-        if not session_key or session_key not in fast_test_auth_sessions:
+        if not session_key:
+            return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
+        
+        # Restore session if needed
+        if not restore_session_if_needed(session_key):
             return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
         
         session_info = fast_test_auth_sessions[session_key]
@@ -2447,6 +2670,7 @@ def load_more_messages():
 # =============================================================================
 # Fast Download APIs
 # =============================================================================
+
 
 @_flask_app.route("/api/fast_download/add_tasks", methods=["POST"])
 @require_fast_test_auth
@@ -2508,10 +2732,116 @@ def add_fast_download_tasks():
                 # Don't fail the request if config update fails
                 pass
             
+            # Auto-trigger download after adding tasks
+            download_triggered = False
+            if _client and _queue:
+                try:
+                    from module.custom_download import run_custom_download
+                    from module.download_stat import set_download_state, DownloadState
+                    
+                    # 設置下載狀態為下載中
+                    set_download_state(DownloadState.Downloading)
+                    
+                    if hasattr(_app, 'loop') and _app.loop:
+                        # 為 Fast Test 創建 TaskNode，像 bot 下載一樣處理
+                        user_id = session.get('fast_test_user_id')
+                        
+                        # 創建 TaskNode 來支持進度通知，像 bot 下載一樣
+                        if user_id and hasattr(_app, 'download_bot') and _app.download_bot:
+                            try:
+                                import time
+                                
+                                # 構建初始通知訊息
+                                chat_id_str = str(chat_id)
+                                start_message = f"""🚀 **Fast Test 下載開始**
+
+📁 **群組ID:** `{chat_id_str}`
+📊 **任務:** {len(new_ids)} 個檔案
+⏰ **時間:** {time.strftime('%Y-%m-%d %H:%M:%S')}
+
+💡 即將開始下載，請稍候..."""
+                                
+                                # 使用事件循環來發送訊息並創建 TaskNode
+                                async def create_task_node():
+                                    try:
+                                        # 導入必要模塊
+                                        import pyrogram
+                                        from module.app import TaskNode, TaskType
+                                        
+                                        # 發送初始訊息
+                                        reply_message = await _app.download_bot.bot.send_message(
+                                            user_id,
+                                            start_message,
+                                            parse_mode=pyrogram.enums.ParseMode.MARKDOWN
+                                        )
+                                        logger.info(f"✅ Sent initial notification to user {user_id}")
+                                        
+                                        # 創建 TaskNode
+                                        task_id = int(time.time() * 1000)  # 使用時間戳作為唯一 task_id
+                                        task_node = TaskNode(
+                                            chat_id=chat_id,
+                                            from_user_id=user_id,
+                                            task_type=TaskType.Download,
+                                            task_id=task_id,
+                                            bot=_app.download_bot.bot,
+                                            reply_message_id=reply_message.id,  # 關鍵：設置回覆訊息ID
+                                            replay_message=start_message
+                                        )
+                                        
+                                        # 設定下載數據
+                                        task_node.total_download_task = len(new_ids)
+                                        task_node.success_download_task = 0
+                                        task_node.is_running = True
+                                        
+                                        # 添加到 bot 的 task_node 系統
+                                        _app.download_bot.add_task_node(task_node)
+                                        logger.info(f"✅ Created TaskNode {task_id} with reply_message_id {reply_message.id}")
+                                        
+                                        # 觸發下載任務，並傳遞 TaskNode
+                                        _app.loop.create_task(run_custom_download(_app, _client, _queue, task_node))
+                                        logger.info("Download task auto-triggered after creating TaskNode")
+                                        
+                                    except Exception as e:
+                                        logger.error(f"❌ Failed to create TaskNode: {e}")
+                                        # 如果 TaskNode 創建失敗，仍然執行下載但不跟踪進度
+                                        _app.loop.create_task(run_custom_download(_app, _client, _queue))
+                                        logger.info("Download task triggered without TaskNode (fallback)")
+                                
+                                # 使用 create_task 來執行異步任務
+                                _app.loop.create_task(create_task_node())
+                                logger.info(f"📤 Queued TaskNode creation for user {user_id}")
+                                download_triggered = True
+                                
+                            except Exception as e:
+                                logger.error(f"❌ Failed to prepare TaskNode creation: {e}")
+                                # 如果準備過程失敗，使用回退方式
+                                _app.loop.create_task(run_custom_download(_app, _client, _queue))
+                                download_triggered = True
+                                logger.info("Download task triggered without TaskNode (fallback)")
+                        else:
+                            # 如果沒有 download_bot，使用原始方式
+                            _app.loop.create_task(run_custom_download(_app, _client, _queue))
+                            download_triggered = True
+                            logger.info("Download task auto-triggered after adding Fast Test tasks (no bot)")
+                    else:
+                        logger.warning("Main event loop not available for auto-triggering download")
+                except Exception as download_error:
+                    logger.error(f"Failed to auto-trigger download: {download_error}")
+            
+            # TaskNode 系統會自動處理所有通知，包括開始、進度和完成通知
+            # 不需要額外的立即通知
+            
+            message = f'已新增 {len(new_ids)} 個下載任務'
+            if download_triggered:
+                message += '，下載已自動開始'
+            else:
+                message += '，請手動開始下載'
+            
             return jsonify({
                 'success': True,
-                'message': f'已新增 {len(new_ids)} 個下載任務',
-                'added_count': len(new_ids)
+                'message': message,
+                'added_count': len(new_ids),
+                'download_triggered': download_triggered
             })
         else:
             logger.info(f"All message IDs already exist in queue: existing={existing_ids}, requested={message_ids}")

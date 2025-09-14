@@ -523,7 +523,7 @@ const ModernTelegramDownloader = {
     const count = this.state.selectedTasks.size;
     const countElement = document.getElementById('selected-count');
     const badgeElement = document.getElementById('selected-count-badge');
-    const startButton = document.getElementById('start-download-btn');
+    const startButton = document.getElementById('fast-test-download-btn');
     
     if (countElement) countElement.textContent = count;
     
@@ -1568,7 +1568,7 @@ function updateDownloadControls(state) {
   const pauseBtn = document.getElementById('pause-download-btn');
   const cancelBtn = document.getElementById('cancel-download-btn');
   const resumeBtn = document.getElementById('resume-download-btn');
-  const startBtn = document.getElementById('start-download-btn');
+  const startBtn = document.getElementById('fast-test-download-btn');
 
   if (pauseBtn && cancelBtn && resumeBtn && startBtn) {
     switch (state) {
@@ -2179,7 +2179,7 @@ class FastTestManager {
       this.loadMessages(true); // Reset to first page
     });
     document.getElementById('select-all-messages')?.addEventListener('click', () => this.selectAllMessages());
-    document.getElementById('start-download-btn')?.addEventListener('click', () => this.startDownload());
+    // 下載按鈕的事件監聽器會在 updateSelectedCount 中動態添加，因為按鈕是後來才載入的
     document.getElementById('load-more-btn')?.addEventListener('click', () => this.loadMoreMessages());
     
     // Enter key handlers
@@ -2479,7 +2479,7 @@ class FastTestManager {
     }
     
     const messageIds = Array.from(this.selectedMessages);
-    this.setLoading('start-download-btn', true, '添加中...');
+    this.setLoading('fast-test-download-btn', true, '添加中...');
     
     try {
       const response = await fetch('/api/fast_download/add_tasks', {
@@ -2507,7 +2507,7 @@ class FastTestManager {
       console.error('Start download error:', error);
       this.showError('網路錯誤');
     } finally {
-      this.setLoading('start-download-btn', false, '開始下載');
+      this.setLoading('fast-test-download-btn', false, '開始下載');
     }
   }
   
@@ -2590,19 +2590,115 @@ class FastTestManager {
   }
   
   toggleMessageSelection(messageId) {
-    if (this.selectedMessages.has(messageId)) {
+    // 找到對應的訊息
+    const message = this.messages.find(m => m.message_id === messageId);
+    
+    if (!message || !message.media_type) {
+      // 如果沒有媒體檔案，不允許選中
+      console.log('Fast Test - Message rejected: no media');
+      return;
+    }
+    
+    const isCurrentlySelected = this.selectedMessages.has(messageId);
+    
+    if (isCurrentlySelected) {
       this.selectedMessages.delete(messageId);
     } else {
       this.selectedMessages.add(messageId);
     }
+    
+    
+    // 更新特定元素的視覺狀態，避免重新渲染整個列表
+    this.updateMessageVisualState(messageId, !isCurrentlySelected);
     this.updateSelectedCount();
+  }
+  
+  updateMessageVisualState(messageId, isSelected) {
+    // 使用 data attribute 找到對應的 DOM 元素
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageElement) {
+      const checkbox = messageElement.querySelector('input[type="checkbox"]');
+      const checkboxMark = messageElement.querySelector('.chat-checkbox-mark');
+      
+      // 更新 checkbox 狀態
+      if (checkbox) {
+        checkbox.checked = isSelected;
+      }
+      
+      // 更新 checkbox 視覺標記
+      if (checkboxMark) {
+        checkboxMark.style.background = isSelected ? 'rgba(0, 122, 255, 0.9)' : 'transparent';
+      }
+      
+      // 更新 chat-message 的 class
+      if (isSelected) {
+        messageElement.classList.add('selected');
+      } else {
+        messageElement.classList.remove('selected');
+      }
+    }
   }
   
   updateSelectedCount() {
     const count = this.selectedMessages.size;
-    document.getElementById('selected-count-number').textContent = count;
-    document.getElementById('selected-count').style.display = count > 0 ? 'block' : 'none';
-    document.getElementById('start-download-btn').disabled = count === 0;
+    const countElement = document.getElementById('selected-count-number');
+    const countContainer = document.getElementById('selected-count');
+    
+    // 動態查找下載按鈕，因為它可能是後來才載入的
+    const downloadButton = document.getElementById('fast-test-download-btn');
+    
+    
+    if (countElement) {
+      countElement.textContent = count;
+    }
+    
+    if (countContainer) {
+      countContainer.style.display = count > 0 ? 'block' : 'none';
+    }
+    
+    // 動態更新按鈕狀態
+    if (downloadButton) {
+      downloadButton.disabled = count === 0;
+      
+      // 強制移除HTML中的disabled屬性
+      if (count > 0) {
+        downloadButton.removeAttribute('disabled');
+      } else {
+        downloadButton.setAttribute('disabled', '');
+      }
+      
+      // 如果按鈕還沒有事件監聽器，添加它
+      if (!downloadButton.hasAttribute('data-click-handler')) {
+        downloadButton.addEventListener('click', () => this.startDownload());
+        downloadButton.setAttribute('data-click-handler', 'true');
+      }
+    } else {
+      console.warn('Fast Test - Download button not found (may not be loaded yet)');
+      
+      // 嘗試多次重新查找按鈕，因為它可能需要時間載入
+      this.retryFindButton(0);
+    }
+  }
+  
+  retryFindButton(attempt) {
+    const maxAttempts = 10;
+    const delays = [100, 200, 300, 500, 500, 1000, 1000, 2000, 2000, 3000];
+    
+    if (attempt >= maxAttempts) {
+      console.error('Fast Test - Failed to find download button after', maxAttempts, 'attempts');
+      return;
+    }
+    
+    setTimeout(() => {
+      const button = document.getElementById('fast-test-download-btn');
+      if (button) {
+        console.log('Fast Test - Found button after', attempt + 1, 'attempts, updating state');
+        this.updateSelectedCount();
+      } else {
+        console.log('Fast Test - Retry', attempt + 1, 'failed, trying again...');
+        this.retryFindButton(attempt + 1);
+      }
+    }, delays[attempt]);
   }
   
   updateLoadMoreButton() {
@@ -2632,49 +2728,204 @@ class FastTestManager {
     const container = document.getElementById('messages-list');
     
     if (this.messages.length === 0) {
-      container.innerHTML = '<div class="messages-empty">沒有找到訊息</div>';
+      container.innerHTML = '<div class="chat-empty">沒有找到訊息</div>';
       return;
     }
+    
+    // 使用聊天室風格的容器
+    container.className = 'chat-messages-container';
     
     container.innerHTML = this.messages.map(message => {
       const isSelected = this.selectedMessages.has(message.message_id);
       const hasMedia = message.media_type;
-      const date = new Date(message.date).toLocaleString();
+      const date = new Date(message.date).toLocaleString('zh-TW', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      // 生成媒體預覽
+      const mediaHtml = this.generateMediaPreview(message);
       
       return `
-        <div class="message-item ${isSelected ? 'selected' : ''} ${!hasMedia ? 'no-media' : ''}">
-          <div class="message-checkbox">
+        <div class="chat-message ${isSelected ? 'selected' : ''} ${!hasMedia ? 'no-media' : ''}" 
+             data-message-id="${message.message_id}"
+             onclick="fastTestManager.toggleMessageSelection(${message.message_id})">
+             
+          <div class="chat-checkbox" onclick="event.stopPropagation(); fastTestManager.toggleMessageSelection(${message.message_id})">
             <input type="checkbox" 
                    ${hasMedia ? '' : 'disabled'} 
-                   ${isSelected ? 'checked' : ''} 
-                   onchange="fastTestManager.toggleMessageSelection(${message.message_id})"
-                   class="glass-checkbox-input">
-            <div class="glass-checkbox-mark"></div>
+                   ${isSelected ? 'checked' : ''}>
+            <div class="chat-checkbox-mark"></div>
           </div>
           
-          <div class="message-content">
-            <div class="message-header">
-              <span class="message-id">#${message.message_id}</span>
-              <span class="message-date">${date}</span>
-              ${hasMedia ? `<span class="media-badge">${message.media_type}</span>` : ''}
+          <div class="chat-bubble">
+            <div class="chat-header">
+              <span class="chat-message-id">#${message.message_id}</span>
+              <span class="chat-timestamp">${date}</span>
             </div>
             
-            ${message.text ? `<div class="message-text">${this.escapeHtml(message.text)}</div>` : ''}
+            ${message.text ? `<div class="chat-text">${this.escapeHtml(message.text)}</div>` : ''}
             
-            ${message.file_name ? `
-              <div class="message-file">
-                <span class="file-name">${this.escapeHtml(message.file_name)}</span>
-                ${message.file_size ? `<span class="file-size">(${this.formatFileSize(message.file_size)})</span>` : ''}
-              </div>
-            ` : ''}
+            ${mediaHtml}
             
-            ${message.caption ? `<div class="message-caption">${this.escapeHtml(message.caption)}</div>` : ''}
+            ${message.caption ? `<div class="chat-caption">${this.escapeHtml(message.caption)}</div>` : ''}
           </div>
         </div>
       `;
     }).join('');
     
     this.updateSelectedCount();
+  }
+  
+  generateMediaPreview(message) {
+    if (!message.media_type) {
+      return '';
+    }
+    
+    const mediaType = message.media_type.toLowerCase();
+    let mediaHtml = '';
+    
+    // 媒體容器開始
+    mediaHtml += '<div class="chat-media">';
+    
+    // 根據媒體類型生成不同的預覽
+    if (mediaType === 'photo') {
+      // 照片預覽
+      mediaHtml += `
+        <div class="chat-media-placeholder photo-placeholder">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21,15 16,10 5,21"/>
+          </svg>
+        </div>
+        <div class="chat-media-badge photo">PHOTO</div>
+      `;
+    } else if (mediaType === 'video') {
+      // 影片預覽
+      mediaHtml += `
+        <div class="chat-media-placeholder video-placeholder">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="23,12 23,12 1,1 1,23"/>
+          </svg>
+          <div class="chat-video-overlay">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5,3 19,12 5,21"/>
+            </svg>
+          </div>
+        </div>
+        <div class="chat-media-badge video">VIDEO</div>
+      `;
+      if (message.duration) {
+        mediaHtml += `<div class="chat-duration">${this.formatDuration(message.duration)}</div>`;
+      }
+    } else if (mediaType === 'animation') {
+      // GIF 動畫
+      mediaHtml += `
+        <div class="chat-media-placeholder animation-placeholder">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <div class="chat-media-badge animation">GIF</div>
+      `;
+    } else if (mediaType === 'voice') {
+      // 語音訊息
+      mediaHtml += `
+        <div class="chat-media-placeholder voice-placeholder">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m12 1-8 3v10c0 5.55 3.84 10 8 10s8-4.45 8-10V4l-8-3Z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </div>
+        <div class="chat-media-badge voice">VOICE</div>
+      `;
+      if (message.duration) {
+        mediaHtml += `<div class="chat-duration">${this.formatDuration(message.duration)}</div>`;
+      }
+    } else if (mediaType === 'audio') {
+      // 音訊檔案
+      mediaHtml += `
+        <div class="chat-media-placeholder audio-placeholder">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
+          </svg>
+        </div>
+        <div class="chat-media-badge audio">AUDIO</div>
+      `;
+      if (message.duration) {
+        mediaHtml += `<div class="chat-duration">${this.formatDuration(message.duration)}</div>`;
+      }
+    } else if (mediaType === 'sticker') {
+      // 貼圖
+      mediaHtml += `
+        <div class="chat-media-placeholder sticker-placeholder">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+            <line x1="9" y1="9" x2="9.01" y2="9"/>
+            <line x1="15" y1="9" x2="15.01" y2="9"/>
+          </svg>
+        </div>
+        <div class="chat-media-badge sticker">STICKER</div>
+      `;
+    } else {
+      // 其他文件類型
+      mediaHtml += `
+        <div class="chat-media-placeholder document-placeholder">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10,9 9,9 8,9"/>
+          </svg>
+        </div>
+        <div class="chat-media-badge document">DOC</div>
+      `;
+    }
+    
+    mediaHtml += '</div>'; // 媒體容器結束
+    
+    // 如果有檔案資訊，顯示檔案詳情
+    if (message.file_name || message.file_size) {
+      mediaHtml += `
+        <div class="chat-file-info">
+          <div class="chat-file-icon">${this.getFileIcon(mediaType)}</div>
+          <div class="chat-file-details">
+            ${message.file_name ? `<div class="chat-file-name">${this.escapeHtml(message.file_name)}</div>` : ''}
+            ${message.file_size ? `<div class="chat-file-size">${this.formatFileSize(message.file_size)}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+    
+    return mediaHtml;
+  }
+  
+  getFileIcon(mediaType) {
+    const icons = {
+      'photo': '📷',
+      'video': '🎥',
+      'animation': '🎞️',
+      'voice': '🎤',
+      'audio': '🎵',
+      'sticker': '😊',
+      'document': '📄'
+    };
+    return icons[mediaType] || '📄';
+  }
+  
+  formatDuration(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
   
   // Utility Methods
@@ -2720,8 +2971,28 @@ class FastTestManager {
 
 // Initialize Fast Test Manager when DOM is loaded
 let fastTestManager;
-document.addEventListener('DOMContentLoaded', function() {
-  if (document.getElementById('fast-test')) {
+
+// 嘗試多種方式初始化 FastTestManager
+function initializeFastTestManager() {
+  const fastTestElement = document.getElementById('fast-test');
+  console.log('Initializing FastTestManager, element found:', !!fastTestElement);
+  
+  if (fastTestElement && !fastTestManager) {
     fastTestManager = new FastTestManager();
+    console.log('FastTestManager initialized:', fastTestManager);
   }
-});
+}
+
+// DOM 載入完成後初始化
+document.addEventListener('DOMContentLoaded', initializeFastTestManager);
+
+// 頁面載入完成後再次嘗試初始化（以防萬一）
+window.addEventListener('load', initializeFastTestManager);
+
+// 如果頁面已經載入完成，立即初始化
+if (document.readyState === 'loading') {
+  // 文檔仍在載入中，等待DOMContentLoaded事件
+} else {
+  // 文檔已經載入完成，立即初始化
+  initializeFastTestManager();
+}

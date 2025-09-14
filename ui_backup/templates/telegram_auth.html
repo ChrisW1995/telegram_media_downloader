@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Authentication - Media Downloader</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 30px;
+            background: #0088cc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .auth-step {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+        .auth-step.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #0088cc;
+        }
+        .btn {
+            background: #0088cc;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s ease;
+        }
+        .btn:hover {
+            background: #0077bb;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .error-message {
+            background: #ffe6e6;
+            color: #d63384;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+        .success-message {
+            background: #e6ffe6;
+            color: #198754;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0088cc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status-text {
+            color: #666;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📱</div>
+        <h1>Telegram 驗證</h1>
+        <div class="subtitle">請完成以下步驟以連接到 Telegram</div>
+
+        <!-- Error/Success Messages -->
+        <div id="message-container"></div>
+
+        <!-- Phone Number Step -->
+        <div id="phone-step" class="auth-step active">
+            <div class="status-text">步驟 1: 輸入您的電話號碼</div>
+            <div class="input-group">
+                <label for="phone-input">電話號碼 (包含國碼)</label>
+                <input type="text" id="phone-input" placeholder="例如: +886912345678">
+            </div>
+            <button class="btn" onclick="submitPhone()">
+                <span id="phone-btn-text">發送驗證碼</span>
+                <span id="phone-loading" class="loading" style="display:none;"></span>
+            </button>
+        </div>
+
+        <!-- Verification Code Step -->
+        <div id="code-step" class="auth-step">
+            <div class="status-text">步驟 2: 輸入從 Telegram 收到的驗證碼</div>
+            <div class="input-group">
+                <label for="code-input">驗證碼</label>
+                <input type="text" id="code-input" placeholder="例如: 12345">
+            </div>
+            <button class="btn" onclick="submitCode()">
+                <span id="code-btn-text">驗證</span>
+                <span id="code-loading" class="loading" style="display:none;"></span>
+            </button>
+        </div>
+
+        <!-- 2FA Password Step -->
+        <div id="password-step" class="auth-step">
+            <div class="status-text">步驟 3: 輸入兩步驗證密碼</div>
+            <div class="input-group">
+                <label for="password-input">兩步驗證密碼</label>
+                <input type="password" id="password-input" placeholder="輸入您的兩步驗證密碼">
+            </div>
+            <button class="btn" onclick="submitPassword()">
+                <span id="password-btn-text">完成驗證</span>
+                <span id="password-loading" class="loading" style="display:none;"></span>
+            </button>
+        </div>
+
+        <!-- Success Step -->
+        <div id="success-step" class="auth-step">
+            <div class="success-message">✅ Telegram 驗證完成！</div>
+            <div class="status-text">正在重新導向到主頁面...</div>
+        </div>
+    </div>
+
+    <script>
+        let authState = {
+            waiting_for_phone: true,
+            waiting_for_code: false,
+            waiting_for_password: false,
+            auth_complete: false
+        };
+
+        // Poll auth status every 2 seconds
+        let statusInterval = setInterval(checkAuthStatus, 2000);
+
+        function showMessage(message, isError = false) {
+            const container = document.getElementById('message-container');
+            const className = isError ? 'error-message' : 'success-message';
+            container.innerHTML = `<div class="${className}">${message}</div>`;
+        }
+
+        function hideMessage() {
+            document.getElementById('message-container').innerHTML = '';
+        }
+
+        function showStep(stepName) {
+            document.querySelectorAll('.auth-step').forEach(step => step.classList.remove('active'));
+            document.getElementById(stepName + '-step').classList.add('active');
+        }
+
+        function setButtonLoading(stepName, loading) {
+            const textEl = document.getElementById(stepName + '-btn-text');
+            const loadingEl = document.getElementById(stepName + '-loading');
+            const btnEl = textEl.closest('button');
+            
+            if (loading) {
+                textEl.style.display = 'none';
+                loadingEl.style.display = 'inline-block';
+                btnEl.disabled = true;
+            } else {
+                textEl.style.display = 'inline';
+                loadingEl.style.display = 'none';
+                btnEl.disabled = false;
+            }
+        }
+
+        async function submitPhone() {
+            const phoneInput = document.getElementById('phone-input');
+            const phoneNumber = phoneInput.value.trim();
+            
+            if (!phoneNumber) {
+                showMessage('請輸入電話號碼', true);
+                return;
+            }
+
+            setButtonLoading('phone', true);
+            hideMessage();
+
+            try {
+                const response = await fetch('/api/telegram/submit_phone', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phone_number: phoneNumber })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(result.message);
+                    showStep('code');
+                } else {
+                    showMessage(result.error, true);
+                }
+            } catch (error) {
+                showMessage('網絡錯誤，請重試', true);
+            }
+
+            setButtonLoading('phone', false);
+        }
+
+        async function submitCode() {
+            const codeInput = document.getElementById('code-input');
+            const verificationCode = codeInput.value.trim();
+            
+            if (!verificationCode) {
+                showMessage('請輸入驗證碼', true);
+                return;
+            }
+
+            setButtonLoading('code', true);
+            hideMessage();
+
+            try {
+                const response = await fetch('/api/telegram/submit_code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ verification_code: verificationCode })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(result.message);
+                } else {
+                    showMessage(result.error, true);
+                }
+            } catch (error) {
+                showMessage('網絡錯誤，請重試', true);
+            }
+
+            setButtonLoading('code', false);
+        }
+
+        async function submitPassword() {
+            const passwordInput = document.getElementById('password-input');
+            const password = passwordInput.value.trim();
+            
+            if (!password) {
+                showMessage('請輸入兩步驗證密碼', true);
+                return;
+            }
+
+            setButtonLoading('password', true);
+            hideMessage();
+
+            try {
+                const response = await fetch('/api/telegram/submit_password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: password })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(result.message);
+                } else {
+                    showMessage(result.error, true);
+                }
+            } catch (error) {
+                showMessage('網絡錯誤，請重試', true);
+            }
+
+            setButtonLoading('password', false);
+        }
+
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/telegram/auth_status');
+                const status = await response.json();
+                
+                if (status.auth_complete) {
+                    clearInterval(statusInterval);
+                    showStep('success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 3000);
+                    return;
+                }
+
+                if (status.error_message) {
+                    showMessage(status.error_message, true);
+                }
+
+                // Update UI based on current state
+                if (status.waiting_for_phone && !document.getElementById('phone-step').classList.contains('active')) {
+                    showStep('phone');
+                } else if (status.waiting_for_code && !document.getElementById('code-step').classList.contains('active')) {
+                    showStep('code');
+                } else if (status.waiting_for_password && !document.getElementById('password-step').classList.contains('active')) {
+                    showStep('password');
+                }
+
+                authState = status;
+                
+            } catch (error) {
+                console.error('Status check failed:', error);
+            }
+        }
+
+        // Handle Enter key press
+        document.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                if (document.getElementById('phone-step').classList.contains('active')) {
+                    submitPhone();
+                } else if (document.getElementById('code-step').classList.contains('active')) {
+                    submitCode();
+                } else if (document.getElementById('password-step').classList.contains('active')) {
+                    submitPassword();
+                }
+            }
+        });
+
+        // Initial status check
+        checkAuthStatus();
+    </script>
+</body>
+</html>

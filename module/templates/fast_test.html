@@ -8,96 +8,1012 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/modern.css') }}" rel="stylesheet">
     <style>
+        /* iOS 26 Authentic Control Center Design */
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: 
+                /* Dynamic Island-inspired orbs */
+                radial-gradient(ellipse 280px 140px at 15% 20%, rgba(88, 86, 214, 0.6) 0%, transparent 40%),
+                radial-gradient(ellipse 320px 160px at 85% 25%, rgba(255, 45, 85, 0.5) 0%, transparent 45%),
+                radial-gradient(ellipse 240px 120px at 25% 80%, rgba(255, 149, 0, 0.4) 0%, transparent 40%),
+                radial-gradient(ellipse 300px 150px at 75% 75%, rgba(52, 199, 89, 0.3) 0%, transparent 35%),
+                /* Base iOS 26 gradient */
+                linear-gradient(145deg, 
+                    rgba(25, 25, 35, 0.95) 0%,
+                    rgba(35, 40, 60, 0.92) 20%,
+                    rgba(45, 55, 85, 0.88) 40%,
+                    rgba(55, 70, 110, 0.85) 60%,
+                    rgba(65, 85, 135, 0.82) 80%,
+                    rgba(75, 100, 160, 0.8) 100%);
             min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+            font-weight: 400;
+            letter-spacing: -0.02em;
+            overflow-x: hidden;
+            position: relative;
+            background-attachment: fixed;
         }
         
-        .container {
-            padding-top: 2rem;
-            padding-bottom: 2rem;
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                /* Authentic iOS glass reflections */
+                radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 30%),
+                radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0.08) 0%, transparent 35%),
+                radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.05) 0%, transparent 25%),
+                /* Subtle noise texture overlay */
+                repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(255, 255, 255, 0.01) 1px, rgba(255, 255, 255, 0.01) 2px);
+            pointer-events: none;
+            z-index: -1;
+            animation: subtleShimmer 15s ease-in-out infinite;
         }
         
-        .header-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
-            margin-bottom: 2rem;
+        @keyframes subtleShimmer {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
         }
         
-        .main-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
-            min-height: 70vh;
+        /* iOS 26 Control Center Micro-animations */
+        @keyframes controlCenterFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(10px);
+                filter: blur(5px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+                filter: blur(0px);
+            }
+        }
+        
+        @keyframes floatingOrbs {
+            0%, 100% {
+                transform: translateX(0) translateY(0) scale(1);
+            }
+            25% {
+                transform: translateX(5px) translateY(-3px) scale(1.02);
+            }
+            50% {
+                transform: translateX(-3px) translateY(2px) scale(0.98);
+            }
+            75% {
+                transform: translateX(2px) translateY(-5px) scale(1.01);
+            }
+        }
+        
+        /* Apply iOS 26 entrance animations */
+        .chat-header {
+            animation: controlCenterFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1);
         }
         
         .group-selector {
-            background: rgba(108, 117, 125, 0.1);
-            border: 1px solid rgba(108, 117, 125, 0.2);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
+            animation: controlCenterFadeIn 1s cubic-bezier(0.23, 1, 0.32, 1) 0.2s both;
         }
         
         .messages-container {
-            max-height: 60vh;
-            overflow-y: auto;
-            background: rgba(248, 249, 250, 0.5);
-            border-radius: 15px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            animation: controlCenterFadeIn 1.2s cubic-bezier(0.23, 1, 0.32, 1) 0.4s both;
         }
         
         .action-buttons {
-            padding: 1rem;
-            background: rgba(248, 249, 250, 0.3);
-            border-radius: 15px;
+            animation: controlCenterFadeIn 1.4s cubic-bezier(0.23, 1, 0.32, 1) 0.6s both;
+        }
+        
+        /* Add floating orb animation to background */
+        body::before {
+            animation: floatingOrbs 25s ease-in-out infinite;
+        }
+        
+        .container {
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            padding: env(safe-area-inset-top, 20px) 16px calc(env(safe-area-inset-bottom, 20px) + 120px) 16px;
+            min-height: 100vh;
             display: flex;
-            gap: 1rem;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        
+        /* Chat Header - Authentic iOS 26 Control Center Tile */
+        .chat-header {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.18) 0%,
+                    rgba(255, 255, 255, 0.08) 50%,
+                    rgba(255, 255, 255, 0.12) 100%);
+            backdrop-filter: blur(60px) saturate(200%) brightness(1.1);
+            border: 0.5px solid rgba(255, 255, 255, 0.25);
+            border-radius: 28px;
+            padding: 20px 24px;
+            margin-bottom: 16px;
+            box-shadow: 
+                0 12px 40px rgba(0, 0, 0, 0.4),
+                0 2px 8px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.25),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        
+        .chat-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        }
+        
+        .chat-title {
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 19px;
+            font-weight: 700;
+            text-align: center;
+            margin: 0;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            letter-spacing: -0.01em;
+        }
+        
+        /* Group Selector - iOS 26 Control Center Module */
+        .group-selector {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.15) 0%,
+                    rgba(255, 255, 255, 0.06) 50%,
+                    rgba(255, 255, 255, 0.1) 100%);
+            backdrop-filter: blur(50px) saturate(180%) brightness(1.05);
+            border: 0.5px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                0 2px 8px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .group-selector .row {
+            margin: 0;
+        }
+        
+        .group-selector .col-md-8,
+        .group-selector .col-md-4 {
+            padding: 0 8px;
+        }
+        
+        .group-selector .col-md-8 {
+            padding-right: 8px;
+        }
+        
+        .group-selector .col-md-4 {
+            padding-left: 8px;
+        }
+        
+        /* Messages Container - Chat Style */
+        .messages-container {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.02);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 20px 0;
+            margin-bottom: 16px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            /* 設置固定最大高度，確保內部滾動 */
+            max-height: 60vh;
+            height: 60vh;
+        }
+        
+        .messages-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .messages-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .messages-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+        }
+        
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Chat Message Bubbles - iOS 26 Control Center Cards */
+        .chat-bubble {
+            max-width: 90%;
+            margin: 12px auto;
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.16) 0%,
+                    rgba(255, 255, 255, 0.08) 40%,
+                    rgba(255, 255, 255, 0.12) 100%);
+            backdrop-filter: blur(40px) saturate(190%) brightness(1.05);
+            border: 0.5px solid rgba(255, 255, 255, 0.22);
+            border-radius: 26px;
+            padding: 18px 22px;
+            box-shadow: 
+                0 6px 24px rgba(0, 0, 0, 0.25),
+                0 1px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+            position: relative;
+            transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+            cursor: pointer;
+            transform-origin: center;
+        }
+        
+        .chat-bubble:hover {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.22) 0%,
+                    rgba(255, 255, 255, 0.12) 40%,
+                    rgba(255, 255, 255, 0.18) 100%);
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 
+                0 10px 35px rgba(0, 0, 0, 0.3),
+                0 2px 8px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.25),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+        }
+        
+        .chat-bubble.selected {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 214, 102, 0.2) 0%,
+                    rgba(255, 193, 7, 0.15) 40%,
+                    rgba(255, 214, 102, 0.2) 100%);
+            border-color: rgba(255, 193, 7, 0.4);
+            box-shadow: 
+                0 6px 24px rgba(255, 193, 7, 0.15),
+                0 2px 8px rgba(255, 214, 102, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                inset 0 -1px 0 rgba(255, 193, 7, 0.08);
+            transform: scale(1.02);
+            backdrop-filter: blur(50px) saturate(200%) brightness(1.1);
+        }
+        
+        .chat-bubble.selected .message-checkbox {
+            opacity: 1;
+            transform: scale(1.1);
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 193, 7, 0.9) 0%,
+                    rgba(255, 214, 102, 0.9) 100%);
+            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 
+                0 4px 12px rgba(255, 193, 7, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        
+        .chat-bubble.selected::after {
+            background: 
+                radial-gradient(ellipse 60% 40% at 25% 25%, rgba(255, 193, 7, 0.12) 0%, transparent 40%),
+                radial-gradient(ellipse 40% 60% at 75% 15%, rgba(255, 255, 255, 0.15) 0%, transparent 35%),
+                radial-gradient(ellipse 30% 30% at 85% 85%, rgba(255, 214, 102, 0.1) 0%, transparent 30%);
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .message-checkbox {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 28px;
+            height: 28px;
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.95) 0%,
+                    rgba(255, 255, 255, 0.85) 100%);
+            backdrop-filter: blur(30px) saturate(180%);
+            border: 0.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
             justify-content: center;
+            box-shadow: 
+                0 4px 16px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            transform: scale(0.8);
+        }
+        
+        .chat-bubble:hover .message-checkbox {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .message-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+            appearance: none;
+            background: transparent;
+            border: 2px solid rgba(255, 193, 7, 0.6);
+            border-radius: 6px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .message-checkbox input[type="checkbox"]:checked {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.9) 0%, rgba(255, 214, 102, 0.9) 100%);
+            border-color: rgba(255, 193, 7, 0.9);
+            box-shadow: 
+                0 0 0 2px rgba(255, 255, 255, 0.3),
+                0 2px 6px rgba(255, 193, 7, 0.2);
+        }
+        
+        .message-checkbox input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: -1px;
+            left: 1px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        .message-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             flex-wrap: wrap;
         }
         
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 25px;
-            padding: 0.75rem 2rem;
+        .message-id {
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 12px;
             font-weight: 600;
-            transition: all 0.3s ease;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+        }
+        
+        .message-date {
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 11px;
+            font-weight: 500;
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+        }
+        
+        .media-badge {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            color: rgba(0, 0, 0, 0.9);
+            font-size: 10px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .media-badge.video {
+            background: rgba(255, 59, 48, 0.9);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .media-badge.photo {
+            background: rgba(52, 199, 89, 0.9);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .media-badge.audio {
+            background: rgba(255, 149, 0, 0.9);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .media-badge.document {
+            background: rgba(88, 86, 214, 0.9);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .message-content {
+            margin-top: 8px;
+        }
+        
+        .message-content * {
+            color: rgba(255, 255, 255, 0.7) !important;
+        }
+        
+        .message-text {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            word-wrap: break-word;
+        }
+        
+        .media-placeholder {
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .media-placeholder:hover {
+            background: rgba(0, 0, 0, 0.15);
+        }
+        
+        .media-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 18px;
+        }
+        
+        .media-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .media-filename {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 2px;
+            word-wrap: break-word;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        
+        .media-size {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 11px;
+            font-weight: 500;
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-buttons {
+            position: fixed;
+            bottom: env(safe-area-inset-bottom, 20px);
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 800px;
+            width: calc(100% - 32px);
+            z-index: 1000;
+            padding: 16px 20px;
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.16) 0%,
+                    rgba(255, 255, 255, 0.08) 50%,
+                    rgba(255, 255, 255, 0.12) 100%);
+            backdrop-filter: blur(60px) saturate(200%) brightness(1.1);
+            border: 0.5px solid rgba(255, 255, 255, 0.25);
+            border-radius: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 
+                0 12px 50px rgba(0, 0, 0, 0.4),
+                0 4px 16px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        
+        .action-buttons.hidden {
+            transform: translateX(-50%) translateY(100px);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        /* iOS 26 Authentic Button Styles */
+        .btn-primary {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(0, 122, 255, 0.95) 0%, 
+                    rgba(88, 86, 214, 0.92) 50%,
+                    rgba(0, 122, 255, 0.95) 100%);
+            backdrop-filter: blur(30px) saturate(200%);
+            border: 0.5px solid rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
+            padding: 14px 28px;
+            font-weight: 650;
+            font-size: 15px;
+            color: rgba(255, 255, 255, 1);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 
+                0 6px 24px rgba(0, 122, 255, 0.5),
+                0 1px 4px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
         }
         
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            background: 
+                linear-gradient(135deg, rgba(0, 122, 255, 0.9) 0%, rgba(88, 86, 214, 0.9) 100%);
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 
+                0 6px 30px rgba(0, 122, 255, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0) scale(0.98);
         }
         
         .btn-secondary {
-            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-            border: none;
-            border-radius: 25px;
-            padding: 0.75rem 2rem;
-            font-weight: 600;
-            color: white;
-            transition: all 0.3s ease;
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.9) 0%,
+                    rgba(255, 255, 255, 0.7) 50%,
+                    rgba(255, 255, 255, 0.85) 100%);
+            backdrop-filter: blur(30px) saturate(180%);
+            border: 0.5px solid rgba(255, 255, 255, 0.35);
+            border-radius: 20px;
+            padding: 14px 28px;
+            font-weight: 650;
+            font-size: 15px;
+            color: rgba(0, 0, 0, 0.9);
+            text-shadow: 0 0.5px 1px rgba(255, 255, 255, 0.5);
+            transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 
+                0 6px 24px rgba(0, 0, 0, 0.25),
+                0 1px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.25),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
         }
         
         .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
-            color: white;
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 
+                0 6px 25px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .btn-secondary:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        /* Form Controls - iOS 26 Control Center Style */
+        .form-control, .form-select {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.92) 0%,
+                    rgba(255, 255, 255, 0.85) 50%,
+                    rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(30px) saturate(120%);
+            border: 0.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 14px 18px;
+            color: rgba(0, 0, 0, 0.9);
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+            width: 100%;
+            box-sizing: border-box;
+            box-shadow: 
+                0 2px 8px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(0, 122, 255, 0.6);
+            box-shadow: 
+                0 0 0 3px rgba(0, 122, 255, 0.2),
+                0 4px 20px rgba(0, 122, 255, 0.3);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .form-control::placeholder {
+            color: rgba(0, 0, 0, 0.5);
+            font-weight: 400;
+        }
+        
+        /* Enhanced text contrast for iOS 26 readability */
+        .group-selector h5 {
+            color: rgba(255, 255, 255, 0.95) !important;
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            letter-spacing: -0.01em;
+        }
+        
+        .message-text {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            word-wrap: break-word;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        
+        .text-muted {
+            color: rgba(255, 255, 255, 0.7) !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Loading and Alert Styles */
+        .alert {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            color: rgba(0, 0, 0, 0.9);
+        }
+        
+        .alert-success {
+            background: rgba(52, 199, 89, 0.9);
+            border-color: rgba(52, 199, 89, 0.3);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .alert-warning {
+            background: rgba(255, 149, 0, 0.9);
+            border-color: rgba(255, 149, 0, 0.3);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .alert-danger {
+            background: rgba(255, 59, 48, 0.9);
+            border-color: rgba(255, 59, 48, 0.3);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        /* 即時通知系統 */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .notification {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.95) 0%,
+                    rgba(255, 255, 255, 0.85) 50%,
+                    rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(40px) saturate(200%);
+            border: 0.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                0 2px 8px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateX(120%);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .notification::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--notification-color, #007AFF);
+            border-radius: 2px 0 0 2px;
+        }
+        
+        .notification.success {
+            --notification-color: #34C759;
+        }
+        
+        .notification.info {
+            --notification-color: #007AFF;
+        }
+        
+        .notification.warning {
+            --notification-color: #FF9500;
+        }
+        
+        .notification.error {
+            --notification-color: #FF3B30;
+        }
+        
+        .notification-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        
+        .notification-title {
+            font-weight: 700;
+            font-size: 14px;
+            color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .notification-close {
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+            color: rgba(0, 0, 0, 0.7);
+            font-size: 12px;
+        }
+        
+        .notification-close:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .notification-body {
+            color: rgba(0, 0, 0, 0.8);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .notification-progress {
+            margin-top: 8px;
+        }
+        
+        .notification-progress-bar {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            height: 6px;
+            overflow: hidden;
+        }
+        
+        .notification-progress-fill {
+            background: var(--notification-color, #007AFF);
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .notification-progress-text {
+            font-size: 11px;
+            color: rgba(0, 0, 0, 0.6);
+            margin-top: 4px;
+            text-align: right;
+        }
+        
+        /* Selection Counter */
+        .selection-counter {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(0, 122, 255, 0.25) 0%,
+                    rgba(88, 86, 214, 0.2) 100%);
+            backdrop-filter: blur(30px) saturate(180%);
+            border: 0.5px solid rgba(0, 122, 255, 0.4);
+            border-radius: 16px;
+            padding: 10px 16px;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 13px;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            box-shadow: 
+                0 2px 8px rgba(0, 122, 255, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Responsive Design for iOS 26 */
+        @media (max-width: 768px) {
+            .container {
+                max-width: 100%;
+                padding: env(safe-area-inset-top, 16px) 12px env(safe-area-inset-bottom, 16px) 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: env(safe-area-inset-top, 12px) 8px calc(env(safe-area-inset-bottom, 12px) + 100px) 8px;
+                max-width: 100%;
+            }
+            
+            .chat-bubble {
+                max-width: 95%;
+                margin: 6px auto;
+                padding: 12px 16px;
+            }
+            
+            .chat-header {
+                padding: 12px 16px;
+                border-radius: 20px;
+                margin-bottom: 8px;
+            }
+            
+            .group-selector {
+                padding: 12px;
+                border-radius: 16px;
+                margin-bottom: 12px;
+            }
+            
+            .action-buttons {
+                bottom: env(safe-area-inset-bottom, 12px);
+                width: calc(100% - 16px);
+                padding: 12px 16px;
+                border-radius: 20px;
+            }
+            
+            .btn-primary, .btn-secondary {
+                padding: 10px 20px;
+                font-size: 13px;
+                width: 100%;
+                margin-bottom: 8px;
+            }
+            
+            .row .col-md-4 .btn {
+                width: 100%;
+            }
+            
+            .d-flex .btn {
+                width: auto;
+                flex: 1;
+                margin: 0 4px;
+            }
+            
+            .chat-title {
+                font-size: 16px;
+            }
+        }
+        
+        /* Desktop optimization */
+        @media (min-width: 1200px) {
+            .container {
+                max-width: 1000px;
+            }
+        }
+        
+        /* Animations and Micro-interactions */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .chat-bubble {
+            animation: controlCenterFadeIn 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            animation-fill-mode: both;
+        }
+        
+        /* Staggered animation for chat bubbles */
+        .chat-bubble:nth-child(1) { animation-delay: 0s; }
+        .chat-bubble:nth-child(2) { animation-delay: 0.1s; }
+        .chat-bubble:nth-child(3) { animation-delay: 0.2s; }
+        .chat-bubble:nth-child(4) { animation-delay: 0.3s; }
+        .chat-bubble:nth-child(5) { animation-delay: 0.4s; }
+        .chat-bubble:nth-child(n+6) { animation-delay: 0.5s; }
+        
+        .loading-spinner {
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .loading-spinner .spinner-border {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        /* Glass morphism enhanced effects */
+        .chat-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                /* iOS authentic light reflections */
+                radial-gradient(ellipse 60% 40% at 25% 25%, rgba(255, 255, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(ellipse 40% 60% at 75% 15%, rgba(255, 255, 255, 0.08) 0%, transparent 35%),
+                radial-gradient(ellipse 30% 30% at 85% 85%, rgba(0, 122, 255, 0.08) 0%, transparent 30%);
+            pointer-events: none;
+            border-radius: 28px;
+            mix-blend-mode: overlay;
+        }
+        
+        .group-selector::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse 50% 30% at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 40%),
+                radial-gradient(ellipse 30% 50% at 80% 20%, rgba(255, 255, 255, 0.06) 0%, transparent 35%);
+            pointer-events: none;
+            border-radius: 24px;
+            mix-blend-mode: overlay;
+        }
+        
+        /* Enhanced glass morphism for chat bubbles */
+        .chat-bubble::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse 40% 25% at 30% 20%, rgba(255, 255, 255, 0.12) 0%, transparent 35%),
+                radial-gradient(ellipse 25% 40% at 80% 30%, rgba(255, 255, 255, 0.06) 0%, transparent 30%);
+            pointer-events: none;
+            border-radius: 26px;
+            mix-blend-mode: overlay;
         }
         
         .loading-spinner {
             display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1050;
             text-align: center;
             padding: 2rem;
+            background: rgba(25, 25, 35, 0.95);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
         
         .alert {
@@ -122,30 +1038,95 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header Card -->
-        <div class="card header-card">
-            <div class="card-body text-center">
-                <h1 class="card-title mb-3">
-                    <i class="fas fa-rocket text-primary"></i>
-                    Fast Test 快速測試下載
-                </h1>
-                <p class="text-muted mb-3">選擇群組和訊息，快速預覽並下載媒體內容</p>
-                <nav class="d-flex justify-content-center gap-3">
-                    <a href="{{ url_for('index') }}" class="nav-link">
-                        <i class="fas fa-home"></i> 返回首頁
-                    </a>
-                    <button type="button" onclick="window.close()" class="nav-link" style="border: none; background: transparent;">
-                        <i class="fas fa-times"></i> 關閉
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <div class="chat-title" id="chat-title">
+                <i class="fas fa-comments"></i>
+                快速媒體下載
+            </div>
+            
+            <!-- Login Status Indicator -->
+            <div id="login-status" style="display: none; margin-top: 8px;">
+                <div id="login-status-success" class="alert alert-success py-1 mb-0" style="display: none; font-size: 12px;">
+                    <i class="fas fa-user-check"></i>
+                    <span id="login-user-info">已登入</span>
+                    <button id="header-logout-btn" class="btn btn-sm btn-outline-light ms-2" style="font-size: 10px; padding: 2px 8px;">
+                        <i class="fas fa-sign-out-alt"></i>
                     </button>
-                </nav>
+                </div>
+                <div id="login-status-loading" class="alert alert-info py-1 mb-0" style="display: none; font-size: 12px;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    檢查中...
+                </div>
+                <div id="login-status-error" class="alert alert-warning py-1 mb-0" style="display: none; font-size: 12px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    需要認證
+                </div>
             </div>
         </div>
+        
+        <!-- Authentication Section -->
+        <div id="auth-section" class="group-selector">
+            <h5 class="mb-3" style="color: rgba(255, 255, 255, 0.9); font-size: 16px; font-weight: 600;">
+                <i class="fas fa-user-lock" style="color: rgba(0, 122, 255, 0.8);"></i>
+                Telegram 認證
+            </h5>
+                    <div id="auth-phone-step">
+                        <p class="text-muted">請輸入您的電話號碼以開始認證</p>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="tel" id="phone-number" class="form-control" placeholder="+886912345678" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button id="send-code-btn" class="btn btn-primary w-100">
+                                    <i class="fas fa-paper-plane"></i>
+                                    發送驗證碼
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="auth-code-step" style="display: none;">
+                        <p class="text-muted">請輸入收到的驗證碼</p>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="text" id="verification-code" class="form-control" placeholder="12345" maxlength="5" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button id="verify-code-btn" class="btn btn-primary w-100">
+                                    <i class="fas fa-check"></i>
+                                    驗證
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="auth-password-step" style="display: none;">
+                        <p class="text-muted">請輸入兩步驗證密碼</p>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="password" id="two-factor-password" class="form-control" placeholder="密碼" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button id="verify-password-btn" class="btn btn-primary w-100">
+                                    <i class="fas fa-unlock"></i>
+                                    確認
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="auth-success" style="display: none;">
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i>
+                            認證成功！歡迎，<span id="user-name"></span>
+                            <button id="logout-btn" class="btn btn-sm btn-outline-secondary float-end">
+                                <i class="fas fa-sign-out-alt"></i>
+                                登出
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Main Card -->
-        <div class="card main-card">
-            <div class="card-body">
                 <!-- Group Selection -->
-                <div class="group-selector">
+                <div class="group-selector" id="group-selector" style="display: none;">
                     <h5 class="mb-3">
                         <i class="fas fa-users text-primary"></i>
                         選擇群組
@@ -170,43 +1151,55 @@
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">載入中...</span>
                     </div>
-                    <p class="mt-2">正在載入群組訊息...</p>
+                    <p class="mt-2 text-light">正在載入群組訊息...</p>
                 </div>
 
-                <!-- Messages Container -->
-                <div id="messages-container" class="messages-container" style="display: none;">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0">
-                            <i class="fas fa-comments text-primary"></i>
-                            群組訊息
-                        </h5>
-                        <div>
-                            <button id="select-all-btn" class="btn btn-sm btn-outline-primary me-2">全選</button>
-                            <button id="clear-selection-btn" class="btn btn-sm btn-outline-secondary">清除選擇</button>
-                        </div>
-                    </div>
-                    
-                    <div id="messages-list">
-                        <!-- Messages will be loaded here -->
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="action-buttons" style="display: none;" id="action-buttons">
-                    <button id="fast-test-download-btn" class="btn btn-primary" disabled>
-                        <i class="fas fa-download"></i>
-                        開始下載 (<span id="selected-count">0</span>)
-                    </button>
-                    <button id="refresh-messages-btn" class="btn btn-secondary">
-                        <i class="fas fa-refresh"></i>
-                        重新載入
-                    </button>
-                </div>
-
-                <!-- Status Alert -->
-                <div id="status-alert" class="alert alert-info" style="display: none;"></div>
+        <!-- Chat Messages Container -->
+        <div id="messages-container" class="messages-container" style="display: none;">
+            <!-- Messages will be populated here -->
+            <div id="messages-list">
+                <!-- Dynamic chat bubbles will appear here -->
             </div>
         </div>
+
+        <!-- Chat Controls -->
+        <div id="chat-controls" class="action-buttons" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="selection-counter">
+                    已選擇 <span id="selected-count">0</span> 項
+                </div>
+                <div>
+                    <button id="select-all-btn" class="btn btn-sm btn-secondary me-2">
+                        <i class="fas fa-check-double"></i> 全選
+                    </button>
+                    <button id="clear-selection-btn" class="btn btn-sm btn-secondary me-2">
+                        <i class="fas fa-times"></i> 清除
+                    </button>
+                    <button id="refresh-messages-btn" class="btn btn-sm btn-secondary me-2">
+                        <i class="fas fa-sync-alt"></i> 載入更多
+                    </button>
+                    <button id="debug-scroll-btn" class="btn btn-sm btn-outline-info me-2">
+                        <i class="fas fa-bug"></i> 調試
+                    </button>
+                    <button id="test-scroll-btn" class="btn btn-sm btn-outline-warning">
+                        <i class="fas fa-vial"></i> 測試滾動
+                    </button>
+            </div>
+            <div class="d-flex justify-content-center mt-3">
+                <button id="fast-test-download-btn" class="btn btn-primary" disabled>
+                    <i class="fas fa-download"></i>
+                    開始下載
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Alert -->
+        <div id="status-alert" class="alert alert-info" style="display: none;"></div>
+    </div>
+    
+    <!-- 即時通知容器 -->
+    <div id="notification-container" class="notification-container">
+        <!-- 動態通知會在這裡顯示 -->
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
@@ -215,11 +1208,29 @@
         let selectedMessages = [];
         let currentChatId = null;
         let allMessages = [];
+        let lastMessageId = 0;
+        let isLoading = false;
+        let hasMoreMessages = true;
+        let previousLastMessageId = 0; // 記錄上一次的 lastMessageId
+        let noProgressCount = 0; // 記錄沒有進展的次數
+        const MESSAGES_PER_PAGE = 20;
+        const SCROLL_THRESHOLD = 50; // pixels from bottom to trigger auto-load
+        const MAX_NO_PROGRESS_ATTEMPTS = 3; // 最大無進展嘗試次數
+        let scrollTimeout = null;
+        let lastScrollTop = 0;
+        let userScrolled = false;
+        let preventAutoLoad = false;
+        
+        // 通知系統變數
+        let notificationCount = 0;
+        let activeNotifications = new Map();
+        let downloadNotificationId = null;
+        let progressCheckInterval = null;
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
-            loadGroups();
             initializeEventListeners();
+            checkAuthStatus();
         });
 
         function initializeEventListeners() {
@@ -231,18 +1242,29 @@
                 if (selectedValue) {
                     loadBtn.disabled = false;
                     currentChatId = selectedValue;
+                    // 重置滾動相關狀態
+                    userScrolled = false;
+                    preventAutoLoad = false;
+                    lastScrollTop = 0;
                 } else {
                     loadBtn.disabled = true;
                     currentChatId = null;
                     hideMessages();
+                    // 重置滾動相關狀態
+                    userScrolled = false;
+                    preventAutoLoad = false;
+                    lastScrollTop = 0;
                 }
             });
 
             // Load messages button
             document.getElementById('load-messages-btn').addEventListener('click', loadMessages);
 
-            // Refresh messages button
-            document.getElementById('refresh-messages-btn').addEventListener('click', loadMessages);
+            // Refresh messages button - 應該載入更多訊息，不是重置
+            document.getElementById('refresh-messages-btn').addEventListener('click', function() {
+                console.log('🔄 手動重新整理 - 載入更多訊息');
+                loadMessages(false); // false = 追加模式，不重置
+            });
 
             // Select all button
             document.getElementById('select-all-btn').addEventListener('click', selectAllMessages);
@@ -252,70 +1274,438 @@
 
             // Download button
             document.getElementById('fast-test-download-btn').addEventListener('click', startDownload);
+            
+            // Debug scroll button
+            document.getElementById('debug-scroll-btn').addEventListener('click', function() {
+                const container = document.getElementById('messages-container');
+                const scrollTop = container.scrollTop;
+                const scrollHeight = container.scrollHeight;
+                const clientHeight = container.clientHeight;
+                const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+                
+                console.log('🐛 滾動狀態調試資訊:');
+                console.log('  容器顯示狀態:', container.style.display);
+                console.log('  scrollTop:', scrollTop);
+                console.log('  scrollHeight:', scrollHeight);
+                console.log('  clientHeight:', clientHeight);
+                console.log('  距離底部:', distanceFromBottom);
+                console.log('  閾值:', SCROLL_THRESHOLD);
+                console.log('  hasMoreMessages:', hasMoreMessages);
+                console.log('  isLoading:', isLoading);
+                console.log('  lastMessageId:', lastMessageId);
+                console.log('  previousLastMessageId:', previousLastMessageId);
+                console.log('  noProgressCount:', noProgressCount);
+                console.log('  allMessages.length:', allMessages.length);
+                console.log('  觸發條件滿足:', distanceFromBottom <= SCROLL_THRESHOLD && hasMoreMessages && !isLoading);
+                
+                // 強制觸發滾動檢測
+                handleScroll();
+            });
+            
+            // Test scroll button
+            document.getElementById('test-scroll-btn').addEventListener('click', function() {
+                const container = document.getElementById('messages-container');
+                console.log('🧪 測試滾動檢測...');
+                console.log('  容器元素:', container);
+                
+                // 先滾動到底部
+                container.scrollTop = container.scrollHeight - container.clientHeight;
+                console.log('  已滾動到底部，scrollTop:', container.scrollTop);
+                
+                // 等待一下然後觸發檢測
+                setTimeout(() => {
+                    console.log('  觸發滾動檢測...');
+                    handleScroll();
+                    handleScrollImmediate();
+                }, 100);
+            });
+            
+            // Header logout button
+            const headerLogoutBtn = document.getElementById('header-logout-btn');
+            if (headerLogoutBtn) {
+                headerLogoutBtn.addEventListener('click', logout);
+            }
         }
+        
+        // 新的簡化滾動監聽器
+        function setupScrollListener() {
+            const messagesContainer = document.getElementById('messages-container');
+            console.log('🔧 設置滾動監聽器', {
+                element: messagesContainer,
+                hasAttribute: messagesContainer ? messagesContainer.hasAttribute('data-scroll-listener') : false,
+                style: messagesContainer ? messagesContainer.style.display : 'null'
+            });
+            
+            if (!messagesContainer) {
+                console.error('❌ messages-container 元素不存在');
+                return;
+            }
+            
+            if (!messagesContainer.hasAttribute('data-scroll-listener')) {
+                console.log('🔧 設置新的簡化滾動檢測');
+                
+                // 容器滾動事件監聽器
+                let scrollTimer = null;
+                messagesContainer.addEventListener('scroll', function(e) {
+                    const currentScrollTop = messagesContainer.scrollTop;
+                    
+                    console.log('📜 容器滾動事件觸發', {
+                        scrollTop: currentScrollTop,
+                        scrollHeight: messagesContainer.scrollHeight,
+                        clientHeight: messagesContainer.clientHeight
+                    });
+                    
+                    // 檢測是否是用戶主動滾動（滾動位置發生變化）
+                    if (Math.abs(currentScrollTop - lastScrollTop) > 5) {
+                        userScrolled = true;
+                        console.log('👆 檢測到用戶滾動', { 
+                            from: lastScrollTop, 
+                            to: currentScrollTop,
+                            userScrolled: true
+                        });
+                    }
+                    
+                    lastScrollTop = currentScrollTop;
+                    
+                    // 防抖：延遲執行檢查
+                    if (scrollTimer) {
+                        clearTimeout(scrollTimer);
+                    }
+                    scrollTimer = setTimeout(() => {
+                        checkShouldLoadMore();
+                    }, 100); // 100ms 防抖延遲
+                });
+                
+                messagesContainer.setAttribute('data-scroll-listener', 'true');
+                console.log('✅ 滾動監聽器設置完成');
+            } else {
+                console.log('⚠️ 滾動監聽器已經存在');
+            }
+        }
+        
+        // 基於最後一個 chat-bubble 的檢測邏輯
+        function checkShouldLoadMore() {
+            // 基本條件檢查
+            if (isLoading || !hasMoreMessages) {
+                console.log('🚫 跳過檢查: isLoading=' + isLoading + ', hasMoreMessages=' + hasMoreMessages);
+                return;
+            }
+            
+            // 如果被設置為阻止自動載入，跳過
+            if (preventAutoLoad) {
+                console.log('🚫 阻止自動載入標記已設置，跳過檢查');
+                return;
+            }
+            
+            const container = document.getElementById('messages-container');
+            if (!container || container.style.display === 'none') {
+                console.log('🚫 跳過檢查: 容器不存在或隱藏');
+                return;
+            }
+            
+            // 找到最後一個 chat-bubble
+            const messagesList = document.getElementById('messages-list');
+            if (!messagesList) {
+                console.log('🚫 跳過檢查: messages-list 不存在');
+                return;
+            }
+            
+            const chatBubbles = messagesList.querySelectorAll('.chat-bubble');
+            
+            // 如果沒有訊息，允許初始載入
+            if (chatBubbles.length === 0) {
+                console.log('✅ 沒有訊息，允許初始載入');
+                loadMessages(false);
+                return;
+            }
+            
+            // 如果用戶沒有主動滾動，不觸發載入
+            if (!userScrolled) {
+                console.log('🚫 用戶尚未滾動，跳過自動載入');
+                return;
+            }
+            
+            // 獲取容器的滾動信息
+            const scrollTop = container.scrollTop;
+            const scrollHeight = container.scrollHeight;
+            const clientHeight = container.clientHeight;
+            const scrollBottom = scrollHeight - scrollTop - clientHeight;
+            
+            // 計算是否接近底部
+            const isNearBottom = scrollBottom <= SCROLL_THRESHOLD;
+            
+            console.log('🔍 滾動位置檢查:', {
+                totalBubbles: chatBubbles.length,
+                userScrolled: userScrolled,
+                scrollTop: Math.round(scrollTop),
+                scrollHeight: Math.round(scrollHeight),
+                clientHeight: Math.round(clientHeight),
+                scrollBottom: Math.round(scrollBottom),
+                threshold: SCROLL_THRESHOLD,
+                isNearBottom: isNearBottom,
+                preventAutoLoad: preventAutoLoad,
+                shouldLoad: isNearBottom && userScrolled && hasMoreMessages && !isLoading
+            });
+            
+            // 只有當用戶滾動且接近底部時才觸發加載
+            if (isNearBottom && userScrolled) {
+                console.log('✅ 用戶滾動到底部附近，觸發載入更多訊息');
+                // 重置用戶滾動標記，防止重複觸發
+                userScrolled = false;
+                // 設置阻止自動載入標記
+                preventAutoLoad = true;
+                loadMessages(false);
+            }
+        }
+        
 
         async function loadGroups() {
             try {
-                const response = await fetch('/api/get_user_groups');
+                console.log('正在載入群組...');
+                showAlert('正在載入群組列表...', 'info');
+                
+                const response = await fetch('/api/groups/list');
+                console.log('群組 API 響應狀態:', response.status);
+                
                 const data = await response.json();
+                console.log('群組 API 響應數據:', data);
                 
                 if (data.success) {
                     const select = document.getElementById('group-select');
                     select.innerHTML = '<option value="">請選擇群組...</option>';
                     
-                    data.groups.forEach(group => {
-                        const option = document.createElement('option');
-                        option.value = group.chat_id;
-                        option.textContent = group.name;
-                        select.appendChild(option);
-                    });
+                    console.log('載入群組數量:', data.groups ? data.groups.length : 0);
+                    
+                    if (data.groups && data.groups.length > 0) {
+                        data.groups.forEach(group => {
+                            const option = document.createElement('option');
+                            option.value = group.id;
+                            option.textContent = group.title;
+                            select.appendChild(option);
+                        });
+                        showAlert(`成功載入 ${data.groups.length} 個群組`, 'success');
+                    } else {
+                        showAlert('沒有找到任何群組', 'info');
+                    }
                 } else {
-                    showAlert('載入群組失敗: ' + data.message, 'danger');
+                    // Check if it's an authentication error
+                    const errorMsg = data.error || data.message || '未知錯誤';
+                    if (errorMsg.includes('會話已過期') || errorMsg.includes('需要先進行認證')) {
+                        showLoginStatusError();
+                        showAuthForm();
+                        showAlert('請先進行 Telegram 認證', 'info');
+                    } else {
+                        showAlert('載入群組失敗: ' + errorMsg, 'danger');
+                    }
                 }
             } catch (error) {
                 console.error('載入群組錯誤:', error);
-                showAlert('載入群組時發生錯誤', 'danger');
+                // If it's a fetch error (like 401 or 403), it might be authentication related
+                if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
+                    showLoginStatusError();
+                    showAuthForm();
+                    showAlert('認證已過期，請重新登入', 'info');
+                } else {
+                    showAlert('載入群組時發生錯誤', 'danger');
+                }
             }
         }
 
-        async function loadMessages() {
-            if (!currentChatId) return;
+        async function loadMessages(resetOffset = true) {
+            if (!currentChatId || isLoading) return;
 
+            if (resetOffset) {
+                lastMessageId = 0;
+                previousLastMessageId = 0;
+                noProgressCount = 0;
+                hasMoreMessages = true;
+                allMessages = [];
+                const container = document.getElementById('messages-list');
+                container.innerHTML = '';
+                hideMessages();
+            }
+
+            if (!hasMoreMessages) return;
+
+            isLoading = true;
             showLoading(true);
-            hideMessages();
             
             try {
-                const response = await fetch(`/api/get_group_messages?chat_id=${currentChatId}`);
+                const response = await fetch('/api/groups/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chat_id: currentChatId,
+                        limit: MESSAGES_PER_PAGE,
+                        offset_id: lastMessageId,
+                        media_only: false
+                    })
+                });
                 const data = await response.json();
                 
                 if (data.success && data.messages) {
-                    allMessages = data.messages;
-                    renderMessages(allMessages);
-                    showMessages();
+                    const newMessages = data.messages;
+                    
+                    console.log('📨 載入訊息結果:', {
+                        newMessagesCount: newMessages.length,
+                        messagesPerPage: MESSAGES_PER_PAGE,
+                        resetOffset,
+                        hasMoreMessagesBefore: hasMoreMessages
+                    });
+                    
+                    // 檢查是否還有更多訊息的邏輯
+                    // 只有當返回 0 條訊息，或者明確從後端得到 "沒有更多" 的訊息時才設為 false
+                    if (newMessages.length === 0) {
+                        hasMoreMessages = false;
+                        console.log('❌ 沒有更多訊息了 (返回 0 條訊息)');
+                    } else if (data.has_more !== undefined) {
+                        // 如果後端提供了 has_more 字段，使用它
+                        hasMoreMessages = data.has_more;
+                        console.log(hasMoreMessages ? '✅ 後端確認還有更多訊息' : '❌ 後端確認沒有更多訊息');
+                    } else if (newMessages.length < MESSAGES_PER_PAGE) {
+                        // 如果返回的數量少於請求數量，可能是到達了最舊的訊息
+                        // 但我們不能確定，保持 hasMoreMessages 為 true，讓用戶手動觸發檢查
+                        // 只有連續多次返回少於頁面大小的結果時才設為 false
+                        console.log('⚠️ 返回的訊息少於請求數量，但保持 hasMoreMessages = true 以便繼續檢查');
+                    } else {
+                        // 返回了完整的一頁，很可能還有更多
+                        hasMoreMessages = true;
+                        console.log('✅ 返回完整頁面，可能還有更多訊息');
+                    }
+                    
+                    if (newMessages.length > 0) {
+                        allMessages = [...allMessages, ...newMessages];
+                        renderMessages(newMessages, !resetOffset); // append mode
+                        
+                        // Update lastMessageId for next pagination
+                        const newLastMessageId = Math.min(...newMessages.map(m => m.message_id));
+                        
+                        // 檢查是否有進展
+                        if (previousLastMessageId > 0 && newLastMessageId >= previousLastMessageId) {
+                            noProgressCount++;
+                            console.log(`⚠️ 沒有進展：newLastMessageId (${newLastMessageId}) >= previousLastMessageId (${previousLastMessageId}), 計數: ${noProgressCount}/${MAX_NO_PROGRESS_ATTEMPTS}`);
+                            
+                            if (noProgressCount >= MAX_NO_PROGRESS_ATTEMPTS) {
+                                hasMoreMessages = false;
+                                console.log('❌ 達到最大無進展嘗試次數，停止載入更多訊息');
+                            }
+                        } else {
+                            noProgressCount = 0; // 重置計數
+                            console.log('✅ 有進展，重置無進展計數');
+                        }
+                        
+                        previousLastMessageId = lastMessageId;
+                        lastMessageId = newLastMessageId;
+                        console.log('📍 更新 lastMessageId:', lastMessageId, '(previous:', previousLastMessageId, ')');
+                        
+                        if (resetOffset) {
+                            showMessages();
+                            
+                            // 處理初始狀態：檢查是否需要自動加載更多
+                            setTimeout(() => {
+                                if (hasMoreMessages && !isLoading) {
+                                    const messagesList = document.getElementById('messages-list');
+                                    const container = document.getElementById('messages-container');
+                                    
+                                    if (messagesList && container) {
+                                        const chatBubbles = messagesList.querySelectorAll('.chat-bubble');
+                                        
+                                        if (chatBubbles.length > 0) {
+                                            // 檢查最後一個氣泡是否在可視區域內
+                                            const lastBubble = chatBubbles[chatBubbles.length - 1];
+                                            const containerRect = container.getBoundingClientRect();
+                                            const bubbleRect = lastBubble.getBoundingClientRect();
+                                            
+                                            const bubbleBottom = bubbleRect.bottom;
+                                            const containerBottom = containerRect.bottom;
+                                            
+                                            // 如果最後一個氣泡完全在可視區域內，自動載入更多
+                                            if (bubbleBottom < containerBottom) {
+                                                console.log('🔄 初始內容可視區域有空間，自動載入更多訊息');
+                                                loadMessages(false); // 繼續載入，不重置
+                                            }
+                                        }
+                                    }
+                                }
+                            }, 100); // 等待 DOM 更新
+                        }
+                    } else if (resetOffset) {
+                        hasMoreMessages = false;
+                        const container = document.getElementById('messages-list');
+                        container.innerHTML = '<div class="text-center text-muted p-4">沒有找到訊息</div>';
+                        showMessages();
+                    }
                 } else {
-                    showAlert('載入訊息失敗: ' + (data.message || '未知錯誤'), 'danger');
+                    showAlert('載入訊息失敗: ' + (data.error || data.message || '未知錯誤'), 'danger');
                 }
             } catch (error) {
                 console.error('載入訊息錯誤:', error);
                 showAlert('載入訊息時發生錯誤', 'danger');
             } finally {
+                isLoading = false;
                 showLoading(false);
+                
+                // 載入完成後，延遲重置阻止自動載入標記，讓用戶可以繼續滾動
+                setTimeout(() => {
+                    preventAutoLoad = false;
+                    console.log('🔓 重置阻止自動載入標記，可以再次檢測滾動');
+                }, 1000); // 1秒後允許再次自動載入
             }
         }
 
-        function renderMessages(messages) {
+        function renderMessages(messages, appendMode = false) {
             const container = document.getElementById('messages-list');
-            container.innerHTML = '';
+            
+            if (!appendMode) {
+                container.innerHTML = '';
+            }
+
+            console.log('🎨 渲染訊息狀態:', {
+                messagesCount: messages.length,
+                appendMode,
+                hasMoreMessages,
+                isLoading,
+                lastMessageId
+            });
+            if (messages.length > 0) {
+                console.log('📝 第一條訊息範例:', {
+                    id: messages[0].message_id,
+                    date: messages[0].date,
+                    mediaType: messages[0].media_type
+                });
+            }
 
             if (!messages || messages.length === 0) {
-                container.innerHTML = '<div class="text-center text-muted p-4">沒有找到訊息</div>';
+                if (!appendMode) {
+                    container.innerHTML = '<div class="text-center text-muted p-4">沒有找到訊息</div>';
+                }
                 return;
             }
 
-            messages.forEach(message => {
+            // 簡化：只添加訊息，不添加載入指示器
+            messages.forEach((message, index) => {
                 const messageElement = createMessageElement(message);
+                if (appendMode) {
+                    // Add delay for smooth animation
+                    messageElement.style.animationDelay = `${index * 0.05}s`;
+                }
                 container.appendChild(messageElement);
             });
+            
+            // 如果沒有更多訊息，添加結束提示
+            if (!hasMoreMessages && !container.querySelector('.end-message')) {
+                const endMessage = document.createElement('div');
+                endMessage.className = 'text-center p-3 end-message';
+                endMessage.innerHTML = `
+                    <div class="text-muted" style="font-size: 12px; color: rgba(255, 255, 255, 0.5) !important;">
+                        <i class="fas fa-check"></i>
+                        已載入所有訊息
+                    </div>
+                `;
+                container.appendChild(endMessage);
+            }
         }
 
         function createMessageElement(message) {
@@ -371,42 +1761,44 @@
         }
 
         function getMediaInfo(message) {
-            let type = 'document';
-            let filename = '';
-            let size = '';
+            console.log('處理訊息媒體資訊:', message);
+            
+            // Use the flattened structure returned by the backend
+            let type = message.media_type || 'document';
+            let filename = message.file_name || '';
+            let size = message.file_size ? formatFileSize(message.file_size) : '';
 
-            if (message.photo) {
-                type = 'photo';
-                filename = 'Photo';
-                size = message.photo.file_size ? formatFileSize(message.photo.file_size) : '';
-            } else if (message.video) {
-                type = 'video';
-                filename = message.video.file_name || 'Video';
-                size = message.video.file_size ? formatFileSize(message.video.file_size) : '';
-            } else if (message.audio) {
-                type = 'audio';
-                filename = message.audio.file_name || 'Audio';
-                size = message.audio.file_size ? formatFileSize(message.audio.file_size) : '';
-            } else if (message.document) {
-                type = 'document';
-                filename = message.document.file_name || 'Document';
-                size = message.document.file_size ? formatFileSize(message.document.file_size) : '';
-            } else if (message.voice) {
-                type = 'audio';
-                filename = 'Voice Message';
-                size = message.voice.file_size ? formatFileSize(message.voice.file_size) : '';
-            } else if (message.video_note) {
-                type = 'video';
-                filename = 'Video Note';
-                size = message.video_note.file_size ? formatFileSize(message.video_note.file_size) : '';
-            } else if (message.sticker) {
-                type = 'photo';
-                filename = 'Sticker';
-                size = message.sticker.file_size ? formatFileSize(message.sticker.file_size) : '';
-            } else if (message.animation) {
-                type = 'video';
-                filename = 'Animation';
-                size = message.animation.file_size ? formatFileSize(message.animation.file_size) : '';
+            // If no filename, provide default based on media type
+            if (!filename) {
+                switch (type) {
+                    case 'photo':
+                        filename = 'Photo';
+                        break;
+                    case 'video':
+                        filename = 'Video';
+                        break;
+                    case 'audio':
+                        filename = 'Audio';
+                        break;
+                    case 'voice':
+                        filename = 'Voice Message';
+                        break;
+                    case 'animation':
+                        filename = 'Animation';
+                        break;
+                    case 'sticker':
+                        filename = 'Sticker';
+                        break;
+                    case 'document':
+                    default:
+                        filename = 'Document';
+                        break;
+                }
+            }
+
+            // If no size info, set default
+            if (!size) {
+                size = 'Unknown size';
             }
 
             return { type, filename, size };
@@ -423,12 +1815,16 @@
         }
 
         function updateSelection(checkbox, messageId) {
+            const chatBubble = checkbox.closest('.chat-bubble');
+            
             if (checkbox.checked) {
                 if (!selectedMessages.includes(messageId)) {
                     selectedMessages.push(messageId);
                 }
+                chatBubble.classList.add('selected');
             } else {
                 selectedMessages = selectedMessages.filter(id => id !== messageId);
+                chatBubble.classList.remove('selected');
             }
 
             updateSelectionUI();
@@ -446,8 +1842,10 @@
             
             checkboxes.forEach(checkbox => {
                 checkbox.checked = true;
-                const messageId = parseInt(checkbox.closest('[data-message-id]').dataset.messageId);
+                const chatBubble = checkbox.closest('.chat-bubble');
+                const messageId = parseInt(chatBubble.dataset.messageId);
                 selectedMessages.push(messageId);
+                chatBubble.classList.add('selected');
             });
             
             updateSelectionUI();
@@ -455,19 +1853,35 @@
 
         function clearSelection() {
             const checkboxes = document.querySelectorAll('.message-select');
-            checkboxes.forEach(checkbox => checkbox.checked = false);
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                const chatBubble = checkbox.closest('.chat-bubble');
+                chatBubble.classList.remove('selected');
+            });
             selectedMessages = [];
             updateSelectionUI();
         }
 
         async function startDownload() {
             if (!currentChatId || selectedMessages.length === 0) {
-                showAlert('請選擇要下載的訊息', 'warning');
+                showNotification('warning', '注意', '請選擇要下載的訊息');
                 return;
             }
 
+            console.log('開始下載，群組ID:', currentChatId);
+            console.log('選中的訊息ID:', selectedMessages);
+            
+            // Show loading state on download button
+            const downloadBtn = document.getElementById('fast-test-download-btn');
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 準備中...';
+            downloadBtn.disabled = true;
+            
+            // 顯示即時通知
+            showDownloadStartNotification(selectedMessages.length);
+
             try {
-                const response = await fetch('/api/add_fast_download_tasks', {
+                const response = await fetch('/api/fast_download/add_tasks', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -478,17 +1892,47 @@
                     })
                 });
 
+                console.log('下載 API 響應狀態:', response.status);
                 const data = await response.json();
+                console.log('下載 API 響應數據:', data);
                 
                 if (data.success) {
-                    showAlert(`成功加入 ${data.added_count} 個下載任務`, 'success');
+                    // 更新通知為成功狀態
+                    if (downloadNotificationId) {
+                        updateNotification(downloadNotificationId, {
+                            title: '下載已加入隊列',
+                            message: `✅ 成功加入 ${data.added_count} 個下載任務到隊列！正在開始下載...`
+                        });
+                    }
+                    
                     clearSelection();
+                    
+                    // 顯示額外提示
+                    setTimeout(() => {
+                        showNotification('info', '提示', '您可以在此頁面查看下載進度，或透過 Telegram bot 接收通知', { duration: 4000 });
+                    }, 2000);
                 } else {
-                    showAlert('下載失敗: ' + data.message, 'danger');
+                    // 如果失敗，停止進度檢查並顯示錯誤
+                    stopProgressChecking();
+                    if (downloadNotificationId) {
+                        removeNotification(downloadNotificationId);
+                        downloadNotificationId = null;
+                    }
+                    showNotification('error', '下載失敗', data.error || data.message || '未知錯誤');
                 }
             } catch (error) {
                 console.error('下載錯誤:', error);
-                showAlert('下載時發生錯誤', 'danger');
+                // 如果出現異常，停止進度檢查並顯示錯誤
+                stopProgressChecking();
+                if (downloadNotificationId) {
+                    removeNotification(downloadNotificationId);
+                    downloadNotificationId = null;
+                }
+                showNotification('error', '連接錯誤', '下載請求時發生錯誤：' + error.message);
+            } finally {
+                // Restore download button
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = selectedMessages.length === 0;
             }
         }
 
@@ -499,14 +1943,38 @@
         }
 
         function showMessages() {
-            document.getElementById('messages-container').style.display = 'block';
-            document.getElementById('action-buttons').style.display = 'block';
+            document.getElementById('messages-container').style.display = 'flex';
+            document.getElementById('chat-controls').style.display = 'block';
+            
+            // 設置滾動事件監聽器
+            setupScrollListener();
+            
+            // Update chat header title
+            const groupSelect = document.getElementById('group-select');
+            const selectedOption = groupSelect.options[groupSelect.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                document.getElementById('chat-title').innerHTML = `
+                    <i class="fas fa-comments"></i>
+                    ${selectedOption.text}
+                `;
+            }
         }
 
         function hideMessages() {
             document.getElementById('messages-container').style.display = 'none';
-            document.getElementById('action-buttons').style.display = 'none';
+            document.getElementById('chat-controls').style.display = 'none';
             clearSelection();
+            
+            // Reset lazy loading state
+            lastMessageId = 0;
+            hasMoreMessages = true;
+            allMessages = [];
+            
+            // Reset chat header title
+            document.getElementById('chat-title').innerHTML = `
+                <i class="fas fa-comments"></i>
+                快速媒體下載
+            `;
         }
 
         function showAlert(message, type) {
@@ -515,9 +1983,11 @@
             alert.textContent = message;
             alert.style.display = 'block';
             
+            // Info messages disappear faster
+            const timeout = type === 'info' ? 3000 : 5000;
             setTimeout(() => {
                 alert.style.display = 'none';
-            }, 5000);
+            }, timeout);
         }
 
         function formatDate(dateString) {
@@ -536,10 +2006,481 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
+        // Authentication functions
+        async function checkAuthStatus() {
+            showLoginStatusLoading();
+            
+            try {
+                console.log('檢查認證狀態...');
+                const response = await fetch('/api/auth/status');
+                const data = await response.json();
+                console.log('認證狀態響應:', data);
+                
+                if (data.success && data.authenticated) {
+                    console.log('用戶已認證, 用戶資訊:', data.user_info);
+                    showLoginStatusSuccess(data.user_info);
+                    showAuthSuccess(data.user_info);
+                    loadGroups();
+                } else {
+                    console.log('用戶未認證');
+                    showLoginStatusError();
+                    showAuthForm();
+                }
+            } catch (error) {
+                console.error('檢查認證狀態錯誤:', error);
+                showLoginStatusError();
+                showAuthForm();
+            }
+        }
+
+        function showAuthForm() {
+            document.getElementById('auth-section').style.display = 'block';
+            document.getElementById('group-selector').style.display = 'none';
+            setupAuthEventListeners();
+        }
+
+        function showAuthSuccess(userInfo) {
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('group-selector').style.display = 'block';
+            
+            // Show success message in a temporary alert
+            const userName = userInfo.first_name || userInfo.phone_number || 'User';
+            showAlert(`認證成功！歡迎，${userName}`, 'success');
+        }
+        
+        // Login status indicator functions
+        function showLoginStatusLoading() {
+            document.getElementById('login-status').style.display = 'block';
+            document.getElementById('login-status-loading').style.display = 'block';
+            document.getElementById('login-status-success').style.display = 'none';
+            document.getElementById('login-status-error').style.display = 'none';
+        }
+        
+        function showLoginStatusSuccess(userInfo) {
+            document.getElementById('login-status').style.display = 'block';
+            document.getElementById('login-status-loading').style.display = 'none';
+            document.getElementById('login-status-success').style.display = 'block';
+            document.getElementById('login-status-error').style.display = 'none';
+            
+            const userName = userInfo.first_name || userInfo.phone_number || 'User';
+            document.getElementById('login-user-info').textContent = `已登入為: ${userName}`;
+        }
+        
+        function showLoginStatusError() {
+            document.getElementById('login-status').style.display = 'block';
+            document.getElementById('login-status-loading').style.display = 'none';
+            document.getElementById('login-status-success').style.display = 'none';
+            document.getElementById('login-status-error').style.display = 'block';
+        }
+        
+        function hideLoginStatus() {
+            document.getElementById('login-status').style.display = 'none';
+        }
+
+        function setupAuthEventListeners() {
+            // Authentication form buttons (only set up if not already done)
+            const sendCodeBtn = document.getElementById('send-code-btn');
+            const verifyCodeBtn = document.getElementById('verify-code-btn');
+            const verifyPasswordBtn = document.getElementById('verify-password-btn');
+            const phoneInput = document.getElementById('phone-number');
+            const codeInput = document.getElementById('verification-code');
+            const passwordInput = document.getElementById('two-factor-password');
+            
+            if (sendCodeBtn && !sendCodeBtn.hasAttribute('data-listener-added')) {
+                sendCodeBtn.addEventListener('click', sendVerificationCode);
+                sendCodeBtn.setAttribute('data-listener-added', 'true');
+            }
+            if (verifyCodeBtn && !verifyCodeBtn.hasAttribute('data-listener-added')) {
+                verifyCodeBtn.addEventListener('click', verifyCode);
+                verifyCodeBtn.setAttribute('data-listener-added', 'true');
+            }
+            if (verifyPasswordBtn && !verifyPasswordBtn.hasAttribute('data-listener-added')) {
+                verifyPasswordBtn.addEventListener('click', verifyPassword);
+                verifyPasswordBtn.setAttribute('data-listener-added', 'true');
+            }
+            
+            // Enter key handlers
+            if (phoneInput && !phoneInput.hasAttribute('data-listener-added')) {
+                phoneInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') sendVerificationCode();
+                });
+                phoneInput.setAttribute('data-listener-added', 'true');
+            }
+            
+            if (codeInput && !codeInput.hasAttribute('data-listener-added')) {
+                codeInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') verifyCode();
+                });
+                codeInput.setAttribute('data-listener-added', 'true');
+            }
+            
+            if (passwordInput && !passwordInput.hasAttribute('data-listener-added')) {
+                passwordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') verifyPassword();
+                });
+                passwordInput.setAttribute('data-listener-added', 'true');
+            }
+        }
+
+        async function sendVerificationCode() {
+            const phoneNumber = document.getElementById('phone-number').value.trim();
+            const sendBtn = document.getElementById('send-code-btn');
+            
+            if (!phoneNumber) {
+                showAlert('請輸入電話號碼', 'warning');
+                return;
+            }
+            
+            // Show loading state
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發送中...';
+            
+            try {
+                const response = await fetch('/api/auth/send_code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone_number: phoneNumber,
+                        api_id: 29060182,  // From config
+                        api_hash: '071ea901d6271a50e8f86b403b244826'  // From config
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('auth-phone-step').style.display = 'none';
+                    document.getElementById('auth-code-step').style.display = 'block';
+                    showAlert('驗證碼已發送，請檢查您的 Telegram', 'info');
+                } else {
+                    showAlert('發送驗證碼失敗: ' + data.error, 'danger');
+                    // Reset button on error
+                    sendBtn.disabled = false;
+                    sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 發送驗證碼';
+                }
+            } catch (error) {
+                console.error('發送驗證碼錯誤:', error);
+                showAlert('發送驗證碼時發生錯誤', 'danger');
+                // Reset button on error
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 發送驗證碼';
+            }
+        }
+
+        async function verifyCode() {
+            const verificationCode = document.getElementById('verification-code').value.trim();
+            
+            if (!verificationCode) {
+                showAlert('請輸入驗證碼', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/verify_code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        verification_code: verificationCode
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.requires_password) {
+                        document.getElementById('auth-code-step').style.display = 'none';
+                        document.getElementById('auth-password-step').style.display = 'block';
+                        showAlert('需要兩步驗證密碼', 'info');
+                    } else {
+                        showLoginStatusSuccess(data.user_info);
+                        showAuthSuccess(data.user_info);
+                        loadGroups();
+                    }
+                } else {
+                    showAlert('驗證碼驗證失敗: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('驗證碼驗證錯誤:', error);
+                showAlert('驗證碼驗證時發生錯誤', 'danger');
+            }
+        }
+
+        async function verifyPassword() {
+            const password = document.getElementById('two-factor-password').value.trim();
+            
+            if (!password) {
+                showAlert('請輸入密碼', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/verify_password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showLoginStatusSuccess(data.user_info);
+                    showAuthSuccess(data.user_info);
+                    loadGroups();
+                } else {
+                    showAlert('密碼驗證失敗: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('密碼驗證錯誤:', error);
+                showAlert('密碼驗證時發生錯誤', 'danger');
+            }
+        }
+
+        async function logout() {
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('已成功登出', 'info');
+                    showLoginStatusError();
+                    // Reset form
+                    document.getElementById('auth-phone-step').style.display = 'block';
+                    document.getElementById('auth-code-step').style.display = 'none';
+                    document.getElementById('auth-password-step').style.display = 'none';
+                    document.getElementById('auth-success').style.display = 'none';
+                    document.getElementById('phone-number').value = '';
+                    document.getElementById('verification-code').value = '';
+                    document.getElementById('two-factor-password').value = '';
+                    showAuthForm();
+                } else {
+                    showAlert('登出失敗: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('登出錯誤:', error);
+                showAlert('登出時發生錯誤', 'danger');
+            }
+        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        // ==================== 通知系統功能 ====================
+        
+        function createNotification(type, title, message, options = {}) {
+            notificationCount++;
+            const id = options.id || `notification-${notificationCount}`;
+            const container = document.getElementById('notification-container');
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.id = id;
+            
+            let progressHtml = '';
+            if (options.showProgress) {
+                progressHtml = `
+                    <div class="notification-progress">
+                        <div class="notification-progress-bar">
+                            <div class="notification-progress-fill" id="${id}-progress"></div>
+                        </div>
+                        <div class="notification-progress-text" id="${id}-progress-text">0%</div>
+                    </div>
+                `;
+            }
+            
+            notification.innerHTML = `
+                <div class="notification-header">
+                    <div class="notification-title">
+                        ${getNotificationIcon(type)}
+                        <span>${title}</span>
+                    </div>
+                    <button class="notification-close" onclick="removeNotification('${id}')">
+                        ×
+                    </button>
+                </div>
+                <div class="notification-body" id="${id}-body">
+                    ${message}
+                </div>
+                ${progressHtml}
+            `;
+            
+            container.appendChild(notification);
+            
+            // 添加動畫效果
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            // 保存通知引用
+            activeNotifications.set(id, {
+                element: notification,
+                type: type,
+                autoClose: options.autoClose !== false
+            });
+            
+            // 自動關閉
+            if (options.autoClose !== false) {
+                const delay = options.duration || (type === 'error' ? 8000 : 5000);
+                setTimeout(() => {
+                    removeNotification(id);
+                }, delay);
+            }
+            
+            return id;
+        }
+        
+        function updateNotification(id, updates) {
+            const notification = activeNotifications.get(id);
+            if (!notification) return;
+            
+            if (updates.message) {
+                const body = document.getElementById(`${id}-body`);
+                if (body) body.innerHTML = updates.message;
+            }
+            
+            if (updates.progress !== undefined) {
+                const progressFill = document.getElementById(`${id}-progress`);
+                const progressText = document.getElementById(`${id}-progress-text`);
+                if (progressFill) {
+                    progressFill.style.width = `${updates.progress}%`;
+                }
+                if (progressText) {
+                    progressText.textContent = `${updates.progress}%`;
+                }
+            }
+            
+            if (updates.title) {
+                const titleElement = notification.element.querySelector('.notification-title span');
+                if (titleElement) titleElement.textContent = updates.title;
+            }
+        }
+        
+        function removeNotification(id) {
+            const notification = activeNotifications.get(id);
+            if (!notification) return;
+            
+            notification.element.classList.remove('show');
+            
+            setTimeout(() => {
+                if (notification.element.parentNode) {
+                    notification.element.parentNode.removeChild(notification.element);
+                }
+                activeNotifications.delete(id);
+            }, 400);
+        }
+        
+        function getNotificationIcon(type) {
+            const icons = {
+                'success': '<i class="fas fa-check-circle"></i>',
+                'info': '<i class="fas fa-info-circle"></i>',
+                'warning': '<i class="fas fa-exclamation-triangle"></i>',
+                'error': '<i class="fas fa-times-circle"></i>'
+            };
+            return icons[type] || '<i class="fas fa-bell"></i>';
+        }
+        
+        // 顯示下載開始通知
+        function showDownloadStartNotification(count) {
+            if (downloadNotificationId) {
+                removeNotification(downloadNotificationId);
+            }
+            
+            downloadNotificationId = createNotification(
+                'info',
+                '下載開始',
+                `正在準備下載 ${count} 個檔案...`,
+                {
+                    id: 'download-progress',
+                    showProgress: true,
+                    autoClose: false
+                }
+            );
+            
+            // 開始檢查進度
+            startProgressChecking();
+        }
+        
+        // 開始檢查下載進度
+        function startProgressChecking() {
+            if (progressCheckInterval) {
+                clearInterval(progressCheckInterval);
+            }
+            
+            progressCheckInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/download_progress');
+                    const data = await response.json();
+                    
+                    if (data.success && downloadNotificationId) {
+                        const progress = data.progress;
+                        
+                        if (progress.active) {
+                            const percentage = progress.total_task > 0 
+                                ? Math.round((progress.completed_task / progress.total_task) * 100) 
+                                : 0;
+                            
+                            let statusText = progress.status_text || `下載中... ${progress.completed_task}/${progress.total_task}`;
+                            
+                            updateNotification(downloadNotificationId, {
+                                title: '下載進行中',
+                                message: statusText,
+                                progress: percentage
+                            });
+                        } else if (progress.completed_task > 0) {
+                            // 下載完成
+                            updateNotification(downloadNotificationId, {
+                                title: '下載完成',
+                                message: `✅ 成功完成 ${progress.completed_task} 個檔案的下載！`,
+                                progress: 100
+                            });
+                            
+                            // 將通知改為成功類型
+                            const notificationElement = document.getElementById(downloadNotificationId);
+                            if (notificationElement) {
+                                notificationElement.className = 'notification success show';
+                            }
+                            
+                            // 5秒後自動關閉
+                            setTimeout(() => {
+                                removeNotification(downloadNotificationId);
+                                downloadNotificationId = null;
+                            }, 5000);
+                            
+                            // 停止檢查進度
+                            clearInterval(progressCheckInterval);
+                            progressCheckInterval = null;
+                        }
+                    }
+                } catch (error) {
+                    console.error('檢查下載進度時發生錯誤:', error);
+                }
+            }, 2000); // 每2秒檢查一次
+        }
+        
+        // 停止進度檢查
+        function stopProgressChecking() {
+            if (progressCheckInterval) {
+                clearInterval(progressCheckInterval);
+                progressCheckInterval = null;
+            }
+        }
+        
+        // 顯示一般通知
+        function showNotification(type, title, message, options = {}) {
+            return createNotification(type, title, message, options);
         }
     </script>
 </body>

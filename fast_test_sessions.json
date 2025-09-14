@@ -1,0 +1,21 @@
+{
+  "sessions": {
+    "temp_auth_+886910174219": {
+      "phone_number": "+886910174219",
+      "phone_code_hash": "873fe9af67fffe16f5",
+      "status": "authenticated",
+      "user_id": "493539630",
+      "user_info": {
+        "user_id": "493539630",
+        "username": "Chris_TH_W",
+        "first_name": "Chris",
+        "last_name": "(๑•̀ㅂ•́)و",
+        "phone_number": "+886910174219"
+      },
+      "created_at": 1757789161.0832489,
+      "last_activity": 1757814370.304425,
+      "authenticated_at": 1757789182.124745
+    }
+  },
+  "last_updated": "2025-09-14T09:46:10.304428"
+}
