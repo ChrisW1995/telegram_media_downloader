@@ -109,14 +109,47 @@
         }
         
         .container {
-            max-width: 800px;
+            max-width: 1400px;
             width: 100%;
             margin: 0 auto;
-            padding: env(safe-area-inset-top, 20px) 16px calc(env(safe-area-inset-bottom, 20px) + 120px) 16px;
+            padding: env(safe-area-inset-top, 20px) 16px env(safe-area-inset-bottom, 20px) 16px;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             box-sizing: border-box;
+        }
+
+        /* Chat App Layout - 左右分割 */
+        .chat-app-layout {
+            display: none; /* 預設隱藏，只在顯示訊息時出現 */
+            flex: 1;
+            flex-direction: row;
+            gap: 20px;
+            min-height: calc(100vh - 120px);
+        }
+
+        .chat-app-layout.active {
+            display: flex;
+        }
+
+        /* 左側區域 - 群組選擇和控制 */
+        .sidebar {
+            width: 350px;
+            min-width: 300px;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* 右側區域 - 訊息顯示 */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 120px);
+            max-height: calc(100vh - 120px);
+            overflow: hidden;
         }
         
         /* Chat Header - Authentic iOS 26 Control Center Tile */
@@ -206,13 +239,13 @@
             backdrop-filter: blur(20px);
             border-radius: 20px;
             padding: 20px 0;
-            margin-bottom: 16px;
             overflow-y: auto;
+            overflow-x: hidden;
             border: 1px solid rgba(255, 255, 255, 0.05);
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-            /* 設置固定最大高度，確保內部滾動 */
-            max-height: 60vh;
-            height: 60vh;
+            /* 確保容器有獨立的滾動區域 */
+            height: 0;
+            min-height: 0;
         }
         
         .messages-container::-webkit-scrollbar {
@@ -286,6 +319,60 @@
             backdrop-filter: blur(50px) saturate(200%) brightness(1.1);
         }
         
+        /* 縮圖樣式 */
+        .media-thumbnail {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .media-thumbnail:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .media-thumbnail img {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        .media-thumbnail .loading-placeholder {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 24px;
+        }
+
+        /* 更新媒體占位符樣式來適應縮圖 */
+        .media-placeholder {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 16px;
+            margin-top: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .media-placeholder.with-thumbnail {
+            padding: 8px;
+        }
+
+        .media-content {
+            flex: 1;
+            min-width: 0;
+        }
+
         .chat-bubble.selected .message-checkbox {
             opacity: 1;
             transform: scale(1.1);
@@ -496,16 +583,17 @@
         }
         
         .action-buttons {
-            position: fixed;
-            bottom: env(safe-area-inset-bottom, 20px);
-            left: 50%;
-            transform: translateX(-50%);
-            max-width: 800px;
-            width: calc(100% - 32px);
-            z-index: 1000;
+            /* 移除固定定位，改為在側邊欄內 */
+            position: relative;
+            bottom: auto;
+            left: auto;
+            transform: none;
+            max-width: none;
+            width: 100%;
+            z-index: auto;
             padding: 16px 20px;
-            background: 
-                linear-gradient(135deg, 
+            background:
+                linear-gradient(135deg,
                     rgba(255, 255, 255, 0.16) 0%,
                     rgba(255, 255, 255, 0.08) 50%,
                     rgba(255, 255, 255, 0.12) 100%);
@@ -515,7 +603,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            box-shadow: 
+            box-shadow:
                 0 12px 50px rgba(0, 0, 0, 0.4),
                 0 4px 16px rgba(0, 0, 0, 0.2),
                 inset 0 1px 0 rgba(255, 255, 255, 0.2),
@@ -524,7 +612,7 @@
         }
         
         .action-buttons.hidden {
-            transform: translateX(-50%) translateY(100px);
+            transform: translateY(20px);
             opacity: 0;
             pointer-events: none;
         }
@@ -838,8 +926,27 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
         
-        /* Responsive Design for iOS 26 */
+        /* 響應式設計 - 手機版改為上下佈局 */
         @media (max-width: 768px) {
+            .chat-app-layout.active {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                min-width: auto;
+                max-width: none;
+                order: 2; /* 讓控制區域在下方 */
+            }
+
+            .chat-area {
+                order: 1; /* 讓訊息區域在上方 */
+                min-height: 50vh;
+            }
+
+            .messages-container {
+                min-height: 50vh;
+            }
             .container {
                 max-width: 100%;
                 padding: env(safe-area-inset-top, 16px) 12px env(safe-area-inset-bottom, 16px) 12px;
@@ -847,8 +954,26 @@
         }
         
         @media (max-width: 480px) {
+            .chat-app-layout.active {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .sidebar {
+                order: 2;
+            }
+
+            .chat-area {
+                order: 1;
+                min-height: 45vh;
+            }
+
+            .messages-container {
+                min-height: 45vh;
+            }
+
             .container {
-                padding: env(safe-area-inset-top, 12px) 8px calc(env(safe-area-inset-bottom, 12px) + 100px) 8px;
+                padding: env(safe-area-inset-top, 12px) 8px env(safe-area-inset-bottom, 12px) 8px;
                 max-width: 100%;
             }
             
@@ -871,8 +996,9 @@
             }
             
             .action-buttons {
-                bottom: env(safe-area-inset-bottom, 12px);
-                width: calc(100% - 16px);
+                /* 在手機版保持相對定位 */
+                position: relative;
+                width: 100%;
                 padding: 12px 16px;
                 border-radius: 20px;
             }
@@ -1125,7 +1251,7 @@
                     </div>
                 </div>
 
-                <!-- Group Selection -->
+                <!-- Group Selection - 保持在上方 -->
                 <div class="group-selector" id="group-selector" style="display: none;">
                     <h5 class="mb-3">
                         <i class="fas fa-users text-primary"></i>
@@ -1154,42 +1280,55 @@
                     <p class="mt-2 text-light">正在載入群組訊息...</p>
                 </div>
 
-        <!-- Chat Messages Container -->
-        <div id="messages-container" class="messages-container" style="display: none;">
-            <!-- Messages will be populated here -->
-            <div id="messages-list">
-                <!-- Dynamic chat bubbles will appear here -->
-            </div>
-        </div>
-
-        <!-- Chat Controls -->
-        <div id="chat-controls" class="action-buttons" style="display: none;">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="selection-counter">
-                    已選擇 <span id="selected-count">0</span> 項
+        <!-- 新的左右分割佈局 -->
+        <div id="chat-app-layout" class="chat-app-layout">
+            <!-- 左側區域 - 控制面板 -->
+            <div class="sidebar">
+                <!-- Chat Controls 移到左側 -->
+                <div id="chat-controls" class="action-buttons" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="selection-counter">
+                            已選擇 <span id="selected-count">0</span> 項
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <button id="select-all-btn" class="btn btn-sm btn-secondary flex-fill">
+                            <i class="fas fa-check-double"></i> 全選
+                        </button>
+                        <button id="clear-selection-btn" class="btn btn-sm btn-secondary flex-fill">
+                            <i class="fas fa-times"></i> 清除
+                        </button>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <button id="refresh-messages-btn" class="btn btn-sm btn-secondary flex-fill">
+                            <i class="fas fa-sync-alt"></i> 載入更多
+                        </button>
+                        <button id="debug-scroll-btn" class="btn btn-sm btn-outline-info flex-fill">
+                            <i class="fas fa-bug"></i> 調試
+                        </button>
+                    </div>
+                    <div class="mb-3">
+                        <button id="test-scroll-btn" class="btn btn-sm btn-outline-warning w-100">
+                            <i class="fas fa-vial"></i> 測試滾動
+                        </button>
+                    </div>
+                    <div class="d-flex justify-content-center">
+                        <button id="fast-test-download-btn" class="btn btn-primary w-100" disabled>
+                            <i class="fas fa-download"></i>
+                            開始下載
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <button id="select-all-btn" class="btn btn-sm btn-secondary me-2">
-                        <i class="fas fa-check-double"></i> 全選
-                    </button>
-                    <button id="clear-selection-btn" class="btn btn-sm btn-secondary me-2">
-                        <i class="fas fa-times"></i> 清除
-                    </button>
-                    <button id="refresh-messages-btn" class="btn btn-sm btn-secondary me-2">
-                        <i class="fas fa-sync-alt"></i> 載入更多
-                    </button>
-                    <button id="debug-scroll-btn" class="btn btn-sm btn-outline-info me-2">
-                        <i class="fas fa-bug"></i> 調試
-                    </button>
-                    <button id="test-scroll-btn" class="btn btn-sm btn-outline-warning">
-                        <i class="fas fa-vial"></i> 測試滾動
-                    </button>
             </div>
-            <div class="d-flex justify-content-center mt-3">
-                <button id="fast-test-download-btn" class="btn btn-primary" disabled>
-                    <i class="fas fa-download"></i>
-                    開始下載
-                </button>
+
+            <!-- 右側區域 - 訊息顯示 -->
+            <div class="chat-area">
+                <div id="messages-container" class="messages-container" style="display: none;">
+                    <!-- Messages will be populated here -->
+                    <div id="messages-list">
+                        <!-- Dynamic chat bubbles will appear here -->
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1692,6 +1831,23 @@
                     messageElement.style.animationDelay = `${index * 0.05}s`;
                 }
                 container.appendChild(messageElement);
+
+                // 元素添加到DOM後，加載縮圖
+                if (messageElement.dataset.needsThumbnail === 'true') {
+                    const messageData = JSON.parse(messageElement.dataset.messageData);
+                    console.log(`Scheduling thumbnail load for message ${messageData.message_id} after DOM addition`);
+                    // 使用 setTimeout 確保DOM完全更新
+                    setTimeout(() => {
+                        console.log(`DOM update timeout reached, attempting to load thumbnail for message ${messageData.message_id}`);
+                        const thumbContainer = document.getElementById(`thumb-${messageData.message_id}`);
+                        console.log(`Thumbnail container check:`, thumbContainer);
+                        if (thumbContainer) {
+                            loadThumbnailFromMessage(messageData);
+                        } else {
+                            console.warn(`Still no thumbnail container found for message ${messageData.message_id} even after timeout`);
+                        }
+                    }, 50); // 增加延遲到50ms
+                }
             });
             
             // 如果沒有更多訊息，添加結束提示
@@ -1735,14 +1891,24 @@
                 
                 <div class="message-content">
                     ${message.caption ? `<div class="message-text">${escapeHtml(message.caption)}</div>` : ''}
-                    
-                    <div class="media-placeholder ${mediaInfo.type}">
-                        <div class="media-icon">
-                            ${mediaIcon}
-                        </div>
-                        <div class="media-info">
-                            <div class="media-filename">${mediaInfo.filename || 'Unknown file'}</div>
-                            <div class="media-size">${mediaInfo.size || 'Unknown size'}</div>
+
+                    <div class="media-placeholder ${mediaInfo.type} ${mediaInfo.type === 'photo' || mediaInfo.type === 'video' ? 'with-thumbnail' : ''}" id="media-${message.message_id}">
+                        ${mediaInfo.type === 'photo' || mediaInfo.type === 'video' ? `
+                            <div class="media-thumbnail" id="thumb-${message.message_id}">
+                                <div class="loading-placeholder">
+                                    <i class="fas fa-image"></i>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="media-icon">
+                                ${mediaIcon}
+                            </div>
+                        `}
+                        <div class="media-content">
+                            <div class="media-info">
+                                <div class="media-filename">${mediaInfo.filename || 'Unknown file'}</div>
+                                <div class="media-size">${mediaInfo.size || 'Unknown size'}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1756,6 +1922,12 @@
                     updateSelection(checkbox, message.message_id);
                 }
             };
+
+            // 如果是照片或影片，標記需要加載縮圖（延遲到DOM添加後執行）
+            if (mediaInfo.type === 'photo' || mediaInfo.type === 'video') {
+                div.dataset.needsThumbnail = 'true';
+                div.dataset.messageData = JSON.stringify(message);
+            }
 
             return div;
         }
@@ -1812,6 +1984,160 @@
                 'document': '<i class="fas fa-file"></i>'
             };
             return icons[type] || '<i class="fas fa-file"></i>';
+        }
+
+        // 從消息數據加載縮圖
+        async function loadThumbnailFromMessage(message) {
+            console.log(`Loading thumbnail for message ${message.message_id}`, message);
+            console.log(`Message thumbnail_url:`, message.thumbnail_url);
+            console.log(`Message thumbnail:`, message.thumbnail);
+
+            try {
+                const thumbnailContainer = document.getElementById(`thumb-${message.message_id}`);
+                if (!thumbnailContainer) {
+                    console.log(`No thumbnail container found for message ${message.message_id}`);
+                    return;
+                }
+
+                // 檢查消息是否有縮圖數據
+                if (!message.thumbnail) {
+                    console.log(`No thumbnail data found for message ${message.message_id}`);
+                    // 顯示默認圖標
+                    const mediaType = message.media_type === 'photo' ? 'image' :
+                                     message.media_type === 'video' ? 'video' : 'file';
+                    thumbnailContainer.innerHTML = `
+                        <div class="loading-placeholder">
+                            <i class="fas fa-${mediaType}"></i>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 顯示加載指示器
+                thumbnailContainer.innerHTML = `
+                    <div class="loading-placeholder">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                `;
+
+                // 使用 Fast Test 專用的縮圖API
+                if (message.media_type === 'photo' || message.media_type === 'video') {
+                    console.log(`Loading thumbnail for ${message.media_type} message ${message.message_id}`);
+                    console.log(`Thumbnail API URL: /api/fast_test_thumbnail/${currentChatId}/${message.message_id}`);
+
+                    try {
+                        const response = await fetch(`/api/fast_test_thumbnail/${currentChatId}/${message.message_id}`);
+                        console.log(`Thumbnail API response status: ${response.status}`);
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log('Thumbnail API response data:', data);
+
+                            if (data.success && data.thumbnail) {
+                                console.log(`Thumbnail loaded successfully for message ${message.message_id}`);
+                                thumbnailContainer.innerHTML = `<img src="${data.thumbnail}" alt="Thumbnail" />`;
+                            } else {
+                                throw new Error(data.error || 'API returned no thumbnail data');
+                            }
+                        } else {
+                            // 嘗試讀取錯誤響應
+                            const errorText = await response.text();
+                            console.error(`API error response: ${errorText}`);
+                            throw new Error(`API returned ${response.status}: ${errorText}`);
+                        }
+                    } catch (error) {
+                        console.error(`Fast Test thumbnail API failed for message ${message.message_id}:`, error);
+                        // 顯示默認圖標
+                        const mediaType = message.media_type === 'photo' ? 'image' :
+                                         message.media_type === 'video' ? 'video' : 'file';
+                        thumbnailContainer.innerHTML = `
+                            <div class="loading-placeholder">
+                                <i class="fas fa-${mediaType}"></i>
+                            </div>
+                        `;
+                    }
+                } else {
+                    console.log(`No thumbnail needed for media type: ${message.media_type}`);
+                    // 顯示默認圖標
+                    // 縮圖加載失敗，顯示默認圖標
+                    const mediaType = message.media_type === 'photo' ? 'image' :
+                                     message.media_type === 'video' ? 'video' : 'file';
+                    thumbnailContainer.innerHTML = `
+                        <div class="loading-placeholder">
+                            <i class="fas fa-${mediaType}"></i>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading thumbnail:', error);
+                // 加載錯誤時顯示默認圖標
+                const thumbnailContainer = document.getElementById(`thumb-${message.message_id}`);
+                if (thumbnailContainer) {
+                    thumbnailContainer.innerHTML = `
+                        <div class="loading-placeholder">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // 原有的縮圖加載函數（保持兼容性）
+        async function loadThumbnail(messageId, chatId) {
+            console.log(`Loading thumbnail for message ${messageId} in chat ${chatId}`);
+            try {
+                const mediaElement = document.getElementById(`media-${messageId}`);
+                if (!mediaElement) {
+                    console.log(`No media element found for message ${messageId}`);
+                    return;
+                }
+
+                const thumbnailContainer = mediaElement.querySelector('.media-thumbnail');
+                if (!thumbnailContainer) {
+                    console.log(`No thumbnail container found for message ${messageId}`);
+                    return;
+                }
+
+                // 顯示加載指示器
+                thumbnailContainer.innerHTML = `
+                    <div class="loading-placeholder">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                `;
+
+                // 請求縮圖
+                console.log(`Making API request to: /api/thumbnail/${chatId}/${messageId}`);
+                const response = await fetch(`/api/thumbnail/${chatId}/${messageId}`);
+                console.log(`API response status: ${response.status}`);
+                const data = await response.json();
+                console.log(`API response data:`, data);
+
+                if (data.success && data.thumbnail) {
+                    // 顯示縮圖
+                    thumbnailContainer.innerHTML = `<img src="${data.thumbnail}" alt="Thumbnail" />`;
+                } else {
+                    // 縮圖加載失敗，顯示默認圖標
+                    const mediaType = mediaElement.classList.contains('photo') ? 'image' :
+                                     mediaElement.classList.contains('video') ? 'video' : 'file';
+                    thumbnailContainer.innerHTML = `
+                        <div class="loading-placeholder">
+                            <i class="fas fa-${mediaType}"></i>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading thumbnail:', error);
+                // 加載錯誤時顯示默認圖標
+                const mediaElement = document.getElementById(`media-${messageId}`);
+                const thumbnailContainer = mediaElement?.querySelector('.media-thumbnail');
+                if (thumbnailContainer) {
+                    thumbnailContainer.innerHTML = `
+                        <div class="loading-placeholder">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    `;
+                }
+            }
         }
 
         function updateSelection(checkbox, messageId) {
@@ -1945,6 +2271,7 @@
         function showMessages() {
             document.getElementById('messages-container').style.display = 'flex';
             document.getElementById('chat-controls').style.display = 'block';
+            document.getElementById('chat-app-layout').classList.add('active');
             
             // 設置滾動事件監聽器
             setupScrollListener();
@@ -1963,6 +2290,7 @@
         function hideMessages() {
             document.getElementById('messages-container').style.display = 'none';
             document.getElementById('chat-controls').style.display = 'none';
+            document.getElementById('chat-app-layout').classList.remove('active');
             clearSelection();
             
             // Reset lazy loading state

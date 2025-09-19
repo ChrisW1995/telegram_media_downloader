@@ -186,6 +186,110 @@ def fast_test():
     return render_template("fast_test.html")
 
 
+@_flask_app.route("/api/thumbnail/<int:chat_id>/<int:message_id>")
+@login_required
+def get_thumbnail(chat_id, message_id):
+    """獲取訊息的縮圖"""
+    logger.info(f"Thumbnail API called for chat_id: {chat_id}, message_id: {message_id}")
+
+    # 檢查用戶認證
+    from flask_login import current_user
+    if not current_user.is_authenticated:
+        logger.error("User not authenticated for thumbnail API")
+        return jsonify({'success': False, 'error': 'User not authenticated'}), 401
+
+    logger.info(f"User authenticated: {current_user.get_id()}")
+
+    try:
+        import asyncio
+        import base64
+        import io
+        from PIL import Image
+        import tempfile
+        import os
+
+        async def fetch_thumbnail():
+            try:
+                # 獲取客戶端
+                client = _client  # 使用全局客戶端
+                if not client:
+                    logger.error("No global client available")
+                    return None
+
+                logger.info(f"Using global client for thumbnail fetch")
+
+                logger.info(f"Fetching message {message_id} from chat {chat_id}")
+                # 獲取訊息
+                message = await client.get_messages(chat_id, message_id)
+                if not message:
+                    logger.error(f"No message found for chat {chat_id}, message {message_id}")
+                    return None
+
+                logger.info(f"Message found: {message.media_type if hasattr(message, 'media_type') else 'no media_type'}")
+
+                thumbnail_data = None
+
+                # 處理照片
+                if message.photo and mess/age.photo.thumbs:
+                    logger.info(f"Processing photo, thumbs count: {len(message.photo.thumbs)}")
+                    # 獲取最小的縮圖
+                    smallest_thumb = min(message.photo.thumbs, key=lambda x: x.file_size)
+                    logger.info(f"Downloading photo thumbnail, size: {smallest_thumb.file_size}")
+                    # 下載縮圖到內存
+                    thumbnail_bytes = io.BytesIO()
+                    await client.download_media(smallest_thumb, file=thumbnail_bytes)
+                    thumbnail_bytes.seek(0)
+                    thumbnail_data = thumbnail_bytes.read()
+                    logger.info(f"Photo thumbnail downloaded, data size: {len(thumbnail_data)}")
+
+                # 處理影片
+                elif message.video and message.video.thumbs:
+                    logger.info(f"Processing video, thumbs count: {len(message.video.thumbs)}")
+                    smallest_thumb = min(message.video.thumbs, key=lambda x: x.file_size)
+                    logger.info(f"Downloading video thumbnail, size: {smallest_thumb.file_size}")
+                    # 下載縮圖到內存
+                    thumbnail_bytes = io.BytesIO()
+                    await client.download_media(smallest_thumb, file=thumbnail_bytes)
+                    thumbnail_bytes.seek(0)
+                    thumbnail_data = thumbnail_bytes.read()
+                    logger.info(f"Video thumbnail downloaded, data size: {len(thumbnail_data)}")
+
+                return thumbnail_data
+            except Exception as e:
+                logger.error(f"Error fetching thumbnail: {e}")
+                return None
+
+        # 執行異步函數 - 使用更安全的方式
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # 如果已經有事件循環在運行，使用 run_in_executor
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, fetch_thumbnail())
+                    thumbnail_data = future.result()
+            else:
+                # 沒有運行中的事件循環，直接使用 asyncio.run
+                thumbnail_data = asyncio.run(fetch_thumbnail())
+        except RuntimeError:
+            # 如果無法獲取事件循環，創建新的
+            thumbnail_data = asyncio.run(fetch_thumbnail())
+
+        if thumbnail_data:
+            # 轉換為 base64
+            encoded_thumbnail = base64.b64encode(thumbnail_data).decode('utf-8')
+            return jsonify({
+                'success': True,
+                'thumbnail': f"data:image/jpeg;base64,{encoded_thumbnail}"
+            })
+        else:
+            return jsonify({'success': False, 'error': 'No thumbnail available'})
+
+    except Exception as e:
+        logger.error(f"Error in get_thumbnail: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
 @_flask_app.route("/api/get_user_groups")
 @login_required
 def get_user_groups():
@@ -2506,14 +2610,11 @@ def fast_test_logout():
             auth_manager = session_info.get('auth_manager')
             
             # Disconnect client if exists
-            import asyncio
             if auth_manager and hasattr(auth_manager, 'disconnect_session'):
-                if hasattr(_app, 'loop') and _app.loop:
-                    _app.loop.run_until_complete(
-                        auth_manager.disconnect_session(session_key)
-                    )
-                else:
-                    asyncio.run(auth_manager.disconnect_session(session_key))
+                try:
+                    run_async_in_thread(auth_manager.disconnect_session(session_key))
+                except Exception as e:
+                    logger.warning(f"Failed to disconnect session {session_key}: {e}")
             
             # Remove from global storage
             del fast_test_auth_sessions[session_key]
@@ -2665,6 +2766,121 @@ def load_more_messages():
     except Exception as e:
         logger.error(f"Failed to load more messages: {e}")
         return jsonify({'success': False, 'error': f'載入更多訊息失敗: {str(e)}'})
+
+
+@_flask_app.route("/api/fast_test_thumbnail/<chat_id>/<int:message_id>", methods=["GET"])
+@require_fast_test_auth
+def fast_test_thumbnail(chat_id, message_id):
+    """Fast Test - 獲取訊息縮圖 - 重寫版本"""
+    try:
+        # 轉換 chat_id 為整數（支援負數）
+        try:
+            chat_id = int(chat_id)
+        except ValueError:
+            return jsonify({'success': False, 'error': '無效的 chat_id'}), 400
+
+        logger.info(f"Thumbnail API: chat_id={chat_id}, message_id={message_id}")
+
+        # 檢查會話
+        session_key = session.get('fast_test_session_key')
+        if not session_key or session_key not in fast_test_auth_sessions:
+            return jsonify({'success': False, 'error': '會話已過期，請重新登入'}), 401
+
+        # 獲取客戶端
+        session_info = fast_test_auth_sessions[session_key]
+        auth_manager = session_info.get('auth_manager')
+        if not auth_manager or not hasattr(auth_manager, 'active_clients'):
+            return jsonify({'success': False, 'error': '客戶端不可用'}), 500
+
+        client = auth_manager.active_clients.get(session_key)
+        if not client:
+            return jsonify({'success': False, 'error': '找不到有效的客戶端連接'}), 500
+
+        # 簡化的縮圖獲取函數
+        async def get_thumbnail():
+            try:
+                logger.info(f"開始獲取訊息 {message_id} from chat {chat_id}")
+                # 獲取訊息
+                message = await client.get_messages(chat_id, message_id)
+                if not message:
+                    logger.warning(f"找不到訊息 {message_id}")
+                    return None
+
+                logger.info(f"成功獲取訊息，類型: {type(message)}")
+
+                # 尋找縮圖
+                thumb = None
+                if hasattr(message, 'photo') and message.photo and hasattr(message.photo, 'thumbs'):
+                    thumbs = message.photo.thumbs
+                    logger.info(f"Photo thumbs 數量: {len(thumbs) if thumbs else 0}")
+                    if thumbs:
+                        thumb = min(thumbs, key=lambda t: (t.width or 0) * (t.height or 0))
+                        logger.info(f"選擇的 photo thumb: {thumb}")
+                elif hasattr(message, 'video') and message.video and hasattr(message.video, 'thumbs'):
+                    thumbs = message.video.thumbs
+                    logger.info(f"Video thumbs 數量: {len(thumbs) if thumbs else 0}")
+                    if thumbs:
+                        thumb = min(thumbs, key=lambda t: (t.width or 0) * (t.height or 0))
+                        logger.info(f"選擇的 video thumb: {thumb}")
+                elif hasattr(message, 'document') and message.document and hasattr(message.document, 'thumbs'):
+                    thumbs = message.document.thumbs
+                    logger.info(f"Document thumbs 數量: {len(thumbs) if thumbs else 0}")
+                    if thumbs:
+                        thumb = min(thumbs, key=lambda t: (t.width or 0) * (t.height or 0))
+                        logger.info(f"選擇的 document thumb: {thumb}")
+                elif hasattr(message, 'animation') and message.animation and hasattr(message.animation, 'thumbs'):
+                    thumbs = message.animation.thumbs
+                    logger.info(f"Animation thumbs 數量: {len(thumbs) if thumbs else 0}")
+                    if thumbs:
+                        thumb = min(thumbs, key=lambda t: (t.width or 0) * (t.height or 0))
+                        logger.info(f"選擇的 animation thumb: {thumb}")
+                else:
+                    logger.info(f"訊息沒有支援的媒體類型或縮圖")
+
+                # 下載縮圖到記憶體
+                if thumb and hasattr(thumb, 'file_id'):
+                    logger.info(f"開始下載縮圖, file_id: {thumb.file_id}")
+
+                    # 使用 in_memory=True 直接下載到記憶體
+                    binary_io = await client.download_media(thumb, in_memory=True)
+
+                    if binary_io:
+                        # 讀取 BinaryIO 內容
+                        binary_io.seek(0)
+                        data = binary_io.read()
+                        logger.info(f"縮圖下載完成，大小: {len(data)} bytes")
+                        return data
+                    else:
+                        logger.warning(f"下載縮圖失敗，未回傳資料")
+                        return None
+                else:
+                    logger.warning(f"沒有找到有效的縮圖")
+
+                return None
+            except Exception as e:
+                logger.error(f"縮圖獲取錯誤: {e}", exc_info=True)
+                return None
+
+        # 執行並返回結果 - 改為記憶體方式
+        thumbnail_data = run_async_in_thread(get_thumbnail())
+
+        if thumbnail_data:
+            # 轉換為 base64 Data URL
+            import base64
+            base64_data = base64.b64encode(thumbnail_data).decode('utf-8')
+            data_url = f"data:image/jpeg;base64,{base64_data}"
+
+            # 返回 Data URL
+            return jsonify({
+                'success': True,
+                'thumbnail': data_url
+            })
+        else:
+            return jsonify({'success': False, 'error': '無法獲取縮圖'})
+
+    except Exception as e:
+        logger.error(f"Thumbnail API 錯誤: {e}")
+        return jsonify({'success': False, 'error': f'API 錯誤: {str(e)}'}), 500
 
 
 # =============================================================================

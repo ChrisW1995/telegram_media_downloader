@@ -128,3 +128,6 @@ Test files are organized in `tests/` with coverage for:
 - **Rich/Loguru**: Enhanced logging and console output
 - **Cryptographic Libraries**: For Telegram protocol support
 - 不用管media_types變動
+- 如果前一次有幫我背景運行，之後的每次修改完畢都要重新執行一次
+- 程式啟動在5001 port
+- 重新執行環境直接用./fix_database_lock.sh

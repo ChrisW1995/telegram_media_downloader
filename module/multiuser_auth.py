@@ -385,6 +385,19 @@ class TelegramAuthManager:
                             msg_data['file_unique_id'] = message.photo.file_unique_id
                             msg_data['width'] = message.photo.width
                             msg_data['height'] = message.photo.height
+                            # 添加縮圖信息
+                            if message.photo.thumbs:
+                                # 獲取最小的縮圖作為預覽
+                                smallest_thumb = min(message.photo.thumbs, key=lambda x: x.file_size)
+                                # 創建縮圖 URL，指向我們的縮圖 API
+                                msg_data['thumbnail_url'] = f'/api/thumbnail/{chat_id}/{message.id}'
+                                msg_data['thumbnail'] = {
+                                    'file_id': smallest_thumb.file_id,
+                                    'file_unique_id': smallest_thumb.file_unique_id,
+                                    'width': smallest_thumb.width,
+                                    'height': smallest_thumb.height,
+                                    'file_size': smallest_thumb.file_size
+                                }
                         elif message.video:
                             msg_data['media_type'] = 'video'
                             msg_data['file_name'] = message.video.file_name or f"video_{message.id}.mp4"
@@ -393,6 +406,19 @@ class TelegramAuthManager:
                             msg_data['duration'] = message.video.duration
                             msg_data['width'] = message.video.width
                             msg_data['height'] = message.video.height
+                            # 添加縮圖信息
+                            if message.video.thumbs:
+                                # 獲取最小的縮圖作為預覽
+                                smallest_thumb = min(message.video.thumbs, key=lambda x: x.file_size)
+                                # 創建縮圖 URL，指向我們的縮圖 API
+                                msg_data['thumbnail_url'] = f'/api/thumbnail/{chat_id}/{message.id}'
+                                msg_data['thumbnail'] = {
+                                    'file_id': smallest_thumb.file_id,
+                                    'file_unique_id': smallest_thumb.file_unique_id,
+                                    'width': smallest_thumb.width,
+                                    'height': smallest_thumb.height,
+                                    'file_size': smallest_thumb.file_size
+                                }
                         elif message.audio:
                             msg_data['media_type'] = 'audio'
                             msg_data['file_name'] = message.audio.file_name or f"audio_{message.id}.mp3"
