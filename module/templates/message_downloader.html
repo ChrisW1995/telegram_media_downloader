@@ -3,96 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fast Test - 快速測試下載</title>
+    <title>Message Downloader - 訊息下載器</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/modern.css') }}" rel="stylesheet">
     <style>
-        /* iOS 26 Authentic Control Center Design */
+        /* Apple-inspired Design with Liquid Glass */
         body {
-            background: 
-                /* Dynamic Island-inspired orbs */
-                radial-gradient(ellipse 280px 140px at 15% 20%, rgba(88, 86, 214, 0.6) 0%, transparent 40%),
-                radial-gradient(ellipse 320px 160px at 85% 25%, rgba(255, 45, 85, 0.5) 0%, transparent 45%),
-                radial-gradient(ellipse 240px 120px at 25% 80%, rgba(255, 149, 0, 0.4) 0%, transparent 40%),
-                radial-gradient(ellipse 300px 150px at 75% 75%, rgba(52, 199, 89, 0.3) 0%, transparent 35%),
-                /* Base iOS 26 gradient */
-                linear-gradient(145deg, 
-                    rgba(25, 25, 35, 0.95) 0%,
-                    rgba(35, 40, 60, 0.92) 20%,
-                    rgba(45, 55, 85, 0.88) 40%,
-                    rgba(55, 70, 110, 0.85) 60%,
-                    rgba(65, 85, 135, 0.82) 80%,
-                    rgba(75, 100, 160, 0.8) 100%);
+            background:
+                /* Apple-style subtle orbs */
+                radial-gradient(ellipse 400px 200px at 20% 30%, rgba(135, 206, 235, 0.3) 0%, transparent 50%),
+                radial-gradient(ellipse 350px 180px at 80% 20%, rgba(173, 216, 230, 0.25) 0%, transparent 45%),
+                radial-gradient(ellipse 300px 150px at 50% 80%, rgba(176, 224, 230, 0.2) 0%, transparent 40%),
+                /* Base Apple gradient */
+                linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
             min-height: 100vh;
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
             font-weight: 400;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.005em;
             overflow-x: hidden;
-            position: relative;
+            margin: 0;
+            padding: 0;
             background-attachment: fixed;
         }
         
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                /* Authentic iOS glass reflections */
-                radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 30%),
-                radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0.08) 0%, transparent 35%),
-                radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.05) 0%, transparent 25%),
-                /* Subtle noise texture overlay */
-                repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(255, 255, 255, 0.01) 1px, rgba(255, 255, 255, 0.01) 2px);
-            pointer-events: none;
-            z-index: -1;
-            animation: subtleShimmer 15s ease-in-out infinite;
-        }
         
-        @keyframes subtleShimmer {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
-        }
-        
-        /* iOS 26 Control Center Micro-animations */
-        @keyframes controlCenterFadeIn {
+        /* Apple-style smooth animations */
+        @keyframes fadeInUp {
             from {
                 opacity: 0;
-                transform: scale(0.95) translateY(10px);
-                filter: blur(5px);
+                transform: translateY(30px);
             }
             to {
                 opacity: 1;
-                transform: scale(1) translateY(0);
-                filter: blur(0px);
+                transform: translateY(0);
             }
         }
-        
-        @keyframes floatingOrbs {
-            0%, 100% {
-                transform: translateX(0) translateY(0) scale(1);
-            }
-            25% {
-                transform: translateX(5px) translateY(-3px) scale(1.02);
-            }
-            50% {
-                transform: translateX(-3px) translateY(2px) scale(0.98);
-            }
-            75% {
-                transform: translateX(2px) translateY(-5px) scale(1.01);
-            }
+
+        .fade-in {
+            animation: fadeInUp 0.6s ease-out;
         }
-        
-        /* Apply iOS 26 entrance animations */
-        .chat-header {
-            animation: controlCenterFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-        
-        .group-selector {
-            animation: controlCenterFadeIn 1s cubic-bezier(0.23, 1, 0.32, 1) 0.2s both;
         }
         
         .messages-container {
@@ -152,26 +102,24 @@
             overflow: hidden;
         }
         
-        /* Chat Header - Authentic iOS 26 Control Center Tile */
+        /* Apple-style Liquid Glass Header */
         .chat-header {
-            background: 
-                linear-gradient(135deg, 
-                    rgba(255, 255, 255, 0.18) 0%,
-                    rgba(255, 255, 255, 0.08) 50%,
-                    rgba(255, 255, 255, 0.12) 100%);
-            backdrop-filter: blur(60px) saturate(200%) brightness(1.1);
-            border: 0.5px solid rgba(255, 255, 255, 0.25);
-            border-radius: 28px;
-            padding: 20px 24px;
-            margin-bottom: 16px;
-            box-shadow: 
-                0 12px 40px rgba(0, 0, 0, 0.4),
-                0 2px 8px rgba(0, 0, 0, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.25),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+            background:
+                linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.25) 0%,
+                    rgba(255, 255, 255, 0.15) 50%,
+                    rgba(255, 255, 255, 0.2) 100%);
+            backdrop-filter: blur(40px) saturate(180%) brightness(1.05);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
+            padding: 24px 28px;
+            margin-bottom: 20px;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                0 2px 8px rgba(0, 0, 0, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
             position: relative;
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            transition: all 0.3s ease;
         }
         
         .chat-header::before {
@@ -184,33 +132,46 @@
             background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
         }
         
+        /* Apple Typography System */
+        :root {
+            --apple-label-primary: rgba(0, 0, 0, 0.85);
+            --apple-label-secondary: rgba(60, 60, 67, 0.6);
+            --apple-label-tertiary: rgba(60, 60, 67, 0.3);
+            --apple-label-quaternary: rgba(60, 60, 67, 0.18);
+            --apple-link: #007AFF;
+            --apple-blue: #007AFF;
+            --apple-green: #34C759;
+            --apple-orange: #FF9500;
+            --apple-red: #FF3B30;
+            --apple-purple: #AF52DE;
+        }
+
         .chat-title {
-            color: rgba(255, 255, 255, 0.95);
-            font-size: 19px;
-            font-weight: 700;
+            color: var(--apple-label-primary);
+            font-size: 28px;
+            font-weight: 600;
             text-align: center;
             margin: 0;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-            letter-spacing: -0.01em;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
         }
         
-        /* Group Selector - iOS 26 Control Center Module */
+        /* Apple-style Liquid Glass Selector */
         .group-selector {
-            background: 
-                linear-gradient(135deg, 
-                    rgba(255, 255, 255, 0.15) 0%,
-                    rgba(255, 255, 255, 0.06) 50%,
-                    rgba(255, 255, 255, 0.1) 100%);
-            backdrop-filter: blur(50px) saturate(180%) brightness(1.05);
-            border: 0.5px solid rgba(255, 255, 255, 0.2);
-            border-radius: 24px;
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.3),
-                0 2px 8px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+            background:
+                linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.3) 0%,
+                    rgba(255, 255, 255, 0.2) 50%,
+                    rgba(255, 255, 255, 0.25) 100%);
+            backdrop-filter: blur(40px) saturate(180%) brightness(1.05);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.08),
+                0 2px 8px rgba(0, 0, 0, 0.04),
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
             position: relative;
             transition: all 0.3s ease;
         }
@@ -232,37 +193,44 @@
             padding-left: 8px;
         }
         
-        /* Messages Container - Chat Style */
+        /* Apple-style Liquid Glass Messages Container */
         .messages-container {
             flex: 1;
-            background: rgba(0, 0, 0, 0.02);
-            backdrop-filter: blur(20px);
+            background:
+                linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.2) 0%,
+                    rgba(255, 255, 255, 0.1) 50%,
+                    rgba(255, 255, 255, 0.15) 100%);
+            backdrop-filter: blur(40px) saturate(180%) brightness(1.02);
             border-radius: 20px;
-            padding: 20px 0;
+            padding: 24px 0;
             overflow-y: auto;
             overflow-x: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow:
+                0 4px 16px rgba(0, 0, 0, 0.06),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
             /* 確保容器有獨立的滾動區域 */
             height: 0;
             min-height: 0;
         }
         
         .messages-container::-webkit-scrollbar {
-            width: 4px;
+            width: 6px;
         }
-        
+
         .messages-container::-webkit-scrollbar-track {
             background: transparent;
         }
-        
+
         .messages-container::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+            transition: background 0.2s ease;
         }
-        
+
         .messages-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(0, 0, 0, 0.3);
         }
         
         /* Chat Message Bubbles - iOS 26 Control Center Cards */
@@ -469,18 +437,16 @@
         }
         
         .message-id {
-            color: rgba(255, 255, 255, 0.75);
+            color: var(--apple-label-secondary);
             font-size: 12px;
             font-weight: 600;
             font-family: 'SF Mono', 'Monaco', monospace;
-            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
         }
-        
+
         .message-date {
-            color: rgba(255, 255, 255, 0.65);
+            color: var(--apple-label-tertiary);
             font-size: 11px;
             font-weight: 500;
-            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
         }
         
         .media-badge {
@@ -518,13 +484,13 @@
         .message-content {
             margin-top: 8px;
         }
-        
+
         .message-content * {
-            color: rgba(255, 255, 255, 0.7) !important;
+            color: var(--apple-label-secondary) !important;
         }
-        
+
         .message-text {
-            color: rgba(255, 255, 255, 0.8);
+            color: var(--apple-label-primary);
             font-size: 14px;
             line-height: 1.4;
             margin-bottom: 8px;
@@ -554,17 +520,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: rgba(255, 255, 255, 0.8);
+            color: var(--apple-label-secondary);
             font-size: 18px;
         }
-        
+
         .media-info {
             flex: 1;
             min-width: 0;
         }
-        
+
         .media-filename {
-            color: rgba(255, 255, 255, 0.9);
+            color: var(--apple-label-primary);
             font-size: 13px;
             font-weight: 600;
             margin-bottom: 2px;
@@ -572,14 +538,12 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
-        
+
         .media-size {
-            color: rgba(255, 255, 255, 0.7);
+            color: var(--apple-label-tertiary);
             font-size: 11px;
             font-weight: 500;
-            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
         }
         
         .action-buttons {
@@ -617,134 +581,150 @@
             pointer-events: none;
         }
         
-        /* iOS 26 Authentic Button Styles */
+        /* Apple-style Button Styles */
         .btn-primary {
-            background: 
-                linear-gradient(135deg, 
-                    rgba(0, 122, 255, 0.95) 0%, 
-                    rgba(88, 86, 214, 0.92) 50%,
-                    rgba(0, 122, 255, 0.95) 100%);
-            backdrop-filter: blur(30px) saturate(200%);
-            border: 0.5px solid rgba(255, 255, 255, 0.4);
-            border-radius: 20px;
-            padding: 14px 28px;
-            font-weight: 650;
-            font-size: 15px;
-            color: rgba(255, 255, 255, 1);
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-            transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
-            box-shadow: 
-                0 6px 24px rgba(0, 122, 255, 0.5),
-                0 1px 4px rgba(0, 0, 0, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.4),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            background: linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-weight: 600;
+            font-size: 17px;
+            color: #FFFFFF;
+            letter-spacing: -0.01em;
+            transition: all 0.3s ease;
+            box-shadow:
+                0 4px 16px rgba(0, 122, 255, 0.3),
+                0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         .btn-primary:hover {
-            background: 
-                linear-gradient(135deg, rgba(0, 122, 255, 0.9) 0%, rgba(88, 86, 214, 0.9) 100%);
-            transform: translateY(-1px) scale(1.02);
-            box-shadow: 
-                0 6px 30px rgba(0, 122, 255, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
-            color: rgba(255, 255, 255, 1);
+            background: linear-gradient(135deg, #0056CC 0%, #4A9EE7 100%);
+            transform: translateY(-2px);
+            box-shadow:
+                0 6px 20px rgba(0, 122, 255, 0.4),
+                0 4px 8px rgba(0, 0, 0, 0.15);
+            color: #FFFFFF;
         }
         
         .btn-primary:active {
-            transform: translateY(0) scale(0.98);
+            transform: translateY(0) scale(0.96);
+            box-shadow:
+                0 2px 8px rgba(0, 122, 255, 0.3),
+                0 1px 2px rgba(0, 0, 0, 0.1);
         }
         
         .btn-secondary {
-            background: 
-                linear-gradient(135deg, 
-                    rgba(255, 255, 255, 0.9) 0%,
-                    rgba(255, 255, 255, 0.7) 50%,
-                    rgba(255, 255, 255, 0.85) 100%);
-            backdrop-filter: blur(30px) saturate(180%);
-            border: 0.5px solid rgba(255, 255, 255, 0.35);
-            border-radius: 20px;
-            padding: 14px 28px;
-            font-weight: 650;
-            font-size: 15px;
-            color: rgba(0, 0, 0, 0.9);
-            text-shadow: 0 0.5px 1px rgba(255, 255, 255, 0.5);
-            transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
-            box-shadow: 
-                0 6px 24px rgba(0, 0, 0, 0.25),
-                0 1px 4px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.25),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-weight: 600;
+            font-size: 17px;
+            color: #007AFF;
+            letter-spacing: -0.01em;
+            transition: all 0.3s ease;
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
         }
         
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.12);
-            transform: translateY(-1px) scale(1.02);
-            box-shadow: 
-                0 6px 25px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.15);
-            color: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-2px);
+            box-shadow:
+                0 4px 12px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            color: #0056CC;
         }
         
         .btn-secondary:active {
-            transform: translateY(0) scale(0.98);
+            transform: translateY(0) scale(0.96);
+            box-shadow:
+                0 1px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7);
         }
         
-        /* Form Controls - iOS 26 Control Center Style */
+        /* Apple-style Form Controls */
         .form-control, .form-select {
-            background: 
-                linear-gradient(135deg, 
-                    rgba(255, 255, 255, 0.92) 0%,
-                    rgba(255, 255, 255, 0.85) 50%,
-                    rgba(255, 255, 255, 0.9) 100%);
-            backdrop-filter: blur(30px) saturate(120%);
-            border: 0.5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 16px;
-            padding: 14px 18px;
-            color: rgba(0, 0, 0, 0.9);
-            font-size: 15px;
-            font-weight: 500;
-            transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px) saturate(120%);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 16px 18px;
+            color: var(--apple-label-primary);
+            font-size: 17px;
+            font-weight: 400;
+            transition: all 0.3s ease;
             width: 100%;
             box-sizing: border-box;
-            box-shadow: 
-                0 2px 8px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
         }
         
         .form-control:focus, .form-select:focus {
-            background: rgba(255, 255, 255, 0.12);
-            border-color: rgba(0, 122, 255, 0.6);
-            box-shadow: 
-                0 0 0 3px rgba(0, 122, 255, 0.2),
-                0 4px 20px rgba(0, 122, 255, 0.3);
-            color: rgba(255, 255, 255, 1);
+            background: rgba(255, 255, 255, 0.95);
+            border-color: var(--apple-blue);
+            box-shadow:
+                0 0 0 3px rgba(0, 122, 255, 0.15),
+                0 4px 20px rgba(0, 122, 255, 0.2);
+            color: var(--apple-label-primary);
+            outline: none;
         }
-        
+
         .form-control::placeholder {
-            color: rgba(0, 0, 0, 0.5);
+            color: var(--apple-label-tertiary);
             font-weight: 400;
         }
-        
-        /* Enhanced text contrast for iOS 26 readability */
-        .group-selector h5 {
-            color: rgba(255, 255, 255, 0.95) !important;
-            font-weight: 700;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+        /* Apple-style Select Optgroups */
+        .form-select optgroup {
+            background: rgba(248, 249, 250, 0.95);
+            color: var(--apple-label-secondary);
+            font-weight: 600;
+            font-size: 14px;
+            padding: 8px 12px;
+            text-transform: none;
             letter-spacing: -0.01em;
         }
+
+        .form-select option {
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--apple-label-primary);
+            font-weight: 400;
+            padding: 10px 16px;
+        }
+
+        .form-select optgroup option {
+            padding-left: 24px;
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        .form-select option:hover,
+        .form-select option:checked {
+            background: var(--apple-blue);
+            color: white;
+        }
         
+        /* Apple-style Typography Hierarchy */
+        .group-selector h5 {
+            color: var(--apple-label-primary) !important;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            font-size: 20px;
+        }
+
         .message-text {
-            color: rgba(255, 255, 255, 0.9);
+            color: var(--apple-label-primary);
             font-size: 14px;
             line-height: 1.4;
             margin-bottom: 8px;
             word-wrap: break-word;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
-        
+
         .text-muted {
-            color: rgba(255, 255, 255, 0.7) !important;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            color: var(--apple-label-secondary) !important;
         }
         
         /* Loading and Alert Styles */
@@ -1616,12 +1596,53 @@
                     console.log('載入群組數量:', data.groups ? data.groups.length : 0);
                     
                     if (data.groups && data.groups.length > 0) {
+                        // Group the data by type
+                        const groupsByType = {
+                            channel: [],
+                            supergroup: [],
+                            group: []
+                        };
+
                         data.groups.forEach(group => {
-                            const option = document.createElement('option');
-                            option.value = group.id;
-                            option.textContent = group.title;
-                            select.appendChild(option);
+                            const type = group.type || 'group';
+                            if (groupsByType[type]) {
+                                groupsByType[type].push(group);
+                            } else {
+                                groupsByType.group.push(group);
+                            }
                         });
+
+                        // Sort groups within each category by title
+                        Object.keys(groupsByType).forEach(type => {
+                            groupsByType[type].sort((a, b) => a.title.localeCompare(b.title));
+                        });
+
+                        // Type labels in Traditional Chinese
+                        const typeLabels = {
+                            channel: '頻道 (Channels)',
+                            supergroup: '超級群組 (Supergroups)',
+                            group: '群組 (Groups)'
+                        };
+
+                        // Add grouped options to select
+                        Object.keys(groupsByType).forEach(type => {
+                            if (groupsByType[type].length > 0) {
+                                const optgroup = document.createElement('optgroup');
+                                optgroup.label = `${typeLabels[type]} (${groupsByType[type].length})`;
+
+                                groupsByType[type].forEach(group => {
+                                    const option = document.createElement('option');
+                                    option.value = group.id;
+                                    // Include member count if available
+                                    const memberCount = group.members_count > 0 ? ` (${group.members_count} 成員)` : '';
+                                    option.textContent = group.title + memberCount;
+                                    optgroup.appendChild(option);
+                                });
+
+                                select.appendChild(optgroup);
+                            }
+                        });
+
                         showAlert(`成功載入 ${data.groups.length} 個群組`, 'success');
                     } else {
                         showAlert('沒有找到任何群組', 'info');
@@ -2023,10 +2044,10 @@
                 // 使用 Fast Test 專用的縮圖API
                 if (message.media_type === 'photo' || message.media_type === 'video') {
                     console.log(`Loading thumbnail for ${message.media_type} message ${message.message_id}`);
-                    console.log(`Thumbnail API URL: /api/fast_test_thumbnail/${currentChatId}/${message.message_id}`);
+                    console.log(`Thumbnail API URL: /api/message_downloader_thumbnail/${currentChatId}/${message.message_id}`);
 
                     try {
-                        const response = await fetch(`/api/fast_test_thumbnail/${currentChatId}/${message.message_id}`);
+                        const response = await fetch(`/api/message_downloader_thumbnail/${currentChatId}/${message.message_id}`);
                         console.log(`Thumbnail API response status: ${response.status}`);
 
                         if (response.ok) {
@@ -2226,14 +2247,14 @@
                     // 更新通知為成功狀態
                     if (downloadNotificationId) {
                         updateNotification(downloadNotificationId, {
-                            title: '下載已加入隊列',
-                            message: `✅ 成功加入 ${data.added_count} 個下載任務到隊列！正在開始下載...`
+                            title: '任務已加入隊列',
+                            message: `✅ 成功加入 ${data.added_count} 個下載任務到隊列`
                         });
                     }
-                    
+
                     clearSelection();
-                    
-                    // 顯示額外提示
+
+                    // 顯示提示
                     setTimeout(() => {
                         showNotification('info', '提示', '您可以在此頁面查看下載進度，或透過 Telegram bot 接收通知', { duration: 4000 });
                     }, 2000);

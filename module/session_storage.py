@@ -11,7 +11,7 @@ from loguru import logger
 class SessionStorage:
     """Manages persistent storage of Fast Test authentication sessions."""
     
-    def __init__(self, storage_file: str = "fast_test_sessions.json"):
+    def __init__(self, storage_file: str = "message_downloader_sessions.json"):
         self.storage_file = storage_file
         self.sessions: Dict[str, Dict[str, Any]] = {}
         self.session_timeout = 24 * 60 * 60  # 24 hours in seconds

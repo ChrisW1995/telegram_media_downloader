@@ -839,7 +839,9 @@ async def _report_bot_status(
     Returns:
         None
     """
+    logger.debug(f"_report_bot_status called: reply_message_id={node.reply_message_id}, bot={node.bot is not None}")
     if not node.reply_message_id or not node.bot:
+        logger.debug(f"_report_bot_status early return: no reply_message_id or bot")
         return
 
     if immediate_reply or node.can_reply():
@@ -877,6 +879,8 @@ async def _report_bot_status(
 
         download_result_str = ""
         download_result = get_download_result()
+        logger.debug(f"Bot progress check: NodeID={node.task_id}, ChatID={node.chat_id}")
+        logger.debug(f"Available chats in download_result: {list(download_result.keys())}")
         if node.chat_id in download_result:
             messages = download_result[node.chat_id]
             for idx, value in messages.items():
@@ -935,14 +939,22 @@ async def _report_bot_status(
             f"{download_result_str}\n`"
         )
 
+        logger.debug(f"Bot message prepared for TaskNode {node.task_id}")
         if new_msg_str != node.last_edit_msg:
+            logger.debug(f"Sending bot update message to user {node.from_user_id}, message {node.reply_message_id}")
             node.last_edit_msg = new_msg_str
-            await client.edit_message_text(
-                node.from_user_id,
-                node.reply_message_id,
-                new_msg_str,
-                parse_mode=pyrogram.enums.ParseMode.MARKDOWN,
-            )
+            try:
+                await client.edit_message_text(
+                    node.from_user_id,
+                    node.reply_message_id,
+                    new_msg_str,
+                    parse_mode=pyrogram.enums.ParseMode.MARKDOWN,
+                )
+                logger.debug(f"Bot message sent successfully")
+            except Exception as e:
+                logger.error(f"Failed to send bot message: {e}")
+        else:
+            logger.debug(f"Bot message unchanged, skipping update")
 
 
 def set_max_concurrent_transmissions(

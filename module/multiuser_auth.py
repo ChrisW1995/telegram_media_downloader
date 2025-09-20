@@ -23,6 +23,7 @@ class TelegramAuthManager:
     """Manages Telegram authentication for multiple users."""
     
     def __init__(self):
+        logger.info("🎯 TelegramAuthManager.__init__ - NEW VERSION WITH UPDATE HANDLER!")
         # self.db_manager = get_multiuser_db_manager()  # Disabled for now
         self.active_clients: Dict[str, Client] = {}
         self.user_sessions: Dict[str, str] = {}  # user_id -> session_string
@@ -491,8 +492,15 @@ class TelegramAuthManager:
         """Clean up temporary authentication session."""
         if session_key in self.active_clients:
             try:
-                client = self.active_clients[session_key]
-                asyncio.create_task(client.disconnect())
+                client_data = self.active_clients[session_key]
+                # Handle both old format (direct client) and new format (dict with client)
+                if isinstance(client_data, dict):
+                    client = client_data.get('client')
+                else:
+                    client = client_data
+
+                if client:
+                    asyncio.create_task(client.disconnect())
                 del self.active_clients[session_key]
             except:
                 pass
@@ -523,6 +531,350 @@ class TelegramAuthManager:
             logger.info(f"Saved {len(self.user_sessions)} user sessions to file")
         except Exception as e:
             logger.error(f"Failed to save sessions to file: {e}")
+
+    async def start_qr_login(self, api_id: int, api_hash: str) -> Dict[str, Any]:
+        """Start QR code login process with proper update handler."""
+        logger.info("🚀 DEBUG: start_qr_login called - code is loaded!")
+        try:
+            import uuid
+            import base64
+            import time
+            import asyncio
+            from pyrogram.raw.functions.auth import ExportLoginToken
+            from pyrogram.raw.types.auth import LoginToken
+            from pyrogram import handlers
+
+            session_key = str(uuid.uuid4())
+
+            # Create client for QR login
+            client = Client(
+                name=f"qr_session_{session_key}",
+                api_id=api_id,
+                api_hash=api_hash,
+                in_memory=True
+            )
+
+            # Start client and get QR login token
+            await client.connect()
+
+            # Add update handler for login token updates
+            login_event = asyncio.Event()
+            login_result = {'authenticated': False, 'user_info': None}
+
+            async def handle_update(client, update):
+                logger.info(f"🔍 Received update: {type(update).__name__}")
+                logger.debug(f"Update details: {update}")
+
+                # Check for updateLoginToken specifically
+                update_class_name = type(update).__name__
+
+                # Check for various login-related update types
+                if 'LoginToken' in update_class_name or 'updateLoginToken' in update_class_name:
+                    logger.info(f"📱 Received LoginToken update! Triggering second ExportLoginToken")
+                    try:
+                        # Wait a moment for the token to be processed
+                        await asyncio.sleep(1)
+
+                        # Trigger second ExportLoginToken as per Telegram docs
+                        second_result = await client.invoke(
+                            ExportLoginToken(
+                                api_id=api_id,
+                                api_hash=api_hash,
+                                except_ids=[]
+                            )
+                        )
+                        logger.info(f"📄 Second ExportLoginToken result: {type(second_result).__name__}")
+
+                        # Check if we got LoginTokenSuccess
+                        from pyrogram.raw.types.auth import LoginTokenSuccess
+                        if isinstance(second_result, LoginTokenSuccess):
+                            logger.info(f"🎉 QR login successful! Got LoginTokenSuccess")
+
+                            # Get user info after successful authorization
+                            me = await client.get_me()
+
+                            if me:
+                                user_id = str(me.id)
+                                logger.info(f"👤 QR login successful for user: {user_id}")
+
+                                # Save session string for future use
+                                session_string = await client.export_session_string()
+                                self.user_sessions[user_id] = session_string
+                                self._save_sessions()
+
+                                # Store result for retrieval
+                                login_result['authenticated'] = True
+                                login_result['user_info'] = {
+                                    'id': me.id,
+                                    'user_id': user_id,
+                                    'first_name': me.first_name,
+                                    'last_name': me.last_name,
+                                    'username': me.username,
+                                    'phone_number': me.phone_number
+                                }
+
+                                # Move client to permanent storage
+                                self.active_clients[user_id] = client
+
+                                # Signal completion
+                                login_event.set()
+                                logger.info(f"✅ Login event signaled for user {user_id}")
+
+                        else:
+                            logger.info(f"⚠️ Second ExportLoginToken did not return LoginTokenSuccess, got: {type(second_result).__name__}")
+
+                    except Exception as e:
+                        logger.error(f"❌ Error in update handler: {e}")
+                        import traceback
+                        logger.error(f"Full traceback: {traceback.format_exc()}")
+
+                # Try to detect any authorization-related updates
+                elif ('auth' in update_class_name.lower() or
+                      'Auth' in update_class_name or
+                      hasattr(update, 'authorization') or
+                      hasattr(update, 'user')):
+                    logger.info(f"🔐 Received authorization-related update: {update_class_name}")
+                    try:
+                        # Try to get user info
+                        me = await client.get_me()
+                        if me:
+                            user_id = str(me.id)
+                            logger.info(f"👤 Direct authorization successful for user: {user_id}")
+
+                            # Save session string for future use
+                            session_string = await client.export_session_string()
+                            self.user_sessions[user_id] = session_string
+                            self._save_sessions()
+
+                            # Store result for retrieval
+                            login_result['authenticated'] = True
+                            login_result['user_info'] = {
+                                'id': me.id,
+                                'user_id': user_id,
+                                'first_name': me.first_name,
+                                'last_name': me.last_name,
+                                'username': me.username,
+                                'phone_number': me.phone_number
+                            }
+
+                            # Move client to permanent storage
+                            self.active_clients[user_id] = client
+
+                            # Signal completion
+                            login_event.set()
+                            logger.info(f"✅ Direct authorization completed for user {user_id}")
+
+                    except Exception as e:
+                        logger.debug(f"Not an actual authorization update: {e}")
+                else:
+                    logger.debug(f"🔄 Ignoring update type: {update_class_name}")
+
+            # Add the update handler
+            client.add_handler(handlers.RawUpdateHandler(handle_update))
+
+            # Export login token using Telegram API
+            login_token = await client.invoke(
+                ExportLoginToken(
+                    api_id=api_id,
+                    api_hash=api_hash,
+                    except_ids=[]
+                )
+            )
+
+            if isinstance(login_token, LoginToken):
+                # Encode token to base64url format for QR code
+                token_b64 = base64.urlsafe_b64encode(login_token.token).decode('ascii').rstrip('=')
+                qr_url = f"tg://login?token={token_b64}"
+
+                # Store the client and token temporarily
+                self.active_clients[session_key] = {
+                    'client': client,
+                    'token': login_token.token,
+                    'expires': login_token.expires,
+                    'login_event': login_event,
+                    'login_result': login_result,
+                    'api_id': api_id,
+                    'api_hash': api_hash
+                }
+
+                logger.info(f"QR login started for session: {session_key}")
+                logger.info(f"Token expires at: {login_token.expires} (current: {time.time()})")
+                logger.info(f"Update handler added, waiting for user interaction")
+
+                return {
+                    'success': True,
+                    'session_key': session_key,
+                    'qr_token': qr_url
+                }
+            else:
+                await client.disconnect()
+                return {'success': False, 'error': 'Failed to get login token'}
+
+        except Exception as e:
+            logger.error(f"Failed to start QR login: {e}")
+            return {'success': False, 'error': str(e)}
+
+    async def check_qr_status(self, session_key: str) -> Dict[str, Any]:
+        """Check QR code login status with enhanced detection."""
+        try:
+            logger.info(f"Checking QR status for session: {session_key}")
+            logger.info(f"Active clients: {list(self.active_clients.keys())}")
+
+            if session_key not in self.active_clients:
+                logger.info(f"Session {session_key} not found in active clients")
+                return {'success': False, 'error': 'QR session not found'}
+
+            client_data = self.active_clients[session_key]
+            client = client_data['client']
+
+            # Check if token has expired
+            import time
+            current_time = time.time()
+            expires_time = client_data['expires']
+            logger.debug(f"Current time: {current_time}, Expires: {expires_time}")
+
+            if current_time > expires_time:
+                # Clean up expired session
+                logger.info(f"QR session {session_key} expired")
+                await client.disconnect()
+                del self.active_clients[session_key]
+                return {'success': True, 'expired': True}
+
+            # Check if login was completed via the event handler
+            login_result = client_data.get('login_result', {})
+
+            if login_result.get('authenticated'):
+                logger.info(f"QR login completed via update handler!")
+                user_info = login_result.get('user_info', {})
+                user_id = user_info.get('user_id')
+
+                # Clean up temporary session
+                if session_key in self.active_clients:
+                    del self.active_clients[session_key]
+
+                return {
+                    'success': True,
+                    'authenticated': True,
+                    'user_id': user_id,
+                    'user_info': user_info
+                }
+
+            # ENHANCED: Proactively check for authorization using multiple methods
+            try:
+                logger.info("🔍 Proactively checking for QR authorization...")
+
+                # Method 1: Try to get user info (if authorized, this will succeed)
+                try:
+                    me = await client.get_me()
+                    if me:
+                        logger.info(f"🎉 QR login detected via get_me()! User: {me.id}")
+
+                        # Save session and user info
+                        user_id = str(me.id)
+                        session_string = await client.export_session_string()
+                        self.user_sessions[user_id] = session_string
+                        self._save_sessions()
+
+                        # Store client permanently
+                        self.active_clients[user_id] = client
+
+                        # Clean up temp session
+                        if session_key in self.active_clients:
+                            del self.active_clients[session_key]
+
+                        return {
+                            'success': True,
+                            'authenticated': True,
+                            'user_id': user_id,
+                            'user_info': {
+                                'id': me.id,
+                                'user_id': user_id,
+                                'first_name': me.first_name,
+                                'last_name': me.last_name,
+                                'username': me.username,
+                                'phone_number': me.phone_number
+                            }
+                        }
+                except Exception as auth_check_error:
+                    logger.debug(f"get_me() check failed (expected if not authorized): {auth_check_error}")
+
+                # Method 2: Try second ExportLoginToken as per Telegram docs
+                try:
+                    from pyrogram.raw.functions.auth import ExportLoginToken
+                    from pyrogram.raw.types.auth import LoginTokenSuccess
+
+                    logger.info("🔄 Attempting second ExportLoginToken check...")
+                    second_result = await client.invoke(
+                        ExportLoginToken(
+                            api_id=client_data.get('api_id', client.api_id),
+                            api_hash=client_data.get('api_hash', client.api_hash),
+                            except_ids=[]
+                        )
+                    )
+
+                    if isinstance(second_result, LoginTokenSuccess):
+                        logger.info(f"🎉 QR login successful via second ExportLoginToken!")
+
+                        # Get user info after successful authorization
+                        me = await client.get_me()
+                        if me:
+                            user_id = str(me.id)
+                            logger.info(f"👤 QR login successful for user: {user_id}")
+
+                            # Save session string for future use
+                            session_string = await client.export_session_string()
+                            self.user_sessions[user_id] = session_string
+                            self._save_sessions()
+
+                            # Store client permanently
+                            self.active_clients[user_id] = client
+
+                            # Clean up temporary session
+                            if session_key in self.active_clients:
+                                del self.active_clients[session_key]
+
+                            return {
+                                'success': True,
+                                'authenticated': True,
+                                'user_id': user_id,
+                                'user_info': {
+                                    'id': me.id,
+                                    'user_id': user_id,
+                                    'first_name': me.first_name,
+                                    'last_name': me.last_name,
+                                    'username': me.username,
+                                    'phone_number': me.phone_number
+                                }
+                            }
+                    else:
+                        logger.debug(f"Second ExportLoginToken not yet successful: {type(second_result)}")
+
+                except Exception as token_check_error:
+                    logger.debug(f"Second ExportLoginToken check failed (expected if not authorized): {token_check_error}")
+
+            except Exception as enhanced_check_error:
+                logger.debug(f"Enhanced authorization check failed: {enhanced_check_error}")
+
+            # Fallback: Check client connection status
+            if not client.is_connected:
+                logger.info(f"Client disconnected for session {session_key}")
+                self.cleanup_session(session_key)
+                return {
+                    'success': True,
+                    'authenticated': False,
+                    'expired': True
+                }
+
+            # Still waiting for user to scan/approve
+            return {
+                'success': True,
+                'authenticated': False,
+                'expired': False
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to check QR status: {e}")
+            return {'success': False, 'error': str(e)}
 
 
 # Global auth manager instance

@@ -79,6 +79,7 @@ class DownloadBot:
     def add_task_node(self, node: TaskNode):
         """Add task node"""
         self.task_node[node.task_id] = node
+        logger.info(f"TaskNode {node.task_id} added to bot. Total TaskNodes: {len(self.task_node)}")
 
     def remove_task_node(self, task_id: int):
         """Remove task node"""
@@ -229,12 +230,18 @@ class DownloadBot:
     async def update_reply_message(self):
         """Update reply message"""
         while self.is_running:
+            task_count = len(self.task_node)
+            if task_count > 0:
+                logger.debug(f"Bot checking {task_count} TaskNodes")
+
             for key, value in self.task_node.copy().items():
                 if value.is_running:
-                    await report_bot_status(self.bot, value)
+                    logger.debug(f"Reporting status for TaskNode {key} (is_running={value.is_running})")
+                    await report_bot_status(self.bot, value, immediate_reply=True)
 
             for key, value in self.task_node.copy().items():
                 if value.is_running and value.is_finish():
+                    logger.info(f"TaskNode {key} finished, sending completion notification")
                     await self.send_task_completion_notification(value)
                     self.remove_task_node(key)
             await asyncio.sleep(3)

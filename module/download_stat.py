@@ -74,13 +74,22 @@ async def update_download_status(
         client.stop_transmission()
         return
     
-    # Handle pause state
+    # Handle pause state with timeout to prevent infinite loops
+    pause_timeout = 300  # 5 minutes maximum pause time
+    pause_start_time = time.time()
+
     while get_download_state() == DownloadState.StopDownload:
         # Check if cancelled while paused
         if get_download_state() == DownloadState.Cancelled:
             node.is_stop_transmission = True
             client.stop_transmission()
             return
+
+        # Check pause timeout to prevent infinite hanging
+        if time.time() - pause_start_time > pause_timeout:
+            print(f"Download pause timeout reached for message {message_id}, resuming...")
+            break
+
         if node.is_stop_transmission:
             client.stop_transmission()
         await asyncio.sleep(1)
@@ -136,16 +145,16 @@ async def update_download_status(
         _total_download_size = 0
         _last_download_time = cur_time
 
-    # Update web UI file progress
+    # Update web UI file progress and TaskNode statistics
     try:
         from module.web import update_file_progress
         import os
-        
+
         # Get the current download speed for this file
         current_speed = 0
         if _download_result[chat_id].get(message_id):
             current_speed = _download_result[chat_id][message_id]["download_speed"]
-        
+
         update_file_progress(
             file_name=os.path.basename(file_name),
             downloaded_bytes=down_byte,
@@ -153,21 +162,37 @@ async def update_download_status(
             download_speed=current_speed,
             message_id=message_id
         )
-        
+
+        # Update TaskNode total_download_byte for bot progress display
+        if node and hasattr(node, 'total_download_byte'):
+            # Calculate the increment since last update
+            if not hasattr(node, '_last_download_bytes'):
+                node._last_download_bytes = {}
+
+            last_bytes = node._last_download_bytes.get(message_id, 0)
+            increment = down_byte - last_bytes
+            if increment > 0:
+                node.total_download_byte += increment
+                node._last_download_bytes[message_id] = down_byte
+
         # Check if download is complete and clear specific file progress after a delay
         if down_byte >= total_size and total_size > 0:
             import threading
             def clear_specific_progress():
                 try:
-                    import time
-                    time.sleep(5)  # Wait 5 seconds before clearing
+                    time.sleep(2)  # Reduced wait time from 5 to 2 seconds
                     # Only clear this specific file, not all files
                     from module.web import clear_specific_file_progress
                     clear_specific_file_progress(message_id, os.path.basename(file_name))
-                except:
-                    pass
-            
+                except Exception as e:
+                    # Log the error but don't raise it
+                    print(f"Clear progress error: {e}")
+
+            # Use daemon thread to prevent blocking
             threading.Thread(target=clear_specific_progress, daemon=True).start()
-    except Exception as e:
-        # Don't let web update errors break downloads
+    except ImportError:
+        # web module not available, skip progress update
         pass
+    except Exception as e:
+        # Log the error but don't raise it to prevent download interruption
+        print(f"Progress update error: {e}")

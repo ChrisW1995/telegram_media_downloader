@@ -5,7 +5,7 @@ import os
 import threading
 import time
 
-from flask import Flask, jsonify, render_template, request, session
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for
 from flask_login import LoginManager, UserMixin, login_required, login_user
 from loguru import logger
 
@@ -179,11 +179,27 @@ def index():
     )
 
 
-@_flask_app.route("/fast_test")
-@login_required
-def fast_test():
-    """Fast Test 獨立頁面"""
-    return render_template("fast_test.html")
+@_flask_app.route("/message_downloader")
+def message_downloader():
+    """Message Downloader 獨立頁面"""
+    # 檢查 message_downloader 驗證狀態
+    if not session.get('message_downloader_authenticated', False):
+        # 儲存原始請求的 URL 以便登入後跳轉
+        session['next_url'] = request.url
+        return redirect(url_for('message_downloader_login'))
+
+    return render_template("message_downloader.html")
+
+
+@_flask_app.route("/message_downloader/login")
+def message_downloader_login():
+    """Message Downloader 登入頁面"""
+    # 如果已經登入，直接跳轉到目標頁面
+    if session.get('message_downloader_authenticated', False):
+        next_url = session.pop('next_url', url_for('message_downloader'))
+        return redirect(next_url)
+
+    return render_template("message_downloader_login.html")
 
 
 @_flask_app.route("/api/thumbnail/<int:chat_id>/<int:message_id>")
@@ -366,7 +382,7 @@ def get_user_groups():
 
 @_flask_app.route("/api/get_group_messages")
 @login_required
-def get_fast_test_group_messages():
+def get_message_downloader_group_messages():
     """獲取群組訊息 - 用於Fast Test頁面"""
     try:
         chat_id = request.args.get('chat_id')
@@ -423,7 +439,7 @@ def get_fast_test_group_messages():
 
 @_flask_app.route("/api/add_fast_download_tasks", methods=["POST"])
 @login_required
-def add_fast_test_download_tasks():
+def add_message_downloader_download_tasks():
     """添加快速下載任務 - 用於Fast Test頁面"""
     try:
         data = request.get_json()
@@ -2236,12 +2252,12 @@ from .session_storage import get_session_storage
 from .multiuser_auth import get_auth_manager
 
 # Global storage for fast test auth sessions (now backed by persistent storage)
-fast_test_auth_sessions = {}
+message_downloader_auth_sessions = {}
 
 
 def restore_session_if_needed(session_key: str) -> bool:
     """Restore session from persistent storage if not in memory."""
-    if session_key in fast_test_auth_sessions:
+    if session_key in message_downloader_auth_sessions:
         return True
     
     try:
@@ -2252,7 +2268,7 @@ def restore_session_if_needed(session_key: str) -> bool:
         
         # Restore session to memory
         auth_manager = get_auth_manager()
-        fast_test_auth_sessions[session_key] = {
+        message_downloader_auth_sessions[session_key] = {
             'phone_number': stored_session['phone_number'],
             'auth_manager': auth_manager
         }
@@ -2340,7 +2356,7 @@ def send_verification_code():
             session_key = result['session_key']
             
             # Store in memory for immediate access
-            fast_test_auth_sessions[session_key] = {
+            message_downloader_auth_sessions[session_key] = {
                 'phone_number': phone_number,
                 'phone_code_hash': result['phone_code_hash'],
                 'auth_manager': auth_manager
@@ -2357,7 +2373,7 @@ def send_verification_code():
             })
             
             # Store session key in Flask session for this user
-            session['fast_test_session_key'] = session_key
+            session['message_downloader_session_key'] = session_key
             session.permanent = True  # Make session persistent
         
         return jsonify(result)
@@ -2375,13 +2391,13 @@ def verify_verification_code():
         verification_code = data.get('verification_code', '').strip()
         
         # Get session key from Flask session
-        session_key = session.get('fast_test_session_key')
+        session_key = session.get('message_downloader_session_key')
         
         if not session_key:
             return jsonify({'success': False, 'error': '會話已過期，請重新開始'})
         
         # Check session in memory first, then restore from persistent storage
-        if session_key not in fast_test_auth_sessions:
+        if session_key not in message_downloader_auth_sessions:
             session_storage = get_session_storage()
             stored_session = session_storage.get_session(session_key)
             if not stored_session:
@@ -2389,7 +2405,7 @@ def verify_verification_code():
             
             # Restore session to memory
             auth_manager = get_auth_manager()
-            fast_test_auth_sessions[session_key] = {
+            message_downloader_auth_sessions[session_key] = {
                 'phone_number': stored_session['phone_number'],
                 'phone_code_hash': stored_session['phone_code_hash'],
                 'auth_manager': auth_manager
@@ -2398,7 +2414,7 @@ def verify_verification_code():
         if not verification_code:
             return jsonify({'success': False, 'error': '請輸入驗證碼'})
         
-        session_info = fast_test_auth_sessions[session_key]
+        session_info = message_downloader_auth_sessions[session_key]
         auth_manager = session_info['auth_manager']
         phone_code_hash = session_info['phone_code_hash']
         
@@ -2409,13 +2425,13 @@ def verify_verification_code():
         
         if result['success'] and not result.get('requires_password'):
             # Authentication completed successfully
-            session['fast_test_authenticated'] = True
-            session['fast_test_user_info'] = result.get('user_info', {})
+            session['message_downloader_authenticated'] = True
+            session['message_downloader_user_info'] = result.get('user_info', {})
             session.permanent = True  # Make session persistent
             
             # Store user session in database for persistence
             if 'user_id' in result:
-                session['fast_test_user_id'] = result['user_id']
+                session['message_downloader_user_id'] = result['user_id']
                 
                 # Update persistent storage with authentication success
                 import time
@@ -2442,13 +2458,13 @@ def verify_two_factor_password():
         password = data.get('password', '')
         
         # Get session key from Flask session
-        session_key = session.get('fast_test_session_key')
+        session_key = session.get('message_downloader_session_key')
         
         if not session_key:
             return jsonify({'success': False, 'error': '會話已過期，請重新開始'})
         
         # Check session in memory first, then restore from persistent storage
-        if session_key not in fast_test_auth_sessions:
+        if session_key not in message_downloader_auth_sessions:
             session_storage = get_session_storage()
             stored_session = session_storage.get_session(session_key)
             if not stored_session:
@@ -2456,7 +2472,7 @@ def verify_two_factor_password():
             
             # Restore session to memory
             auth_manager = get_auth_manager()
-            fast_test_auth_sessions[session_key] = {
+            message_downloader_auth_sessions[session_key] = {
                 'phone_number': stored_session['phone_number'],
                 'phone_code_hash': stored_session['phone_code_hash'],
                 'auth_manager': auth_manager
@@ -2465,7 +2481,7 @@ def verify_two_factor_password():
         if not password:
             return jsonify({'success': False, 'error': '請輸入兩步驗證密碼'})
         
-        session_info = fast_test_auth_sessions[session_key]
+        session_info = message_downloader_auth_sessions[session_key]
         auth_manager = session_info['auth_manager']
         
         # Verify password
@@ -2475,13 +2491,13 @@ def verify_two_factor_password():
         
         if result['success']:
             # Authentication completed successfully
-            session['fast_test_authenticated'] = True
-            session['fast_test_user_info'] = result.get('user_info', {})
+            session['message_downloader_authenticated'] = True
+            session['message_downloader_user_info'] = result.get('user_info', {})
             session.permanent = True  # Make session persistent
             
             # Store user session in database for persistence
             if 'user_id' in result:
-                session['fast_test_user_id'] = result['user_id']
+                session['message_downloader_user_id'] = result['user_id']
                 
                 # Update persistent storage with authentication success
                 import time
@@ -2504,13 +2520,13 @@ def verify_two_factor_password():
 def get_auth_status():
     """Get current authentication status for fast test"""
     try:
-        authenticated = session.get('fast_test_authenticated', False)
-        user_info = session.get('fast_test_user_info', {})
-        user_id = session.get('fast_test_user_id')
+        authenticated = session.get('message_downloader_authenticated', False)
+        user_info = session.get('message_downloader_user_info', {})
+        user_id = session.get('message_downloader_user_id')
         
         # If session shows authenticated but we don't have an active session_key,
         # try to restore it from persistent storage
-        if authenticated and user_id and not session.get('fast_test_session_key'):
+        if authenticated and user_id and not session.get('message_downloader_session_key'):
             try:
                 # First try to find existing session in persistent storage
                 session_storage = get_session_storage()
@@ -2530,9 +2546,9 @@ def get_auth_status():
                     
                     if client:
                         # Restore session to memory
-                        session['fast_test_session_key'] = restored_session_key
+                        session['message_downloader_session_key'] = restored_session_key
                         stored_data = session_storage.get_session(restored_session_key)
-                        fast_test_auth_sessions[restored_session_key] = {
+                        message_downloader_auth_sessions[restored_session_key] = {
                             'phone_number': stored_data.get('phone_number', ''),
                             'auth_manager': auth_manager
                         }
@@ -2567,8 +2583,8 @@ def get_auth_status():
                         })
                         
                         # Restore to memory
-                        session['fast_test_session_key'] = new_session_key
-                        fast_test_auth_sessions[new_session_key] = {
+                        session['message_downloader_session_key'] = new_session_key
+                        message_downloader_auth_sessions[new_session_key] = {
                             'phone_number': user_info.get('phone_number', ''),
                             'auth_manager': auth_manager
                         }
@@ -2598,15 +2614,15 @@ def get_auth_status():
 
 
 @_flask_app.route("/api/auth/logout", methods=["POST"])
-def fast_test_logout():
+def message_downloader_logout():
     """Logout from fast test authentication"""
     try:
         # Get session key and clean up
-        session_key = session.get('fast_test_session_key')
+        session_key = session.get('message_downloader_session_key')
         
-        if session_key and session_key in fast_test_auth_sessions:
+        if session_key and session_key in message_downloader_auth_sessions:
             # Clean up auth session
-            session_info = fast_test_auth_sessions[session_key]
+            session_info = message_downloader_auth_sessions[session_key]
             auth_manager = session_info.get('auth_manager')
             
             # Disconnect client if exists
@@ -2617,7 +2633,7 @@ def fast_test_logout():
                     logger.warning(f"Failed to disconnect session {session_key}: {e}")
             
             # Remove from global storage
-            del fast_test_auth_sessions[session_key]
+            del message_downloader_auth_sessions[session_key]
         
         # Clean up persistent storage
         if session_key:
@@ -2625,10 +2641,10 @@ def fast_test_logout():
             session_storage.delete_session(session_key)
         
         # Clear Flask session
-        session.pop('fast_test_session_key', None)
-        session.pop('fast_test_authenticated', None)
-        session.pop('fast_test_user_info', None)
-        session.pop('fast_test_user_id', None)
+        session.pop('message_downloader_session_key', None)
+        session.pop('message_downloader_authenticated', None)
+        session.pop('message_downloader_user_info', None)
+        session.pop('message_downloader_user_id', None)
         
         return jsonify({'success': True, 'message': '已成功登出'})
         
@@ -2637,13 +2653,126 @@ def fast_test_logout():
         return jsonify({'success': False, 'error': f'登出失敗: {str(e)}'})
 
 
-def require_fast_test_auth(f):
+@_flask_app.route("/api/auth/qr_login", methods=["POST"])
+def qr_login():
+    """Start QR code login process"""
+    try:
+        # Get API credentials from main app config
+        api_id = _app.api_id
+        api_hash = _app.api_hash
+
+        if not api_id or not api_hash:
+            return jsonify({'success': False, 'error': 'API 憑證未設定'})
+
+        # Initialize auth manager
+        from module.multiuser_auth import TelegramAuthManager
+        auth_manager = TelegramAuthManager()
+
+        # Start QR login process
+        result = run_async_in_thread(
+            auth_manager.start_qr_login(api_id, api_hash)
+        )
+
+        if result['success']:
+            session_key = result['session_key']
+
+            # Store session
+            message_downloader_auth_sessions[session_key] = {
+                'auth_manager': auth_manager,
+                'status': 'qr_pending',
+                'created_at': time.time()
+            }
+
+            # Store in persistent storage
+            session_storage = get_session_storage()
+            session_storage.create_session(session_key, {
+                'status': 'qr_pending',
+                'login_type': 'qr',
+                'created_at': time.time()
+            })
+
+            return jsonify({
+                'success': True,
+                'session_key': session_key,
+                'qr_token': result['qr_token']
+            })
+        else:
+            return jsonify({'success': False, 'error': result.get('error', 'QR 登入初始化失敗')})
+
+    except Exception as e:
+        logger.error(f"Failed to start QR login: {e}")
+        return jsonify({'success': False, 'error': f'QR 登入失敗: {str(e)}'})
+
+
+@_flask_app.route("/api/auth/check_qr_status", methods=["POST"])
+def check_qr_status():
+    """Check QR code login status"""
+    try:
+        data = request.get_json()
+        session_key = data.get('session_key')
+
+        if not session_key or session_key not in message_downloader_auth_sessions:
+            return jsonify({'success': False, 'error': '無效的 session'})
+
+        session_info = message_downloader_auth_sessions[session_key]
+        auth_manager = session_info['auth_manager']
+
+        # Check QR login status
+        result = run_async_in_thread(
+            auth_manager.check_qr_status(session_key)
+        )
+
+        if result['success']:
+            if result.get('authenticated'):
+                # QR login successful
+                session['message_downloader_authenticated'] = True
+                session['message_downloader_user_info'] = result.get('user_info', {})
+                session.permanent = True
+
+                if 'user_id' in result:
+                    session['message_downloader_user_id'] = result['user_id']
+
+                    # Update persistent storage
+                    session_storage = get_session_storage()
+                    session_storage.update_session(session_key, {
+                        'status': 'authenticated',
+                        'user_id': result['user_id'],
+                        'user_info': result.get('user_info', {}),
+                        'authenticated_at': time.time()
+                    })
+
+                return jsonify({
+                    'success': True,
+                    'authenticated': True,
+                    'user_info': result.get('user_info', {})
+                })
+            elif result.get('expired'):
+                return jsonify({
+                    'success': True,
+                    'authenticated': False,
+                    'expired': True
+                })
+            else:
+                return jsonify({
+                    'success': True,
+                    'authenticated': False,
+                    'expired': False
+                })
+        else:
+            return jsonify({'success': False, 'error': result.get('error', 'QR 狀態檢查失敗')})
+
+    except Exception as e:
+        logger.error(f"Failed to check QR status: {e}")
+        return jsonify({'success': False, 'error': f'QR 狀態檢查失敗: {str(e)}'})
+
+
+def require_message_downloader_auth(f):
     """Decorator to require fast test authentication"""
     from functools import wraps
     
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not session.get('fast_test_authenticated', False):
+        if not session.get('message_downloader_authenticated', False):
             return jsonify({'success': False, 'error': '需要先進行認證'})
         return f(*args, **kwargs)
     return decorated_function
@@ -2654,12 +2783,12 @@ def require_fast_test_auth(f):
 # =============================================================================
 
 @_flask_app.route("/api/groups/list", methods=["GET"])
-@require_fast_test_auth
+@require_message_downloader_auth
 def get_groups_list():
     """Get list of joined groups for fast test"""
     try:
         # Get authenticated user's session
-        session_key = session.get('fast_test_session_key')
+        session_key = session.get('message_downloader_session_key')
         
         if not session_key:
             return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
@@ -2668,7 +2797,7 @@ def get_groups_list():
         if not restore_session_if_needed(session_key):
             return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
         
-        session_info = fast_test_auth_sessions[session_key]
+        session_info = message_downloader_auth_sessions[session_key]
         auth_manager = session_info['auth_manager']
         
         # Get client for this user using our async helper
@@ -2687,7 +2816,7 @@ def get_groups_list():
 
 
 @_flask_app.route("/api/groups/messages", methods=["POST"])
-@require_fast_test_auth
+@require_message_downloader_auth
 def get_group_messages():
     """Get messages from a specific group for fast test"""
     try:
@@ -2701,7 +2830,7 @@ def get_group_messages():
             return jsonify({'success': False, 'error': '請提供群組 ID'})
         
         # Get authenticated user's session
-        session_key = session.get('fast_test_session_key')
+        session_key = session.get('message_downloader_session_key')
         
         if not session_key:
             return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
@@ -2710,7 +2839,7 @@ def get_group_messages():
         if not restore_session_if_needed(session_key):
             return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
         
-        session_info = fast_test_auth_sessions[session_key]
+        session_info = message_downloader_auth_sessions[session_key]
         auth_manager = session_info['auth_manager']
         
         # Get messages for this group using our async helper
@@ -2728,7 +2857,7 @@ def get_group_messages():
 
 
 @_flask_app.route("/api/groups/load_more", methods=["POST"])
-@require_fast_test_auth
+@require_message_downloader_auth
 def load_more_messages():
     """Load more messages for pagination"""
     try:
@@ -2742,7 +2871,7 @@ def load_more_messages():
             return jsonify({'success': False, 'error': '缺少必要參數'})
         
         # Get authenticated user's session
-        session_key = session.get('fast_test_session_key')
+        session_key = session.get('message_downloader_session_key')
         
         if not session_key:
             return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
@@ -2751,7 +2880,7 @@ def load_more_messages():
         if not restore_session_if_needed(session_key):
             return jsonify({'success': False, 'error': '會話已過期，請重新登入'})
         
-        session_info = fast_test_auth_sessions[session_key]
+        session_info = message_downloader_auth_sessions[session_key]
         auth_manager = session_info['auth_manager']
         
         # Load more messages using our async helper
@@ -2768,9 +2897,9 @@ def load_more_messages():
         return jsonify({'success': False, 'error': f'載入更多訊息失敗: {str(e)}'})
 
 
-@_flask_app.route("/api/fast_test_thumbnail/<chat_id>/<int:message_id>", methods=["GET"])
-@require_fast_test_auth
-def fast_test_thumbnail(chat_id, message_id):
+@_flask_app.route("/api/message_downloader_thumbnail/<chat_id>/<int:message_id>", methods=["GET"])
+@require_message_downloader_auth
+def message_downloader_thumbnail(chat_id, message_id):
     """Fast Test - 獲取訊息縮圖 - 重寫版本"""
     try:
         # 轉換 chat_id 為整數（支援負數）
@@ -2782,18 +2911,26 @@ def fast_test_thumbnail(chat_id, message_id):
         logger.info(f"Thumbnail API: chat_id={chat_id}, message_id={message_id}")
 
         # 檢查會話
-        session_key = session.get('fast_test_session_key')
-        if not session_key or session_key not in fast_test_auth_sessions:
+        session_key = session.get('message_downloader_session_key')
+        logger.info(f"Session key: {session_key}")
+        logger.info(f"Available session keys: {list(message_downloader_auth_sessions.keys())}")
+        if not session_key or session_key not in message_downloader_auth_sessions:
+            logger.warning(f"Session authentication failed. session_key={session_key}, available_keys={list(message_downloader_auth_sessions.keys())}")
             return jsonify({'success': False, 'error': '會話已過期，請重新登入'}), 401
 
         # 獲取客戶端
-        session_info = fast_test_auth_sessions[session_key]
+        session_info = message_downloader_auth_sessions[session_key]
         auth_manager = session_info.get('auth_manager')
+        logger.info(f"Auth manager: {auth_manager}")
         if not auth_manager or not hasattr(auth_manager, 'active_clients'):
+            logger.error("Auth manager not available or no active_clients attribute")
             return jsonify({'success': False, 'error': '客戶端不可用'}), 500
 
         client = auth_manager.active_clients.get(session_key)
+        logger.info(f"Client: {client}")
+        logger.info(f"Active clients: {list(auth_manager.active_clients.keys())}")
         if not client:
+            logger.error(f"No client found for session {session_key}")
             return jsonify({'success': False, 'error': '找不到有效的客戶端連接'}), 500
 
         # 簡化的縮圖獲取函數
@@ -2889,7 +3026,7 @@ def fast_test_thumbnail(chat_id, message_id):
 
 
 @_flask_app.route("/api/fast_download/add_tasks", methods=["POST"])
-@require_fast_test_auth
+@require_message_downloader_auth
 def add_fast_download_tasks():
     """Add selected messages to download queue from fast test"""
     try:
@@ -2948,42 +3085,42 @@ def add_fast_download_tasks():
                 # Don't fail the request if config update fails
                 pass
             
-            # Auto-trigger download after adding tasks
+            # 自動觸發下載
             download_triggered = False
             if _client and _queue:
                 try:
                     from module.custom_download import run_custom_download
                     from module.download_stat import set_download_state, DownloadState
-                    
+
                     # 設置下載狀態為下載中
                     set_download_state(DownloadState.Downloading)
-                    
+
                     if hasattr(_app, 'loop') and _app.loop:
-                        # 為 Fast Test 創建 TaskNode，像 bot 下載一樣處理
-                        user_id = session.get('fast_test_user_id')
-                        
-                        # 創建 TaskNode 來支持進度通知，像 bot 下載一樣
+                        # 為 message_downloader 創建 TaskNode，支援 bot 通知
+                        user_id = session.get('message_downloader_user_id')
+
+                        # 創建 TaskNode 來支持進度通知
                         if user_id and hasattr(_app, 'download_bot') and _app.download_bot:
                             try:
                                 import time
-                                
+
                                 # 構建初始通知訊息
                                 chat_id_str = str(chat_id)
-                                start_message = f"""🚀 **Fast Test 下載開始**
+                                start_message = f"""🚀 **Message Downloader 下載開始**
 
 📁 **群組ID:** `{chat_id_str}`
 📊 **任務:** {len(new_ids)} 個檔案
 ⏰ **時間:** {time.strftime('%Y-%m-%d %H:%M:%S')}
 
 💡 即將開始下載，請稍候..."""
-                                
+
                                 # 使用事件循環來發送訊息並創建 TaskNode
                                 async def create_task_node():
                                     try:
                                         # 導入必要模塊
                                         import pyrogram
                                         from module.app import TaskNode, TaskType
-                                        
+
                                         # 發送初始訊息
                                         reply_message = await _app.download_bot.bot.send_message(
                                             user_id,
@@ -2991,7 +3128,7 @@ def add_fast_download_tasks():
                                             parse_mode=pyrogram.enums.ParseMode.MARKDOWN
                                         )
                                         logger.info(f"✅ Sent initial notification to user {user_id}")
-                                        
+
                                         # 創建 TaskNode
                                         task_id = int(time.time() * 1000)  # 使用時間戳作為唯一 task_id
                                         task_node = TaskNode(
@@ -3003,31 +3140,31 @@ def add_fast_download_tasks():
                                             reply_message_id=reply_message.id,  # 關鍵：設置回覆訊息ID
                                             replay_message=start_message
                                         )
-                                        
+
                                         # 設定下載數據
                                         task_node.total_download_task = len(new_ids)
                                         task_node.success_download_task = 0
                                         task_node.is_running = True
-                                        
+
                                         # 添加到 bot 的 task_node 系統
                                         _app.download_bot.add_task_node(task_node)
                                         logger.info(f"✅ Created TaskNode {task_id} with reply_message_id {reply_message.id}")
-                                        
+
                                         # 觸發下載任務，並傳遞 TaskNode
                                         _app.loop.create_task(run_custom_download(_app, _client, _queue, task_node))
                                         logger.info("Download task auto-triggered after creating TaskNode")
-                                        
+
                                     except Exception as e:
                                         logger.error(f"❌ Failed to create TaskNode: {e}")
                                         # 如果 TaskNode 創建失敗，仍然執行下載但不跟踪進度
                                         _app.loop.create_task(run_custom_download(_app, _client, _queue))
                                         logger.info("Download task triggered without TaskNode (fallback)")
-                                
+
                                 # 使用 create_task 來執行異步任務
                                 _app.loop.create_task(create_task_node())
                                 logger.info(f"📤 Queued TaskNode creation for user {user_id}")
                                 download_triggered = True
-                                
+
                             except Exception as e:
                                 logger.error(f"❌ Failed to prepare TaskNode creation: {e}")
                                 # 如果準備過程失敗，使用回退方式
@@ -3038,21 +3175,18 @@ def add_fast_download_tasks():
                             # 如果沒有 download_bot，使用原始方式
                             _app.loop.create_task(run_custom_download(_app, _client, _queue))
                             download_triggered = True
-                            logger.info("Download task auto-triggered after adding Fast Test tasks (no bot)")
+                            logger.info("Download task auto-triggered after adding message_downloader tasks (no bot)")
                     else:
                         logger.warning("Main event loop not available for auto-triggering download")
                 except Exception as download_error:
                     logger.error(f"Failed to auto-trigger download: {download_error}")
-            
-            # TaskNode 系統會自動處理所有通知，包括開始、進度和完成通知
-            # 不需要額外的立即通知
             
             message = f'已新增 {len(new_ids)} 個下載任務'
             if download_triggered:
                 message += '，下載已自動開始'
             else:
                 message += '，請手動開始下載'
-            
+
             return jsonify({
                 'success': True,
                 'message': message,
@@ -3077,7 +3211,7 @@ def add_fast_download_tasks():
 
 
 @_flask_app.route("/api/fast_download/status", methods=["GET"])
-@require_fast_test_auth
+@require_message_downloader_auth
 def get_fast_download_status():
     """Get download status for fast test interface"""
     try:
