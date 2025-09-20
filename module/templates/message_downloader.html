@@ -68,12 +68,11 @@
             box-sizing: border-box;
         }
 
-        /* Chat App Layout - 左右分割 */
+        /* Chat App Layout - 全寬布局 */
         .chat-app-layout {
             display: none; /* 預設隱藏，只在顯示訊息時出現 */
             flex: 1;
-            flex-direction: row;
-            gap: 20px;
+            flex-direction: column;
             min-height: calc(100vh - 120px);
         }
 
@@ -81,17 +80,7 @@
             display: flex;
         }
 
-        /* 左側區域 - 群組選擇和控制 */
-        .sidebar {
-            width: 350px;
-            min-width: 300px;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        /* 右側區域 - 訊息顯示 */
+        /* 訊息顯示區域 - 全寬 */
         .chat-area {
             flex: 1;
             display: flex;
@@ -579,6 +568,296 @@
             opacity: 0;
             pointer-events: none;
         }
+
+        /* Animated Chat Controls - Fixed Bottom Center */
+        .chat-navigation {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .chat-menu-toggle {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(30px) saturate(180%) brightness(1.1);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1),
+                        0 6px 15px rgba(0, 0, 0, 0.06),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+            border: 0.5px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .chat-menu-toggle:hover {
+            transform: scale(1.02);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15),
+                        0 8px 20px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+        }
+
+        .chat-menu-toggle::before {
+            content: '⚙';
+            position: absolute;
+            font-size: 1.8em;
+            font-weight: 300;
+            color: rgb(29, 29, 31);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .chat-menu-toggle.active::before {
+            transform: rotate(180deg);
+            content: '✕';
+            font-size: 1.5em;
+        }
+
+        .chat-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(35px) saturate(200%) brightness(1.15);
+            border-radius: 15px;
+            z-index: -1;
+            transition: transform 0.4s, width 0.4s, height 0.4s, border-radius 0.4s;
+            transition-delay: 0.8s, 0.4s, 0.4s, 0.4s;
+            transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+            border: 0.5px solid rgba(255, 255, 255, 0.25);
+            overflow: hidden;
+        }
+
+        .chat-menu-toggle.active ~ .chat-menu {
+            width: 320px;
+            height: 90px;
+            z-index: 1;
+            transform: translate(-50%, calc(-50% - 110px));
+            transition-delay: 0s, 0.5s, 0.5s;
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15),
+                        0 10px 25px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-menu::before {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(35px) saturate(200%) brightness(1.15);
+            left: calc(50% - 6px);
+            bottom: 3px;
+            transform: rotate(45deg);
+            border-radius: 2px;
+            transition: 0.4s;
+            border: 0.5px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .chat-menu-toggle.active ~ .chat-menu::before {
+            transition-delay: 0.4s;
+            bottom: -6px;
+            transform: rotate(45deg) translateY(1px);
+        }
+
+        .selection-info {
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(0deg, rgb(122, 143, 164), rgb(29, 29, 31) 60%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            white-space: nowrap;
+            letter-spacing: -0.01em;
+        }
+
+        .chat-menu-toggle.active ~ .chat-menu .selection-info {
+            opacity: 1;
+            visibility: visible;
+            transition-delay: 0.8s;
+        }
+
+        .chat-menu ul {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 90px;
+            gap: 20px;
+            padding: 10px 15px;
+            margin: 0;
+            list-style: none;
+            overflow: hidden;
+        }
+
+        .chat-menu ul li {
+            list-style: none;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-30px);
+            transition: all 0.25s ease;
+            transition-delay: calc(0s + var(--i));
+        }
+
+        .chat-menu-toggle.active ~ .chat-menu ul li {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0px);
+            transition-delay: calc(0.75s + var(--i));
+        }
+
+        .menu-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chat-menu ul li button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(25px) saturate(150%) brightness(1.05);
+            border: 0.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 18px;
+            font-size: 18px;
+            color: rgb(29, 29, 31);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            padding: 0;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.02);
+        }
+
+        .menu-label {
+            font-size: 11px;
+            color: rgb(110, 110, 115);
+            font-weight: 500;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+            text-align: center;
+            letter-spacing: -0.01em;
+        }
+
+        .chat-menu ul li button:hover {
+            background: rgba(255, 255, 255, 0.6);
+            transform: scale(1.02);
+            color: rgb(0, 0, 0);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+        }
+
+        .chat-menu-toggle.active ~ .chat-menu ul li .menu-label {
+            opacity: 1;
+            visibility: visible;
+            transition-delay: calc(0.8s + var(--i));
+        }
+
+        /* 下載按鈕特殊樣式 */
+        #fast-test-download-btn:not(:disabled) {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.4) 100%);
+            color: rgb(0, 0, 0);
+            font-weight: 600;
+        }
+
+        #fast-test-download-btn:not(:disabled) + .menu-label {
+            background: linear-gradient(0deg, rgb(122, 143, 164), rgb(29, 29, 31) 60%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 600;
+        }
+
+        .chat-menu ul li button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(128, 128, 128, 0.2);
+            color: rgb(110, 110, 115);
+        }
+
+        .chat-menu ul li button:disabled:hover {
+            transform: none;
+            background: rgba(128, 128, 128, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+
+        .chat-menu ul li button:disabled + .menu-label {
+            color: rgb(110, 110, 115);
+            opacity: 0.6;
+        }
+
+        /* Responsive design for chat controls */
+        @media (max-width: 768px) {
+            .chat-navigation {
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            .chat-menu-toggle {
+                width: 55px;
+                height: 55px;
+            }
+
+            .chat-menu-toggle::before {
+                font-size: 1.6em;
+            }
+
+            .chat-menu-toggle.active ~ .chat-menu {
+                width: 280px;
+                height: 80px;
+                transform: translate(-50%, calc(-50% - 95px));
+                border-radius: 25px;
+            }
+
+            .chat-menu ul {
+                height: 80px;
+                gap: 15px;
+                padding: 8px 12px;
+            }
+
+            .chat-menu ul li button {
+                width: 42px;
+                height: 42px;
+                font-size: 16px;
+                border-radius: 14px;
+            }
+
+            .menu-label {
+                font-size: 10px;
+            }
+        }
         
         /* Apple-style Button Styles */
         .btn-primary {
@@ -905,21 +1184,9 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
         
-        /* 響應式設計 - 手機版改為上下佈局 */
+        /* 響應式設計 - 維持全寬佈局 */
         @media (max-width: 768px) {
-            .chat-app-layout.active {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                width: 100%;
-                min-width: auto;
-                max-width: none;
-                order: 2; /* 讓控制區域在下方 */
-            }
-
             .chat-area {
-                order: 1; /* 讓訊息區域在上方 */
                 min-height: 50vh;
             }
 
@@ -933,17 +1200,7 @@
         }
         
         @media (max-width: 480px) {
-            .chat-app-layout.active {
-                flex-direction: column;
-                gap: 12px;
-            }
-
-            .sidebar {
-                order: 2;
-            }
-
             .chat-area {
-                order: 1;
                 min-height: 45vh;
             }
 
@@ -1259,48 +1516,9 @@
                     <p class="mt-2 text-light">正在載入群組訊息...</p>
                 </div>
 
-        <!-- 新的左右分割佈局 -->
+        <!-- 全寬聊天佈局 -->
         <div id="chat-app-layout" class="chat-app-layout">
-            <!-- 左側區域 - 控制面板 -->
-            <div class="sidebar">
-                <!-- Chat Controls 移到左側 -->
-                <div id="chat-controls" class="action-buttons" style="display: none;">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="selection-counter">
-                            已選擇 <span id="selected-count">0</span> 項
-                        </div>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <button id="select-all-btn" class="btn btn-sm btn-secondary flex-fill">
-                            <i class="fas fa-check-double"></i> 全選
-                        </button>
-                        <button id="clear-selection-btn" class="btn btn-sm btn-secondary flex-fill">
-                            <i class="fas fa-times"></i> 清除
-                        </button>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <button id="refresh-messages-btn" class="btn btn-sm btn-secondary flex-fill">
-                            <i class="fas fa-sync-alt"></i> 載入更多
-                        </button>
-                        <button id="debug-scroll-btn" class="btn btn-sm btn-outline-info flex-fill">
-                            <i class="fas fa-bug"></i> 調試
-                        </button>
-                    </div>
-                    <div class="mb-3">
-                        <button id="test-scroll-btn" class="btn btn-sm btn-outline-warning w-100">
-                            <i class="fas fa-vial"></i> 測試滾動
-                        </button>
-                    </div>
-                    <div class="d-flex justify-content-center">
-                        <button id="fast-test-download-btn" class="btn btn-primary w-100" disabled>
-                            <i class="fas fa-download"></i>
-                            開始下載
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 右側區域 - 訊息顯示 -->
+            <!-- 訊息顯示區域 -->
             <div class="chat-area">
                 <div id="messages-container" class="messages-container" style="display: none;">
                     <!-- Messages will be populated here -->
@@ -1393,55 +1611,18 @@
             // Download button
             document.getElementById('fast-test-download-btn').addEventListener('click', startDownload);
             
-            // Debug scroll button
-            document.getElementById('debug-scroll-btn').addEventListener('click', function() {
-                const container = document.getElementById('messages-container');
-                const scrollTop = container.scrollTop;
-                const scrollHeight = container.scrollHeight;
-                const clientHeight = container.clientHeight;
-                const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-                
-                console.log('🐛 滾動狀態調試資訊:');
-                console.log('  容器顯示狀態:', container.style.display);
-                console.log('  scrollTop:', scrollTop);
-                console.log('  scrollHeight:', scrollHeight);
-                console.log('  clientHeight:', clientHeight);
-                console.log('  距離底部:', distanceFromBottom);
-                console.log('  閾值:', SCROLL_THRESHOLD);
-                console.log('  hasMoreMessages:', hasMoreMessages);
-                console.log('  isLoading:', isLoading);
-                console.log('  lastMessageId:', lastMessageId);
-                console.log('  previousLastMessageId:', previousLastMessageId);
-                console.log('  noProgressCount:', noProgressCount);
-                console.log('  allMessages.length:', allMessages.length);
-                console.log('  觸發條件滿足:', distanceFromBottom <= SCROLL_THRESHOLD && hasMoreMessages && !isLoading);
-                
-                // 強制觸發滾動檢測
-                handleScroll();
-            });
-            
-            // Test scroll button
-            document.getElementById('test-scroll-btn').addEventListener('click', function() {
-                const container = document.getElementById('messages-container');
-                console.log('🧪 測試滾動檢測...');
-                console.log('  容器元素:', container);
-                
-                // 先滾動到底部
-                container.scrollTop = container.scrollHeight - container.clientHeight;
-                console.log('  已滾動到底部，scrollTop:', container.scrollTop);
-                
-                // 等待一下然後觸發檢測
-                setTimeout(() => {
-                    console.log('  觸發滾動檢測...');
-                    handleScroll();
-                    handleScrollImmediate();
-                }, 100);
-            });
-            
             // Header logout button
             const headerLogoutBtn = document.getElementById('header-logout-btn');
             if (headerLogoutBtn) {
                 headerLogoutBtn.addEventListener('click', logout);
+            }
+
+            // Chat menu toggle (animated popup)
+            const chatMenuToggle = document.querySelector('.chat-menu-toggle');
+            if (chatMenuToggle) {
+                chatMenuToggle.addEventListener('click', function() {
+                    chatMenuToggle.classList.toggle('active');
+                });
             }
         }
         
@@ -2825,5 +3006,49 @@
             return createNotification(type, title, message, options);
         }
     </script>
+
+    <!-- Fixed Animated Chat Controls - Bottom Right Corner -->
+    <div id="chat-controls" class="chat-navigation" style="display: none;">
+        <div class="chat-menu-toggle"></div>
+        <div class="chat-menu">
+            <div class="selection-info">
+                已選擇 <span id="selected-count">0</span> 項
+            </div>
+            <ul>
+                <li style="--i:0.1s;">
+                    <div class="menu-item">
+                        <button id="select-all-btn" title="全選">
+                            <i class="fas fa-check-double"></i>
+                        </button>
+                        <span class="menu-label">全選</span>
+                    </div>
+                </li>
+                <li style="--i:0.2s;">
+                    <div class="menu-item">
+                        <button id="clear-selection-btn" title="清除選擇">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <span class="menu-label">清除</span>
+                    </div>
+                </li>
+                <li style="--i:0.3s;">
+                    <div class="menu-item">
+                        <button id="refresh-messages-btn" title="載入更多訊息">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <span class="menu-label">載入</span>
+                    </div>
+                </li>
+                <li style="--i:0.4s;">
+                    <div class="menu-item">
+                        <button id="fast-test-download-btn" title="開始下載" disabled>
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <span class="menu-label">下載</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
 </body>
 </html>
