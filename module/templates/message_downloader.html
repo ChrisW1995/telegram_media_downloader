@@ -43,7 +43,6 @@
         .fade-in {
             animation: fadeInUp 0.6s ease-out;
         }
-        }
         
         .messages-container {
             animation: controlCenterFadeIn 1.2s cubic-bezier(0.23, 1, 0.32, 1) 0.4s both;
@@ -2597,21 +2596,15 @@
                 const response = await fetch('/api/auth/logout', {
                     method: 'POST'
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showAlert('已成功登出', 'info');
-                    showLoginStatusError();
-                    // Reset form
-                    document.getElementById('auth-phone-step').style.display = 'block';
-                    document.getElementById('auth-code-step').style.display = 'none';
-                    document.getElementById('auth-password-step').style.display = 'none';
-                    document.getElementById('auth-success').style.display = 'none';
-                    document.getElementById('phone-number').value = '';
-                    document.getElementById('verification-code').value = '';
-                    document.getElementById('two-factor-password').value = '';
-                    showAuthForm();
+                    // 跳轉到登入頁面而不是顯示認證表單
+                    setTimeout(() => {
+                        window.location.href = '/message_downloader/login';
+                    }, 1000); // 給用戶時間看到登出成功訊息
                 } else {
                     showAlert('登出失敗: ' + data.error, 'danger');
                 }

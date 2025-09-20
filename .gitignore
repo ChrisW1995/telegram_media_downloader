@@ -11,7 +11,7 @@
 settings.json
 *.jpg
 *.sh
-*log*
+*.log
 
 # Distribution / packaging
 .Python
@@ -76,3 +76,10 @@ data.yaml
 *.css.map
 TGDL/
 downloads_bot/
+message_downloader_sessions.json
+user_sessions.json
+tgdl.db-shm
+tgdl.db-wal
+CLAUDE.md
+.tgdl_pid
+user_sessions.json
