@@ -11,7 +11,7 @@ from module.app_db import DatabaseApplication as Application
 from module.app import TaskNode, DownloadStatus
 from module.language import _t
 from utils.meta_data import MetaData
-from module.pyrogram_extension import set_meta_data
+from module.pyrogram_extension import set_meta_data, report_bot_download_status
 from utils.format import validate_title
 
 
@@ -96,7 +96,7 @@ class CustomDownloadManager:
             chat_title = self.app.config.get("custom_downloads", {}).get("group_tags", {}).get(chat_key, f"chat_{chat_key}")
             chat_title = validate_title(chat_title)
             
-           # logger.debug(f"Checking file existence for message {message_id} in chat {chat_title} ({chat_key})")
+            logger.debug(f"Checking file existence for message {message_id} in chat {chat_title} ({chat_key})")
             
             # 檢查兩種可能的保存路徑 (bot和regular)
             for is_bot in [False, True]:
@@ -344,9 +344,18 @@ class CustomDownloadManager:
     async def _process_message(self, message: Message, numeric_chat_id: int, original_chat_id: str):
         """Process and download a single message."""
         try:
-            # Create a task node for this download
-            node = TaskNode(chat_id=numeric_chat_id)
-            
+            # Use the main task node's chat_id and task_id for consistency
+            main_task_node = getattr(self, 'task_node', None)
+            if main_task_node:
+                # Create a task node that shares the same task_id and chat_id as the main one
+                node = TaskNode(
+                    chat_id=main_task_node.chat_id,
+                    task_id=main_task_node.task_id
+                )
+            else:
+                # Fallback to creating a new task node
+                node = TaskNode(chat_id=numeric_chat_id)
+
             # Set up metadata
             meta_data = MetaData()
             caption = message.caption
@@ -364,14 +373,14 @@ class CustomDownloadManager:
                 # Fallback to import method
                 import media_downloader
                 await media_downloader.add_download_task(message, node)
-            
+
             # Track this download
             if original_chat_id not in self.pending_downloads:
                 self.pending_downloads[original_chat_id] = []
             self.pending_downloads[original_chat_id].append(message.id)
             self.download_nodes.append((node, original_chat_id, message.id))
-            
-            
+
+
         except Exception as e:
             logger.error(f"Error processing message {message.id} from chat {original_chat_id}: {e}")
             self.mark_failed(original_chat_id, message.id)
@@ -382,11 +391,19 @@ class CustomDownloadManager:
         from module.app import DownloadStatus
         
         # Wait for downloads to complete by checking node status
-        max_wait_time = 1000  # 5 minutes maximum wait
-        check_interval = 5   # Check every 2 seconds
+        max_wait_time = 300  # 5 minutes maximum wait
+        check_interval = 2   # Check every 2 seconds
         waited_time = 0
         
-       # logger.info(f"Waiting for {len(self.download_nodes)} downloads to complete...")
+        logger.info(f"Waiting for {len(self.download_nodes)} downloads to complete...")
+        
+        # 如果有 TaskNode，設置初始狀態
+        if hasattr(self, 'task_node') and self.task_node:
+            self.task_node.total_download_task = len(self.download_nodes)
+            self.task_node.success_download_task = 0
+            self.task_node.failed_download_task = 0
+            self.task_node.skip_download_task = 0
+            logger.info(f"TaskNode initialized with {self.task_node.total_download_task} total tasks")
         
         while waited_time < max_wait_time:
             all_completed = True
@@ -398,6 +415,7 @@ class CustomDownloadManager:
                 try:
                     if hasattr(node, 'download_status') and message_id in node.download_status:
                         status = node.download_status[message_id]
+
                         if status == DownloadStatus.Downloading:
                             all_completed = False
                             downloading_count += 1
@@ -417,6 +435,7 @@ class CustomDownloadManager:
                     pending_count += 1
                     all_completed = False
             
+            
             # 更新 web 進度
             try:
                 from module.web import update_download_progress
@@ -430,17 +449,17 @@ class CustomDownloadManager:
                 
                 # Debug 資訊
                 print(f"Progress Debug: completed={completed_count}, total={total_tasks}, downloading={downloading_count}, pending={pending_count}")
-              #  logger.debug(f"Web progress updated: {completed_count}/{total_tasks} - {status_text}")
+                logger.debug(f"Web progress updated: {completed_count}/{total_tasks} - {status_text}")
             except Exception as e:
                 logger.debug(f"Error updating web progress: {e}")
             
             # Log current status every 10 seconds
-            # if waited_time % 10 == 0:
-            #     logger.info(f"Download status: {downloading_count} downloading, {pending_count} pending, {completed_count} completed, waited {waited_time}s")
+            if waited_time % 10 == 0:
+                logger.info(f"Download status: {downloading_count} downloading, {pending_count} pending, {completed_count} completed, waited {waited_time}s")
             
-            # if all_completed:
-            #     logger.info("All downloads completed")
-            #     break
+            if all_completed:
+                logger.info("All downloads completed")
+                break
                 
             await asyncio.sleep(check_interval)
             waited_time += check_interval
@@ -458,20 +477,51 @@ class CustomDownloadManager:
                         self.mark_downloaded(chat_id, message_id)
                         successful_count += 1
                         logger.success(f"Successfully downloaded message {message_id} from chat {chat_id}")
+
+                        # 實時更新 TaskNode 進度
+                        if hasattr(self, 'task_node') and self.task_node:
+                            self.task_node.success_download_task += 1
+                            # 更新 bot 狀態（如果有客戶端）
+                            if hasattr(self.task_node, 'client') and self.task_node.client:
+                                await report_bot_download_status(self.task_node.client, self.task_node, DownloadStatus.SuccessDownload)
+
                     elif status == DownloadStatus.SkipDownload:
                         # SkipDownload means file already exists, count as successful
                         self.mark_downloaded(chat_id, message_id)
                         successful_count += 1
                         logger.success(f"Skipped (already exists) message {message_id} from chat {chat_id}")
+
+                        # 實時更新 TaskNode 進度
+                        if hasattr(self, 'task_node') and self.task_node:
+                            self.task_node.skip_download_task += 1
+                            # 更新 bot 狀態（如果有客戶端）
+                            if hasattr(self.task_node, 'client') and self.task_node.client:
+                                await report_bot_download_status(self.task_node.client, self.task_node, DownloadStatus.SkipDownload)
+
                     elif status == DownloadStatus.FailedDownload:
                         self.mark_failed(chat_id, message_id)
                         failed_count += 1
                         logger.warning(f"Failed to download message {message_id} from chat {chat_id}: {status}")
+
+                        # 實時更新 TaskNode 進度
+                        if hasattr(self, 'task_node') and self.task_node:
+                            self.task_node.failed_download_task += 1
+                            # 更新 bot 狀態（如果有客戶端）
+                            if hasattr(self.task_node, 'client') and self.task_node.client:
+                                await report_bot_download_status(self.task_node.client, self.task_node, DownloadStatus.FailedDownload)
+
                     else:
                         # Still in other status, consider as failed
                         self.mark_failed(chat_id, message_id)
                         failed_count += 1
                         logger.warning(f"Message {message_id} from chat {chat_id} timeout or unknown status: {status}")
+
+                        # 實時更新 TaskNode 進度
+                        if hasattr(self, 'task_node') and self.task_node:
+                            self.task_node.failed_download_task += 1
+                            # 更新 bot 狀態（如果有客戶端）
+                            if hasattr(self.task_node, 'client') and self.task_node.client:
+                                await report_bot_download_status(self.task_node.client, self.task_node, DownloadStatus.FailedDownload)
                 else:
                     # No status available, consider as failed
                     self.mark_failed(chat_id, message_id)
@@ -536,11 +586,23 @@ class CustomDownloadManager:
             except Exception as e:
                 logger.error(f"Error updating target_ids in config: {e}")
         
+        # 設置 TaskNode 為完成狀態（但不清理下載結果）
+        if hasattr(self, 'task_node') and self.task_node:
+            self.task_node.is_running = False
+            logger.info(f"TaskNode {self.task_node.task_id} set to finished state. Final stats: success={self.task_node.success_download_task}, failed={self.task_node.failed_download_task}, skip={self.task_node.skip_download_task}")
+
         # Log summary
         if failed_count > 0:
             logger.info(f"Download completed: {successful_count} successful (including skipped), {failed_count} failed")
         else:
             logger.success(f"Download completed: All {successful_count} items finished successfully (including skipped)")
+        
+        # 返回統計信息供上層函數使用
+        return {
+            'successful_count': successful_count,
+            'failed_count': failed_count,
+            'total_count': successful_count + failed_count
+        }
         
         # Save updated status
         self.save_history()
@@ -550,7 +612,7 @@ class CustomDownloadManager:
         self.download_nodes.clear()
 
 
-async def run_custom_download(app: Application, client: pyrogram.Client, queue_ref=None):
+async def run_custom_download(app: Application, client: pyrogram.Client, queue_ref=None, task_node=None):
     """Main function to run custom download based on config."""
     import asyncio
     
@@ -570,6 +632,7 @@ async def run_custom_download(app: Application, client: pyrogram.Client, queue_r
 
     manager = CustomDownloadManager(app)
     manager.queue_ref = queue_ref  # Pass the queue reference
+    manager.task_node = task_node  # Pass the TaskNode for progress tracking
     
     # 只清理失敗記錄，保留已下載記錄以避免重複下載
     logger.info("Clearing failed download records for re-download...")
@@ -594,7 +657,10 @@ async def run_custom_download(app: Application, client: pyrogram.Client, queue_r
     await manager.download_custom_messages(client, target_ids)
     
     # 等待下載完成後更新狀態
-    await manager.update_download_status()
+    download_stats = await manager.update_download_status()
+    
+    # TaskNode 系統會自動處理完成通知，不需要手動發送
+    # download_stats 仍然可用於其他目的
 
 
 async def run_custom_download_for_selected(app: Application, client: pyrogram.Client, queue_ref=None, selected_target_ids=None):
