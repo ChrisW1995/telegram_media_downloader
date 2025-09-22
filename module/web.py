@@ -1519,8 +1519,21 @@ def start_selected_download():
                 # 初始化進度追蹤
                 update_download_progress(0, total_tasks, "開始下載...")
                 
-                _app.loop.create_task(run_custom_download_for_selected(_app, _client, _queue, selected_target_ids))
-                print("Selected download task created in main event loop")
+                # Create TaskNode for progress tracking (but not bot progress since no reply_message_id)
+                from module.app import TaskNode, TaskType
+                import time
+
+                task_id = int(time.time() * 1000)  # 使用時間戳作為唯一 task_id
+                task_node = TaskNode(
+                    chat_id=0,  # Multiple chats, use 0 as placeholder
+                    task_type=TaskType.Download,
+                    task_id=task_id
+                    # 注意：不設置 bot 和 reply_message_id，因為 web 界面下載不需要機器人進度報告
+                )
+                logger.info(f"Created TaskNode {task_id} for selected download progress tracking")
+
+                _app.loop.create_task(run_custom_download_for_selected(_app, _client, _queue, selected_target_ids, task_node))
+                print("Selected download task created in main event loop with TaskNode")
                 
                 return jsonify({
                     'success': True, 

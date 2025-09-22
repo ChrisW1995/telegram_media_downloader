@@ -348,9 +348,14 @@ async def download_task(
     if message.media:
         logger.info(f"  - media attributes: {dir(message.media)}")
     
-    logger.info(f"id={message.id} Text download check - enable_txt: {app.enable_download_txt}, has_text: {bool(message.text)}, has_media: {bool(message.media)}")
-    if app.enable_download_txt and message.text and not message.media:
-        logger.info(f"id={message.id} Attempting to download text content")
+    # 檢查是否是 custom download
+    is_custom_download = hasattr(node, 'is_custom_download') and node.is_custom_download
+
+    logger.info(f"id={message.id} Text download check - enable_txt: {app.enable_download_txt}, has_text: {bool(message.text)}, has_media: {bool(message.media)}, is_custom: {is_custom_download}")
+
+    # 對於 custom download，強制下載用戶選擇的文字消息
+    if (app.enable_download_txt or is_custom_download) and message.text and not message.media:
+        logger.info(f"id={message.id} Attempting to download text content (custom: {is_custom_download})")
         download_status, file_name = await save_msg_to_file(app, node.chat_id, message, node)
         logger.info(f"id={message.id} Text download result: {download_status}, file: {file_name}")
     else:
@@ -564,8 +569,17 @@ async def download_media(
         logger.info(f"  - message.{_type}: {_type_value}")
     
     if _media is None:
-        logger.info(f"id={message.id} No media content found - skipping download (text-only message)")
-        return DownloadStatus.SkipDownload, None
+        # 檢查是否是 custom download，如果是且有文字內容，嘗試下載文字
+        is_custom_download = hasattr(node, 'is_custom_download') and node.is_custom_download
+
+        if is_custom_download and message.text:
+            logger.info(f"id={message.id} Custom download: No media but has text content - attempting text download")
+            # 對於 custom download，如果沒有媒體但有文字，不直接跳過
+            # 讓後續的 text download 邏輯處理
+            return DownloadStatus.SkipDownload, None
+        else:
+            logger.info(f"id={message.id} No media content found - skipping download (text-only message)")
+            return DownloadStatus.SkipDownload, None
 
     message_id = message.id
 
@@ -590,6 +604,16 @@ async def download_media(
                 _move_to_download_path(temp_download_path, file_name)
                 # TODO: if not exist file size or media
                 return DownloadStatus.SuccessDownload, file_name
+            else:
+                # 檢查是否是 custom download
+                is_custom_download = hasattr(node, 'is_custom_download') and node.is_custom_download
+                logger.error(
+                    f"id={message.id} Download failed: temp_download_path is {temp_download_path}, "
+                    f"is_custom_download: {is_custom_download}"
+                )
+                if temp_download_path is None:
+                    logger.error(f"id={message.id} Pyrogram download_media returned None - possible authentication or permission issue")
+                break
         except pyrogram.errors.exceptions.bad_request_400.BadRequest:
             logger.warning(
                 f"Message[{message.id}]: {_t('file reference expired, refetching')}..."

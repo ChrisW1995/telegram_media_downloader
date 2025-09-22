@@ -36,7 +36,7 @@ from module.pyrogram_extension import (
     set_meta_data,
     upload_telegram_chat_message,
 )
-from utils.format import replace_date_time, validate_title
+from utils.format import replace_date_time, validate_title, format_byte
 from utils.meta_data import MetaData
 
 # pylint: disable = C0301, R0902
@@ -79,6 +79,7 @@ class DownloadBot:
     def add_task_node(self, node: TaskNode):
         """Add task node"""
         self.task_node[node.task_id] = node
+        logger.info(f"TaskNode {node.task_id} added to bot. Total TaskNodes: {len(self.task_node)}")
 
     def remove_task_node(self, task_id: int):
         """Remove task node"""
@@ -97,15 +98,151 @@ class DownloadBot:
             except Exception:
                 return
 
+    async def send_task_completion_notification(self, node: TaskNode):
+        """發送任務完成通知"""
+        if not node.from_user_id or not self.bot:
+            return
+        
+        try:
+            # 獲取聊天資訊（如果有的話）
+            chat_name = "未知聊天"
+            if node.chat_id:
+                try:
+                    chat = await self.client.get_chat(node.chat_id)
+                    chat_name = chat.title or chat.first_name or str(node.chat_id)
+                except Exception:
+                    chat_name = str(node.chat_id)
+            
+            # 根據任務類型生成不同的通知訊息
+            if node.task_type == TaskType.Download:
+                message = self._generate_download_completion_message(node, chat_name)
+            elif node.task_type == TaskType.Forward:
+                message = self._generate_forward_completion_message(node, chat_name)
+            elif node.task_type == TaskType.ListenForward:
+                # Listen Forward 任務不發送完成通知，因為它們是持續性的
+                return
+            else:
+                message = self._generate_generic_completion_message(node, chat_name)
+            
+            # 發送完成通知
+            await self.bot.send_message(
+                node.from_user_id,
+                message,
+                parse_mode=pyrogram.enums.ParseMode.MARKDOWN
+            )
+            
+            logger.info(f"Sent completion notification for task {node.task_id} to user {node.from_user_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send completion notification for task {node.task_id}: {e}")
+
+    def _generate_download_completion_message(self, node: TaskNode, chat_name: str) -> str:
+        """生成下載完成通知訊息"""
+        success_rate = (node.success_download_task / max(node.total_download_task, 1)) * 100
+        
+        if node.success_download_task == node.total_download_task and node.total_download_task > 0:
+            status_emoji = "🎉"
+            status_text = "**下載完成！**"
+        elif node.success_download_task > 0:
+            status_emoji = "⚠️"
+            status_text = "**下載部分完成**"
+        else:
+            status_emoji = "❌"
+            status_text = "**下載失敗**"
+        
+        message = f"""
+{status_emoji} {status_text}
+
+📁 **聊天室:** `{chat_name}`
+🆔 **任務 ID:** `{node.task_id}`
+
+📊 **統計資訊:**
+├─ 📁 **總計:** {node.total_download_task}
+├─ ✅ **成功:** {node.success_download_task}
+├─ ❌ **失敗:** {node.failed_download_task}
+├─ ⏩ **跳過:** {node.skip_download_task}
+└─ 📈 **成功率:** {success_rate:.1f}%
+
+💾 **總下載量:** {format_byte(node.total_download_byte)}
+"""
+        
+        if node.upload_success_count > 0:
+            message += f"☁️ **雲端上傳:** {node.upload_success_count} 個檔案\n"
+        
+        return message.strip()
+
+    def _generate_forward_completion_message(self, node: TaskNode, chat_name: str) -> str:
+        """生成轉發完成通知訊息"""
+        success_rate = (node.success_forward_task / max(node.total_forward_task, 1)) * 100
+        
+        if node.success_forward_task == node.total_forward_task and node.total_forward_task > 0:
+            status_emoji = "🎉"
+            status_text = "**轉發完成！**"
+        elif node.success_forward_task > 0:
+            status_emoji = "⚠️"
+            status_text = "**轉發部分完成**"
+        else:
+            status_emoji = "❌"
+            status_text = "**轉發失敗**"
+        
+        # 獲取目標聊天室名稱
+        dest_chat_name = "未知目標"
+        if node.upload_telegram_chat_id:
+            try:
+                # 這裡可以嘗試獲取目標聊天室的名稱，但為了避免複雜性，暫時使用 ID
+                dest_chat_name = str(node.upload_telegram_chat_id)
+            except Exception:
+                dest_chat_name = str(node.upload_telegram_chat_id)
+        
+        message = f"""
+{status_emoji} {status_text}
+
+📁 **來源聊天室:** `{chat_name}`
+📤 **目標聊天室:** `{dest_chat_name}`
+🆔 **任務 ID:** `{node.task_id}`
+
+📊 **轉發統計:**
+├─ 📁 **總計:** {node.total_forward_task}
+├─ ✅ **成功:** {node.success_forward_task}
+├─ ❌ **失敗:** {node.failed_forward_task}
+├─ ⏩ **跳過:** {node.skip_forward_task}
+└─ 📈 **成功率:** {success_rate:.1f}%
+"""
+        
+        if node.success_download_task > 0:
+            message += f"\n📥 **下載統計:** {node.success_download_task}/{node.total_download_task}\n"
+            message += f"💾 **總下載量:** {format_byte(node.total_download_byte)}\n"
+        
+        return message.strip()
+
+    def _generate_generic_completion_message(self, node: TaskNode, chat_name: str) -> str:
+        """生成通用完成通知訊息"""
+        return f"""
+✅ **任務完成**
+
+📁 **聊天室:** `{chat_name}`
+🆔 **任務 ID:** `{node.task_id}`
+📋 **任務類型:** {node.task_type.name}
+
+任務已成功完成。
+"""
+
     async def update_reply_message(self):
         """Update reply message"""
         while self.is_running:
+            task_count = len(self.task_node)
+            if task_count > 0:
+                logger.debug(f"Bot checking {task_count} TaskNodes")
+
             for key, value in self.task_node.copy().items():
                 if value.is_running:
-                    await report_bot_status(self.bot, value)
+                    logger.debug(f"Reporting status for TaskNode {key} (is_running={value.is_running})")
+                    await report_bot_status(self.bot, value, immediate_reply=True)
 
             for key, value in self.task_node.copy().items():
                 if value.is_running and value.is_finish():
+                    logger.info(f"TaskNode {key} finished, sending completion notification")
+                    await self.send_task_completion_notification(value)
                     self.remove_task_node(key)
             await asyncio.sleep(3)
 
@@ -340,6 +477,10 @@ class DownloadBot:
         
 
         self.client.add_handler(MessageHandler(listen_forward_msg))
+
+        # 將 bot 實例賦值給 app，以支持 TaskNode 通知系統
+        self.app.download_bot = self
+        logger.info("Download bot instance assigned to app")
 
         # 只向管理員發送初始化訊息（版本資訊等）
         try:
