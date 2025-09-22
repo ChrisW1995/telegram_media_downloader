@@ -1,0 +1,3694 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message Downloader - 訊息下載器</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/modern.css') }}" rel="stylesheet">
+    <style>
+        /* Apple-inspired Design with Liquid Glass */
+        body {
+            background:
+                /* Apple-style subtle orbs */
+                radial-gradient(ellipse 400px 200px at 20% 30%, rgba(135, 206, 235, 0.3) 0%, transparent 50%),
+                radial-gradient(ellipse 350px 180px at 80% 20%, rgba(173, 216, 230, 0.25) 0%, transparent 45%),
+                radial-gradient(ellipse 300px 150px at 50% 80%, rgba(176, 224, 230, 0.2) 0%, transparent 40%),
+                /* Base Apple gradient */
+                linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+            font-weight: 400;
+            letter-spacing: -0.005em;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            background-attachment: fixed;
+        }
+        
+        
+        /* Apple-style smooth animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        .messages-container {
+            animation: controlCenterFadeIn 1.2s cubic-bezier(0.23, 1, 0.32, 1) 0.4s both;
+        }
+        
+        .action-buttons {
+            animation: controlCenterFadeIn 1.4s cubic-bezier(0.23, 1, 0.32, 1) 0.6s both;
+        }
+        
+        /* Add floating orb animation to background */
+        body::before {
+            animation: floatingOrbs 25s ease-in-out infinite;
+        }
+        
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: env(safe-area-inset-top, 20px) 16px env(safe-area-inset-bottom, 20px) 16px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* Chat App Layout - 全寬布局 */
+        .chat-app-layout {
+            display: none; /* 預設隱藏，只在顯示訊息時出現 */
+            flex: 1;
+            flex-direction: column;
+            min-height: calc(100vh - 120px);
+        }
+
+        .chat-app-layout.active {
+            display: flex;
+        }
+
+        /* 訊息顯示區域 - 全寬 */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 120px);
+            max-height: calc(100vh - 120px);
+            overflow: hidden;
+        }
+        
+        /* 緊湊頂部工具列 Liquid Glass 效果 */
+        .compact-toolbar {
+            background:
+                linear-gradient(135deg,
+                    var(--theme-bg-primary) 0%,
+                    var(--theme-bg-secondary) 50%,
+                    var(--theme-bg-tertiary) 100%);
+            backdrop-filter: blur(50px) saturate(200%) brightness(1.1);
+            border: 0.5px solid var(--theme-border);
+            border-radius: 16px;
+            padding: 12px 20px;
+            margin-bottom: 16px;
+            box-shadow:
+                0 4px 20px var(--theme-shadow-light),
+                0 1px 4px var(--theme-shadow-light),
+                inset 0 1px 0 var(--theme-inset-light);
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 48px;
+        }
+
+        .toolbar-left, .toolbar-center, .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toolbar-center {
+            flex: 1;
+            justify-content: center;
+        }
+
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--theme-text-primary);
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .current-group-indicator {
+            background: rgba(0, 122, 255, 0.1);
+            border: 0.5px solid rgba(0, 122, 255, 0.2);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--apple-blue);
+        }
+        
+        /* 主題變數系統 */
+        :root {
+            /* Light Theme (Default) */
+            --theme-bg-primary: rgba(255, 255, 255, 0.25);
+            --theme-bg-secondary: rgba(255, 255, 255, 0.2);
+            --theme-bg-tertiary: rgba(255, 255, 255, 0.15);
+            --theme-border: rgba(255, 255, 255, 0.4);
+            --theme-text-primary: rgba(0, 0, 0, 0.85);
+            --theme-text-secondary: rgba(60, 60, 67, 0.6);
+            --theme-text-tertiary: rgba(60, 60, 67, 0.3);
+            --theme-shadow: rgba(0, 0, 0, 0.1);
+            --theme-shadow-light: rgba(0, 0, 0, 0.05);
+            --theme-inset-light: rgba(255, 255, 255, 0.5);
+
+            /* Sidebar Light */
+            --sidebar-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.25) 100%);
+            --sidebar-border: rgba(255, 255, 255, 0.4);
+            --sidebar-title: rgba(0, 0, 0, 0.7);
+            --sidebar-item-bg: rgba(0, 0, 0, 0.05);
+            --sidebar-item-border: rgba(0, 0, 0, 0.08);
+            --sidebar-item-text: rgba(0, 0, 0, 0.85);
+            --sidebar-item-hover-bg: rgba(0, 0, 0, 0.1);
+            --sidebar-search-bg: rgba(0, 0, 0, 0.1);
+            --sidebar-search-border: rgba(0, 0, 0, 0.2);
+            --sidebar-search-text: rgba(0, 0, 0, 0.85);
+            --sidebar-scrollbar: rgba(0, 0, 0, 0.2);
+
+            /* Apple Colors */
+            --apple-blue: #007AFF;
+            --apple-green: #34C759;
+            --apple-orange: #FF9500;
+            --apple-red: #FF3B30;
+            --apple-purple: #AF52DE;
+        }
+
+        /* Dark Theme */
+        [data-theme="dark"] {
+            --theme-bg-primary: rgba(28, 28, 30, 0.85);
+            --theme-bg-secondary: rgba(28, 28, 30, 0.8);
+            --theme-bg-tertiary: rgba(28, 28, 30, 0.75);
+            --theme-border: rgba(255, 255, 255, 0.1);
+            --theme-text-primary: rgba(255, 255, 255, 0.9);
+            --theme-text-secondary: rgba(255, 255, 255, 0.6);
+            --theme-text-tertiary: rgba(255, 255, 255, 0.3);
+            --theme-shadow: rgba(0, 0, 0, 0.3);
+            --theme-shadow-light: rgba(0, 0, 0, 0.15);
+            --theme-inset-light: rgba(255, 255, 255, 0.05);
+
+            /* Sidebar Dark */
+            --sidebar-bg: linear-gradient(135deg, rgba(28, 28, 30, 0.88) 0%, rgba(28, 28, 30, 0.85) 50%, rgba(28, 28, 30, 0.87) 100%);
+            --sidebar-border: rgba(255, 255, 255, 0.1);
+            --sidebar-title: rgba(255, 255, 255, 0.8);
+            --sidebar-item-bg: rgba(255, 255, 255, 0.05);
+            --sidebar-item-border: rgba(255, 255, 255, 0.08);
+            --sidebar-item-text: rgba(255, 255, 255, 0.9);
+            --sidebar-item-hover-bg: rgba(255, 255, 255, 0.1);
+            --sidebar-search-bg: rgba(255, 255, 255, 0.1);
+            --sidebar-search-border: rgba(255, 255, 255, 0.2);
+            --sidebar-search-text: rgba(255, 255, 255, 0.9);
+            --sidebar-scrollbar: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 相容性別名 */
+        :root {
+            --apple-label-primary: var(--theme-text-primary);
+            --apple-label-secondary: var(--theme-text-secondary);
+            --apple-label-tertiary: var(--theme-text-tertiary);
+            --apple-label-quaternary: var(--theme-text-tertiary);
+            --apple-link: var(--apple-blue);
+        }
+
+        /* 登入狀態指示器樣式 */
+        .status-success, .status-loading, .status-error {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: rgba(52, 199, 89, 0.1);
+            color: var(--apple-green);
+        }
+
+        .status-loading {
+            background: rgba(0, 122, 255, 0.1);
+            color: var(--apple-blue);
+        }
+
+        .status-error {
+            background: rgba(255, 59, 48, 0.1);
+            color: var(--apple-red);
+        }
+
+        .btn-logout {
+            background: none;
+            border: none;
+            color: inherit;
+            padding: 2px 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* 主要應用佈局 - 左右分割 */
+        .main-app-layout {
+            display: flex;
+            gap: 16px;
+            height: calc(100vh - 120px);
+            min-height: 600px;
+        }
+
+        /* 左側群組邊欄 - 主題化液體玻璃風格 */
+        .group-sidebar {
+            width: 280px;
+            min-width: 280px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(40px) saturate(180%) brightness(1.05);
+            border: 0.5px solid var(--sidebar-border);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow:
+                0 8px 32px var(--theme-shadow),
+                0 2px 8px var(--theme-shadow-light),
+                inset 0 1px 0 var(--theme-inset-light);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-section {
+            margin-bottom: 20px;
+        }
+
+        .sidebar-title {
+            color: var(--sidebar-title);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* 搜尋框樣式 */
+        .search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 10px;
+            color: var(--theme-text-tertiary);
+            font-size: 12px;
+        }
+
+        .search-box input {
+            width: 100%;
+            background: var(--sidebar-search-bg);
+            border: 0.5px solid var(--sidebar-search-border);
+            border-radius: 8px;
+            padding: 8px 12px 8px 32px;
+            color: var(--sidebar-search-text);
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-box input::placeholder {
+            color: var(--theme-text-tertiary);
+        }
+
+        .search-box input:focus {
+            background: var(--sidebar-item-hover-bg);
+            border-color: var(--apple-blue);
+        }
+        
+        /* 群組列表樣式 */
+        .favorite-groups, .all-groups {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .group-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: var(--sidebar-item-bg);
+            border: 0.5px solid var(--sidebar-item-border);
+            border-radius: 8px;
+            color: var(--sidebar-item-text);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .group-item:hover {
+            background: var(--sidebar-item-hover-bg);
+            border-color: var(--theme-border);
+        }
+
+        .group-item.active {
+            background: rgba(0, 122, 255, 0.2);
+            border-color: var(--apple-blue);
+            color: var(--apple-blue);
+        }
+
+        .group-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--sidebar-item-bg);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .group-pin-btn {
+            position: absolute;
+            right: 8px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            background: none;
+            border: none;
+            color: var(--theme-text-tertiary);
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 4px;
+        }
+
+        .group-item:hover .group-pin-btn {
+            opacity: 1;
+        }
+
+        .group-pin-btn:hover {
+            background: var(--sidebar-item-hover-bg);
+            color: var(--apple-blue);
+        }
+
+        .group-pin-btn.pinned {
+            opacity: 1;
+            color: var(--apple-blue);
+        }
+
+        .group-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .group-badge {
+            background: rgba(0, 122, 255, 0.8);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+        }
+
+        /* 右側主內容區 */
+        .main-content {
+            flex: 1;
+            background:
+                linear-gradient(135deg,
+                    var(--theme-bg-primary) 0%,
+                    var(--theme-bg-secondary) 50%,
+                    var(--theme-bg-tertiary) 100%);
+            backdrop-filter: blur(30px) saturate(150%) brightness(1.1);
+            border: 0.5px solid var(--theme-border);
+            border-radius: 12px;
+            box-shadow:
+                0 8px 32px var(--theme-shadow),
+                0 2px 8px var(--theme-shadow-light),
+                inset 0 1px 0 var(--theme-inset-light);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 訊息內容區域 */
+        .messages-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Apple-style Liquid Glass Messages Container */
+        .messages-container {
+            flex: 1;
+            background: transparent;
+            padding: 16px 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .messages-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+            transition: background 0.2s ease;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* 覆蓋層樣式 */
+        .content-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .overlay-content {
+            text-align: center;
+            color: var(--theme-text-secondary);
+        }
+
+        .overlay-content h5 {
+            color: var(--theme-text-primary);
+            margin-bottom: 8px;
+        }
+
+        /* 認證覆蓋層 */
+        .auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-overlay .group-selector {
+            background:
+                linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.3) 0%,
+                    rgba(255, 255, 255, 0.2) 50%,
+                    rgba(255, 255, 255, 0.25) 100%);
+            backdrop-filter: blur(40px) saturate(180%) brightness(1.05);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
+            padding: 28px;
+            margin: 0;
+            max-width: 500px;
+            width: 90%;
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.3),
+                0 8px 32px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Chat Message Bubbles - iOS 26 Control Center Cards */
+        .chat-bubble {
+            max-width: 90%;
+            margin: 12px auto;
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.16) 0%,
+                    rgba(255, 255, 255, 0.08) 40%,
+                    rgba(255, 255, 255, 0.12) 100%);
+            backdrop-filter: blur(40px) saturate(190%) brightness(1.05);
+            border: 0.5px solid rgba(255, 255, 255, 0.22);
+            border-radius: 26px;
+            padding: 18px 22px;
+            box-shadow: 
+                0 6px 24px rgba(0, 0, 0, 0.25),
+                0 1px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+            position: relative;
+            transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+            cursor: pointer;
+            transform-origin: center;
+        }
+        
+        .chat-bubble:hover {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.22) 0%,
+                    rgba(255, 255, 255, 0.12) 40%,
+                    rgba(255, 255, 255, 0.18) 100%);
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 
+                0 10px 35px rgba(0, 0, 0, 0.3),
+                0 2px 8px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.25),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+        }
+        
+        .chat-bubble.selected {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 214, 102, 0.2) 0%,
+                    rgba(255, 193, 7, 0.15) 40%,
+                    rgba(255, 214, 102, 0.2) 100%);
+            border-color: rgba(255, 193, 7, 0.4);
+            box-shadow: 
+                0 6px 24px rgba(255, 193, 7, 0.15),
+                0 2px 8px rgba(255, 214, 102, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                inset 0 -1px 0 rgba(255, 193, 7, 0.08);
+            transform: scale(1.02);
+            backdrop-filter: blur(50px) saturate(200%) brightness(1.1);
+        }
+        
+        /* 縮圖樣式 */
+        .media-thumbnail {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .media-thumbnail:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .media-thumbnail img {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        .media-thumbnail .loading-placeholder {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 24px;
+        }
+
+        /* 更新媒體占位符樣式來適應縮圖 */
+        .media-placeholder {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 16px;
+            margin-top: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .media-placeholder.with-thumbnail {
+            padding: 8px;
+        }
+
+        .media-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-bubble.selected .message-checkbox {
+            opacity: 1;
+            transform: scale(1.1);
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 193, 7, 0.9) 0%,
+                    rgba(255, 214, 102, 0.9) 100%);
+            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 
+                0 4px 12px rgba(255, 193, 7, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        
+        .chat-bubble.selected::after {
+            background: 
+                radial-gradient(ellipse 60% 40% at 25% 25%, rgba(255, 193, 7, 0.12) 0%, transparent 40%),
+                radial-gradient(ellipse 40% 60% at 75% 15%, rgba(255, 255, 255, 0.15) 0%, transparent 35%),
+                radial-gradient(ellipse 30% 30% at 85% 85%, rgba(255, 214, 102, 0.1) 0%, transparent 30%);
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .message-checkbox {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 28px;
+            height: 28px;
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.95) 0%,
+                    rgba(255, 255, 255, 0.85) 100%);
+            backdrop-filter: blur(30px) saturate(180%);
+            border: 0.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 4px 16px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            transform: scale(0.8);
+        }
+        
+        .chat-bubble:hover .message-checkbox {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .message-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+            appearance: none;
+            background: transparent;
+            border: 2px solid rgba(255, 193, 7, 0.6);
+            border-radius: 6px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .message-checkbox input[type="checkbox"]:checked {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.9) 0%, rgba(255, 214, 102, 0.9) 100%);
+            border-color: rgba(255, 193, 7, 0.9);
+            box-shadow: 
+                0 0 0 2px rgba(255, 255, 255, 0.3),
+                0 2px 6px rgba(255, 193, 7, 0.2);
+        }
+        
+        .message-checkbox input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: -1px;
+            left: 1px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        .message-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .message-id {
+            color: var(--apple-label-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+
+        .message-date {
+            color: var(--apple-label-tertiary);
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .media-badge {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            color: rgba(0, 0, 0, 0.9);
+            font-size: 10px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .media-badge.video {
+            background: rgba(255, 59, 48, 0.9);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .media-badge.photo {
+            background: rgba(52, 199, 89, 0.9);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .media-badge.audio {
+            background: rgba(255, 149, 0, 0.9);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .media-badge.document {
+            background: rgba(88, 86, 214, 0.9);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .message-content {
+            margin-top: 8px;
+        }
+
+        .message-content * {
+            color: var(--apple-label-secondary) !important;
+        }
+
+        .message-text {
+            color: var(--apple-label-primary);
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            word-wrap: break-word;
+        }
+        
+        .media-placeholder {
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .media-placeholder:hover {
+            background: rgba(0, 0, 0, 0.15);
+        }
+        
+        .media-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--apple-label-secondary);
+            font-size: 18px;
+        }
+
+        .media-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .media-filename {
+            color: var(--apple-label-primary);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 2px;
+            word-wrap: break-word;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .media-size {
+            color: var(--apple-label-tertiary);
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .action-buttons {
+            /* 移除固定定位，改為在側邊欄內 */
+            position: relative;
+            bottom: auto;
+            left: auto;
+            transform: none;
+            max-width: none;
+            width: 100%;
+            z-index: auto;
+            padding: 16px 20px;
+            background:
+                linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.16) 0%,
+                    rgba(255, 255, 255, 0.08) 50%,
+                    rgba(255, 255, 255, 0.12) 100%);
+            backdrop-filter: blur(60px) saturate(200%) brightness(1.1);
+            border: 0.5px solid rgba(255, 255, 255, 0.25);
+            border-radius: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow:
+                0 12px 50px rgba(0, 0, 0, 0.4),
+                0 4px 16px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        
+        .action-buttons.hidden {
+            transform: translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Animated Chat Controls - Fixed Bottom Center */
+        .chat-navigation {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .chat-menu-toggle {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(30px) saturate(180%) brightness(1.1);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1),
+                        0 6px 15px rgba(0, 0, 0, 0.06),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+            border: 0.5px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .chat-menu-toggle:hover {
+            transform: scale(1.02);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15),
+                        0 8px 20px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+        }
+
+        .chat-menu-toggle::before {
+            content: '⚙';
+            position: absolute;
+            font-size: 1.8em;
+            font-weight: 300;
+            color: rgb(29, 29, 31);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .chat-menu-toggle.active::before {
+            transform: rotate(180deg);
+            content: '✕';
+            font-size: 1.5em;
+        }
+
+        .chat-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(35px) saturate(200%) brightness(1.15);
+            border-radius: 15px;
+            z-index: -1;
+            transition: transform 0.4s, width 0.4s, height 0.4s, border-radius 0.4s;
+            transition-delay: 0.8s, 0.4s, 0.4s, 0.4s;
+            transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+            border: 0.5px solid rgba(255, 255, 255, 0.25);
+            overflow: hidden;
+        }
+
+        .chat-menu-toggle.active ~ .chat-menu {
+            width: 320px;
+            height: 90px;
+            z-index: 1;
+            transform: translate(-50%, calc(-50% - 110px));
+            transition-delay: 0s, 0.5s, 0.5s;
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15),
+                        0 10px 25px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-menu::before {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(35px) saturate(200%) brightness(1.15);
+            left: calc(50% - 6px);
+            bottom: 3px;
+            transform: rotate(45deg);
+            border-radius: 2px;
+            transition: 0.4s;
+            border: 0.5px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .chat-menu-toggle.active ~ .chat-menu::before {
+            transition-delay: 0.4s;
+            bottom: -6px;
+            transform: rotate(45deg) translateY(1px);
+        }
+
+        .selection-info {
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(0deg, rgb(122, 143, 164), rgb(29, 29, 31) 60%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            white-space: nowrap;
+            letter-spacing: -0.01em;
+        }
+
+        .chat-menu-toggle.active ~ .chat-menu .selection-info {
+            opacity: 1;
+            visibility: visible;
+            transition-delay: 0.8s;
+        }
+
+        .chat-menu ul {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 90px;
+            gap: 20px;
+            padding: 10px 15px;
+            margin: 0;
+            list-style: none;
+            overflow: hidden;
+        }
+
+        .chat-menu ul li {
+            list-style: none;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-30px);
+            transition: all 0.25s ease;
+            transition-delay: calc(0s + var(--i));
+        }
+
+        .chat-menu-toggle.active ~ .chat-menu ul li {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0px);
+            transition-delay: calc(0.75s + var(--i));
+        }
+
+        .menu-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chat-menu ul li button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(25px) saturate(150%) brightness(1.05);
+            border: 0.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 18px;
+            font-size: 18px;
+            color: rgb(29, 29, 31);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            padding: 0;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.02);
+        }
+
+        .menu-label {
+            font-size: 11px;
+            color: rgb(110, 110, 115);
+            font-weight: 500;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+            text-align: center;
+            letter-spacing: -0.01em;
+        }
+
+        .chat-menu ul li button:hover {
+            background: rgba(255, 255, 255, 0.6);
+            transform: scale(1.02);
+            color: rgb(0, 0, 0);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+        }
+
+        .chat-menu-toggle.active ~ .chat-menu ul li .menu-label {
+            opacity: 1;
+            visibility: visible;
+            transition-delay: calc(0.8s + var(--i));
+        }
+
+        /* 下載按鈕特殊樣式 */
+        #fast-test-download-btn:not(:disabled) {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.4) 100%);
+            color: rgb(0, 0, 0);
+            font-weight: 600;
+        }
+
+        #fast-test-download-btn:not(:disabled) + .menu-label {
+            background: linear-gradient(0deg, rgb(122, 143, 164), rgb(29, 29, 31) 60%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 600;
+        }
+
+        .chat-menu ul li button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(128, 128, 128, 0.2);
+            color: rgb(110, 110, 115);
+        }
+
+        .chat-menu ul li button:disabled:hover {
+            transform: none;
+            background: rgba(128, 128, 128, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+
+        .chat-menu ul li button:disabled + .menu-label {
+            color: rgb(110, 110, 115);
+            opacity: 0.6;
+        }
+
+        /* Responsive design for chat controls */
+        @media (max-width: 768px) {
+            .chat-navigation {
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            .chat-menu-toggle {
+                width: 55px;
+                height: 55px;
+            }
+
+            .chat-menu-toggle::before {
+                font-size: 1.6em;
+            }
+
+            .chat-menu-toggle.active ~ .chat-menu {
+                width: 280px;
+                height: 80px;
+                transform: translate(-50%, calc(-50% - 95px));
+                border-radius: 25px;
+            }
+
+            .chat-menu ul {
+                height: 80px;
+                gap: 15px;
+                padding: 8px 12px;
+            }
+
+            .chat-menu ul li button {
+                width: 42px;
+                height: 42px;
+                font-size: 16px;
+                border-radius: 14px;
+            }
+
+            .menu-label {
+                font-size: 10px;
+            }
+        }
+        
+        /* Apple-style Button Styles */
+        .btn-primary {
+            background: linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-weight: 600;
+            font-size: 17px;
+            color: #FFFFFF;
+            letter-spacing: -0.01em;
+            transition: all 0.3s ease;
+            box-shadow:
+                0 4px 16px rgba(0, 122, 255, 0.3),
+                0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0056CC 0%, #4A9EE7 100%);
+            transform: translateY(-2px);
+            box-shadow:
+                0 6px 20px rgba(0, 122, 255, 0.4),
+                0 4px 8px rgba(0, 0, 0, 0.15);
+            color: #FFFFFF;
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0) scale(0.96);
+            box-shadow:
+                0 2px 8px rgba(0, 122, 255, 0.3),
+                0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-weight: 600;
+            font-size: 17px;
+            color: #007AFF;
+            letter-spacing: -0.01em;
+            transition: all 0.3s ease;
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-2px);
+            box-shadow:
+                0 4px 12px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            color: #0056CC;
+        }
+        
+        .btn-secondary:active {
+            transform: translateY(0) scale(0.96);
+            box-shadow:
+                0 1px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+        
+        /* Apple-style Form Controls */
+        .form-control, .form-select {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px) saturate(120%);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 16px 18px;
+            color: var(--apple-label-primary);
+            font-size: 17px;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: var(--apple-blue);
+            box-shadow:
+                0 0 0 3px rgba(0, 122, 255, 0.15),
+                0 4px 20px rgba(0, 122, 255, 0.2);
+            color: var(--apple-label-primary);
+            outline: none;
+        }
+
+        .form-control::placeholder {
+            color: var(--apple-label-tertiary);
+            font-weight: 400;
+        }
+
+        /* Apple-style Select Optgroups */
+        .form-select optgroup {
+            background: rgba(248, 249, 250, 0.95);
+            color: var(--apple-label-secondary);
+            font-weight: 600;
+            font-size: 14px;
+            padding: 8px 12px;
+            text-transform: none;
+            letter-spacing: -0.01em;
+        }
+
+        .form-select option {
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--apple-label-primary);
+            font-weight: 400;
+            padding: 10px 16px;
+        }
+
+        .form-select optgroup option {
+            padding-left: 24px;
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        .form-select option:hover,
+        .form-select option:checked {
+            background: var(--apple-blue);
+            color: white;
+        }
+        
+        /* Apple-style Typography Hierarchy */
+        .group-selector h5 {
+            color: var(--apple-label-primary) !important;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            font-size: 20px;
+        }
+
+        .message-text {
+            color: var(--apple-label-primary);
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            word-wrap: break-word;
+        }
+
+        .text-muted {
+            color: var(--apple-label-secondary) !important;
+        }
+        
+        /* Loading and Alert Styles */
+        .alert {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            color: rgba(0, 0, 0, 0.9);
+        }
+        
+        .alert-success {
+            background: rgba(52, 199, 89, 0.9);
+            border-color: rgba(52, 199, 89, 0.3);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .alert-warning {
+            background: rgba(255, 149, 0, 0.9);
+            border-color: rgba(255, 149, 0, 0.3);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .alert-danger {
+            background: rgba(255, 59, 48, 0.9);
+            border-color: rgba(255, 59, 48, 0.3);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        /* 即時通知系統 */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .notification {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.95) 0%,
+                    rgba(255, 255, 255, 0.85) 50%,
+                    rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(40px) saturate(200%);
+            border: 0.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                0 2px 8px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateX(120%);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .notification::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--notification-color, #007AFF);
+            border-radius: 2px 0 0 2px;
+        }
+        
+        .notification.success {
+            --notification-color: #34C759;
+        }
+        
+        .notification.info {
+            --notification-color: #007AFF;
+        }
+        
+        .notification.warning {
+            --notification-color: #FF9500;
+        }
+        
+        .notification.error {
+            --notification-color: #FF3B30;
+        }
+        
+        .notification-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        
+        .notification-title {
+            font-weight: 700;
+            font-size: 14px;
+            color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .notification-close {
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+            color: rgba(0, 0, 0, 0.7);
+            font-size: 12px;
+        }
+        
+        .notification-close:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .notification-body {
+            color: rgba(0, 0, 0, 0.8);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .notification-progress {
+            margin-top: 8px;
+        }
+        
+        .notification-progress-bar {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            height: 6px;
+            overflow: hidden;
+        }
+        
+        .notification-progress-fill {
+            background: var(--notification-color, #007AFF);
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .notification-progress-text {
+            font-size: 11px;
+            color: rgba(0, 0, 0, 0.6);
+            margin-top: 4px;
+            text-align: right;
+        }
+        
+        /* Selection Counter */
+        .selection-counter {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(0, 122, 255, 0.25) 0%,
+                    rgba(88, 86, 214, 0.2) 100%);
+            backdrop-filter: blur(30px) saturate(180%);
+            border: 0.5px solid rgba(0, 122, 255, 0.4);
+            border-radius: 16px;
+            padding: 10px 16px;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 13px;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            box-shadow: 
+                0 2px 8px rgba(0, 122, 255, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        
+        /* 響應式設計 - 平板 */
+        @media (max-width: 1024px) {
+            .group-sidebar {
+                width: 240px;
+                min-width: 240px;
+            }
+        }
+
+        /* 響應式設計 - 手機橫向 */
+        @media (max-width: 768px) {
+            .main-app-layout {
+                flex-direction: column;
+                height: auto;
+                min-height: calc(100vh - 100px);
+            }
+
+            .group-sidebar {
+                width: 100%;
+                height: 200px;
+                min-width: auto;
+                margin-bottom: 12px;
+                overflow-y: auto;
+            }
+
+            .main-content {
+                flex: 1;
+                min-height: 60vh;
+            }
+
+            .container {
+                max-width: 100%;
+                padding: env(safe-area-inset-top, 16px) 12px env(safe-area-inset-bottom, 16px) 12px;
+            }
+
+            .compact-toolbar {
+                height: 40px;
+                padding: 8px 16px;
+            }
+
+            .app-title {
+                font-size: 14px;
+            }
+
+            .current-group-indicator {
+                font-size: 12px;
+                padding: 2px 8px;
+            }
+        }
+        
+        /* 響應式設計 - 手機直向 */
+        @media (max-width: 480px) {
+            .main-app-layout {
+                gap: 8px;
+            }
+
+            .group-sidebar {
+                height: 160px;
+                padding: 12px;
+            }
+
+            .sidebar-title {
+                font-size: 11px;
+            }
+
+            .group-item {
+                padding: 6px 8px;
+                font-size: 13px;
+            }
+
+            .group-icon {
+                width: 20px;
+                height: 20px;
+                font-size: 10px;
+            }
+
+            .search-box input {
+                font-size: 12px;
+                padding: 6px 10px 6px 28px;
+            }
+
+            .container {
+                padding: env(safe-area-inset-top, 12px) 8px env(safe-area-inset-bottom, 12px) 8px;
+                max-width: 100%;
+            }
+
+            .chat-bubble {
+                max-width: 95%;
+                margin: 6px auto;
+                padding: 12px 16px;
+            }
+
+            .compact-toolbar {
+                height: 36px;
+                padding: 6px 12px;
+                margin-bottom: 8px;
+            }
+
+            .app-title {
+                font-size: 13px;
+            }
+
+            .current-group-indicator {
+                font-size: 11px;
+                padding: 2px 6px;
+            }
+
+            .btn-primary, .btn-secondary {
+                padding: 10px 20px;
+                font-size: 13px;
+                width: 100%;
+                margin-bottom: 8px;
+            }
+            
+        }
+
+        /* 動畫效果 */
+        .group-item {
+            transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .group-item:hover {
+            transform: translateX(2px);
+        }
+
+        .main-content {
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .messages-content {
+            animation: fadeInUp 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 滾動條美化 */
+        .group-sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .group-sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .group-sidebar::-webkit-scrollbar-thumb {
+            background: var(--sidebar-scrollbar);
+            border-radius: 2px;
+        }
+
+        .group-sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--theme-text-tertiary);
+        }
+
+        /* 主題切換按鈕 */
+        .theme-toggle {
+            background: rgba(0, 122, 255, 0.1);
+            border: 0.5px solid rgba(0, 122, 255, 0.2);
+            border-radius: 12px;
+            padding: 6px 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--apple-blue);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(0, 122, 255, 0.15);
+            border-color: rgba(0, 122, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .theme-icon {
+            font-size: 14px;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle.switching .theme-icon {
+            transform: rotate(180deg);
+        }
+        
+        /* Desktop optimization */
+        @media (min-width: 1200px) {
+            .container {
+                max-width: 1000px;
+            }
+        }
+        
+        /* Animations and Micro-interactions */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .chat-bubble {
+            animation: controlCenterFadeIn 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            animation-fill-mode: both;
+        }
+        
+        /* Staggered animation for chat bubbles */
+        .chat-bubble:nth-child(1) { animation-delay: 0s; }
+        .chat-bubble:nth-child(2) { animation-delay: 0.1s; }
+        .chat-bubble:nth-child(3) { animation-delay: 0.2s; }
+        .chat-bubble:nth-child(4) { animation-delay: 0.3s; }
+        .chat-bubble:nth-child(5) { animation-delay: 0.4s; }
+        .chat-bubble:nth-child(n+6) { animation-delay: 0.5s; }
+        
+        .loading-spinner {
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .loading-spinner .spinner-border {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        /* Glass morphism enhanced effects */
+        .chat-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                /* iOS authentic light reflections */
+                radial-gradient(ellipse 60% 40% at 25% 25%, rgba(255, 255, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(ellipse 40% 60% at 75% 15%, rgba(255, 255, 255, 0.08) 0%, transparent 35%),
+                radial-gradient(ellipse 30% 30% at 85% 85%, rgba(0, 122, 255, 0.08) 0%, transparent 30%);
+            pointer-events: none;
+            border-radius: 28px;
+            mix-blend-mode: overlay;
+        }
+        
+        .group-selector::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse 50% 30% at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 40%),
+                radial-gradient(ellipse 30% 50% at 80% 20%, rgba(255, 255, 255, 0.06) 0%, transparent 35%);
+            pointer-events: none;
+            border-radius: 24px;
+            mix-blend-mode: overlay;
+        }
+        
+        /* Enhanced glass morphism for chat bubbles */
+        .chat-bubble::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse 40% 25% at 30% 20%, rgba(255, 255, 255, 0.12) 0%, transparent 35%),
+                radial-gradient(ellipse 25% 40% at 80% 30%, rgba(255, 255, 255, 0.06) 0%, transparent 30%);
+            pointer-events: none;
+            border-radius: 26px;
+            mix-blend-mode: overlay;
+        }
+        
+        .loading-spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1050;
+            text-align: center;
+            padding: 2rem;
+            background: rgba(25, 25, 35, 0.95);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .alert {
+            border-radius: 15px;
+            border: none;
+            backdrop-filter: blur(10px);
+        }
+        
+        .nav-link {
+            color: #495057 !important;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 緊湊頂部工具列 -->
+        <div class="compact-toolbar">
+            <div class="toolbar-left">
+                <div class="app-title" id="app-title">
+                    <i class="fas fa-comments"></i>
+                    <span>快速媒體下載</span>
+                </div>
+            </div>
+            <div class="toolbar-center">
+                <div class="current-group-indicator" id="current-group-indicator" style="display: none;">
+                    <span id="current-group-name">選擇群組</span>
+                </div>
+            </div>
+            <div class="toolbar-right">
+                <!-- Theme Toggle Button -->
+                <button class="theme-toggle" id="theme-toggle" title="切換主題">
+                    <i class="theme-icon fas fa-sun" id="theme-icon"></i>
+                    <span id="theme-text">Light</span>
+                </button>
+
+                <!-- Login Status Indicator -->
+                <div id="login-status" style="display: none;">
+                    <div id="login-status-success" class="status-success" style="display: none;">
+                        <i class="fas fa-user-check"></i>
+                        <span id="login-user-info">已登入</span>
+                        <button id="header-logout-btn" class="btn-logout">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                    <div id="login-status-loading" class="status-loading" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>檢查中...</span>
+                    </div>
+                    <div id="login-status-error" class="status-error" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>需要認證</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Authentication Section -->
+        <div id="auth-section" class="auth-overlay" style="display: none;">
+            <h5 class="mb-3" style="color: rgba(255, 255, 255, 0.9); font-size: 16px; font-weight: 600;">
+                <i class="fas fa-user-lock" style="color: rgba(0, 122, 255, 0.8);"></i>
+                Telegram 認證
+            </h5>
+                    <div id="auth-phone-step">
+                        <p class="text-muted">請輸入您的電話號碼以開始認證</p>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="tel" id="phone-number" class="form-control" placeholder="+886912345678" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button id="send-code-btn" class="btn btn-primary w-100">
+                                    <i class="fas fa-paper-plane"></i>
+                                    發送驗證碼
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="auth-code-step" style="display: none;">
+                        <p class="text-muted">請輸入收到的驗證碼</p>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="text" id="verification-code" class="form-control" placeholder="12345" maxlength="5" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button id="verify-code-btn" class="btn btn-primary w-100">
+                                    <i class="fas fa-check"></i>
+                                    驗證
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="auth-password-step" style="display: none;">
+                        <p class="text-muted">請輸入兩步驗證密碼</p>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="password" id="two-factor-password" class="form-control" placeholder="密碼" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button id="verify-password-btn" class="btn btn-primary w-100">
+                                    <i class="fas fa-unlock"></i>
+                                    確認
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="auth-success" style="display: none;">
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i>
+                            認證成功！歡迎，<span id="user-name"></span>
+                            <button id="logout-btn" class="btn btn-sm btn-outline-secondary float-end">
+                                <i class="fas fa-sign-out-alt"></i>
+                                登出
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+        <!-- 主要應用佈局 - 左右分割 -->
+        <div class="main-app-layout" id="main-app-layout">
+            <!-- 左側群組邊欄 -->
+            <div class="group-sidebar" id="group-sidebar">
+                <!-- 常用群組區塊 -->
+                <div class="sidebar-section">
+                    <h6 class="sidebar-title">常用群組</h6>
+                    <div id="favorite-groups" class="favorite-groups">
+                        <!-- 常用群組將動態載入 -->
+                    </div>
+                </div>
+
+                <!-- 群組搜尋 -->
+                <div class="sidebar-section">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="group-search" placeholder="搜尋群組..." />
+                    </div>
+                </div>
+
+                <!-- 所有群組列表 -->
+                <div class="sidebar-section">
+                    <h6 class="sidebar-title">所有群組</h6>
+                    <div id="all-groups" class="all-groups">
+                        <!-- 群組列表將動態載入 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側主內容區 -->
+            <div class="main-content" id="main-content">
+                <!-- 認證覆蓋層 -->
+                <div id="group-selector" class="content-overlay" style="display: none;">
+                    <div class="overlay-content">
+                        <h5>請先選擇群組</h5>
+                        <p>從左側邊欄選擇您要瀏覽的群組</p>
+                    </div>
+                </div>
+
+                <!-- 訊息內容區 -->
+                <div id="messages-content" class="messages-content" style="display: none;">
+                    <div id="messages-container" class="messages-container">
+                        <div id="messages-list">
+                            <!-- Dynamic chat bubbles will appear here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                <!-- Loading Spinner -->
+                <div id="loading-spinner" class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">載入中...</span>
+                    </div>
+                    <p class="mt-2 text-light">正在載入群組訊息...</p>
+                </div>
+
+
+        <!-- Status Alert -->
+        <div id="status-alert" class="alert alert-info" style="display: none;"></div>
+    </div>
+    
+    <!-- 即時通知容器 -->
+    <div id="notification-container" class="notification-container">
+        <!-- 動態通知會在這裡顯示 -->
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let selectedMessages = [];
+        let currentChatId = null;
+        let allMessages = [];
+        let lastMessageId = 0;
+        let isLoading = false;
+        let hasMoreMessages = true;
+        let previousLastMessageId = 0; // 記錄上一次的 lastMessageId
+        let noProgressCount = 0; // 記錄沒有進展的次數
+        const MESSAGES_PER_PAGE = 20;
+        const SCROLL_THRESHOLD = 50; // pixels from bottom to trigger auto-load
+        const MAX_NO_PROGRESS_ATTEMPTS = 3; // 最大無進展嘗試次數
+        let scrollTimeout = null;
+        let lastScrollTop = 0;
+        let userScrolled = false;
+        let preventAutoLoad = false;
+        
+        // 通知系統變數
+        let notificationCount = 0;
+        let activeNotifications = new Map();
+        let downloadNotificationId = null;
+        let progressCheckInterval = null;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+            checkAuthStatus();
+        });
+
+        function initializeEventListeners() {
+            // 初始化主題
+            initializeTheme();
+
+            // 主題切換按鈕事件
+            const themeToggle = document.getElementById('theme-toggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', toggleTheme);
+            }
+
+            // Refresh messages button - 應該載入更多訊息，不是重置
+            document.getElementById('refresh-messages-btn').addEventListener('click', function() {
+                console.log('🔄 手動重新整理 - 載入更多訊息');
+                loadMessages(false); // false = 追加模式，不重置
+            });
+
+            // Select all button
+            document.getElementById('select-all-btn').addEventListener('click', selectAllMessages);
+
+            // Clear selection button
+            document.getElementById('clear-selection-btn').addEventListener('click', clearSelection);
+
+            // Download button
+            document.getElementById('fast-test-download-btn').addEventListener('click', startDownload);
+            
+            // Header logout button
+            const headerLogoutBtn = document.getElementById('header-logout-btn');
+            if (headerLogoutBtn) {
+                headerLogoutBtn.addEventListener('click', logout);
+            }
+
+            // Chat menu toggle (animated popup)
+            const chatMenuToggle = document.querySelector('.chat-menu-toggle');
+            if (chatMenuToggle) {
+                chatMenuToggle.addEventListener('click', function() {
+                    chatMenuToggle.classList.toggle('active');
+                });
+            }
+        }
+        
+        // 新的簡化滾動監聽器
+        function setupScrollListener() {
+            const messagesContainer = document.getElementById('messages-container');
+            console.log('🔧 設置滾動監聽器', {
+                element: messagesContainer,
+                hasAttribute: messagesContainer ? messagesContainer.hasAttribute('data-scroll-listener') : false,
+                style: messagesContainer ? messagesContainer.style.display : 'null'
+            });
+            
+            if (!messagesContainer) {
+                console.error('❌ messages-container 元素不存在');
+                return;
+            }
+            
+            if (!messagesContainer.hasAttribute('data-scroll-listener')) {
+                console.log('🔧 設置新的簡化滾動檢測');
+                
+                // 容器滾動事件監聽器
+                let scrollTimer = null;
+                messagesContainer.addEventListener('scroll', function(e) {
+                    const currentScrollTop = messagesContainer.scrollTop;
+                    
+                    console.log('📜 容器滾動事件觸發', {
+                        scrollTop: currentScrollTop,
+                        scrollHeight: messagesContainer.scrollHeight,
+                        clientHeight: messagesContainer.clientHeight
+                    });
+                    
+                    // 檢測是否是用戶主動滾動（滾動位置發生變化）
+                    if (Math.abs(currentScrollTop - lastScrollTop) > 5) {
+                        userScrolled = true;
+                        console.log('👆 檢測到用戶滾動', { 
+                            from: lastScrollTop, 
+                            to: currentScrollTop,
+                            userScrolled: true
+                        });
+                    }
+                    
+                    lastScrollTop = currentScrollTop;
+                    
+                    // 防抖：延遲執行檢查
+                    if (scrollTimer) {
+                        clearTimeout(scrollTimer);
+                    }
+                    scrollTimer = setTimeout(() => {
+                        checkShouldLoadMore();
+                    }, 100); // 100ms 防抖延遲
+                });
+                
+                messagesContainer.setAttribute('data-scroll-listener', 'true');
+                console.log('✅ 滾動監聽器設置完成');
+            } else {
+                console.log('⚠️ 滾動監聽器已經存在');
+            }
+        }
+        
+        // 基於最後一個 chat-bubble 的檢測邏輯
+        function checkShouldLoadMore() {
+            // 基本條件檢查
+            if (isLoading || !hasMoreMessages) {
+                console.log('🚫 跳過檢查: isLoading=' + isLoading + ', hasMoreMessages=' + hasMoreMessages);
+                return;
+            }
+            
+            // 如果被設置為阻止自動載入，跳過
+            if (preventAutoLoad) {
+                console.log('🚫 阻止自動載入標記已設置，跳過檢查');
+                return;
+            }
+            
+            const container = document.getElementById('messages-container');
+            if (!container || container.style.display === 'none') {
+                console.log('🚫 跳過檢查: 容器不存在或隱藏');
+                return;
+            }
+            
+            // 找到最後一個 chat-bubble
+            const messagesList = document.getElementById('messages-list');
+            if (!messagesList) {
+                console.log('🚫 跳過檢查: messages-list 不存在');
+                return;
+            }
+            
+            const chatBubbles = messagesList.querySelectorAll('.chat-bubble');
+            
+            // 如果沒有訊息，允許初始載入
+            if (chatBubbles.length === 0) {
+                console.log('✅ 沒有訊息，允許初始載入');
+                loadMessages(false);
+                return;
+            }
+            
+            // 如果用戶沒有主動滾動，不觸發載入
+            if (!userScrolled) {
+                console.log('🚫 用戶尚未滾動，跳過自動載入');
+                return;
+            }
+            
+            // 獲取容器的滾動信息
+            const scrollTop = container.scrollTop;
+            const scrollHeight = container.scrollHeight;
+            const clientHeight = container.clientHeight;
+            const scrollBottom = scrollHeight - scrollTop - clientHeight;
+            
+            // 計算是否接近底部
+            const isNearBottom = scrollBottom <= SCROLL_THRESHOLD;
+            
+            console.log('🔍 滾動位置檢查:', {
+                totalBubbles: chatBubbles.length,
+                userScrolled: userScrolled,
+                scrollTop: Math.round(scrollTop),
+                scrollHeight: Math.round(scrollHeight),
+                clientHeight: Math.round(clientHeight),
+                scrollBottom: Math.round(scrollBottom),
+                threshold: SCROLL_THRESHOLD,
+                isNearBottom: isNearBottom,
+                preventAutoLoad: preventAutoLoad,
+                shouldLoad: isNearBottom && userScrolled && hasMoreMessages && !isLoading
+            });
+            
+            // 只有當用戶滾動且接近底部時才觸發加載
+            if (isNearBottom && userScrolled) {
+                console.log('✅ 用戶滾動到底部附近，觸發載入更多訊息');
+                // 重置用戶滾動標記，防止重複觸發
+                userScrolled = false;
+                // 設置阻止自動載入標記
+                preventAutoLoad = true;
+                loadMessages(false);
+            }
+        }
+        
+
+        // 群組使用統計
+        let groupStats = JSON.parse(localStorage.getItem('groupStats') || '{}');
+        let favoriteGroups = JSON.parse(localStorage.getItem('favoriteGroups') || '[]');
+
+        // 主題管理
+        let currentTheme = localStorage.getItem('theme') || 'light';
+
+        function initializeTheme() {
+            // 設置初始主題
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            updateThemeUI();
+        }
+
+        function toggleTheme() {
+            const toggle = document.getElementById('theme-toggle');
+            toggle.classList.add('switching');
+
+            // 切換主題
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            localStorage.setItem('theme', currentTheme);
+
+            // 更新 UI
+            updateThemeUI();
+
+            // 移除切換動畫類
+            setTimeout(() => {
+                toggle.classList.remove('switching');
+            }, 300);
+        }
+
+        function updateThemeUI() {
+            const themeIcon = document.getElementById('theme-icon');
+            const themeText = document.getElementById('theme-text');
+
+            if (currentTheme === 'dark') {
+                themeIcon.className = 'theme-icon fas fa-moon';
+                themeText.textContent = 'Dark';
+            } else {
+                themeIcon.className = 'theme-icon fas fa-sun';
+                themeText.textContent = 'Light';
+            }
+        }
+
+        async function loadGroups() {
+            try {
+                console.log('正在載入群組...');
+                showAlert('正在載入群組列表...', 'info');
+
+                const response = await fetch('/api/groups/list');
+                console.log('群組 API 響應狀態:', response.status);
+
+                const data = await response.json();
+                console.log('群組 API 響應數據:', data);
+
+                if (data.success) {
+                    console.log('載入群組數量:', data.groups ? data.groups.length : 0);
+
+                    if (data.groups && data.groups.length > 0) {
+                        // 保存群組數據供後續使用
+                        localStorage.setItem('allGroups', JSON.stringify(data.groups));
+
+                        // 渲染群組到側邊欄
+                        renderGroupSidebar(data.groups);
+                        setupGroupSearch(data.groups);
+                        showAlert(`成功載入 ${data.groups.length} 個群組`, 'success');
+                    } else {
+                        showAlert('沒有找到任何群組', 'info');
+                    }
+                } else {
+                    // Check if it's an authentication error
+                    const errorMsg = data.error || data.message || '未知錯誤';
+                    if (errorMsg.includes('會話已過期') || errorMsg.includes('需要先進行認證')) {
+                        showLoginStatusError();
+                        showAuthForm();
+                        showAlert('請先進行 Telegram 認證', 'info');
+                    } else {
+                        showAlert('載入群組失敗: ' + errorMsg, 'danger');
+                    }
+                }
+            } catch (error) {
+                console.error('載入群組錯誤:', error);
+                // If it's a fetch error (like 401 or 403), it might be authentication related
+                if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
+                    showLoginStatusError();
+                    showAuthForm();
+                    showAlert('認證已過期，請重新登入', 'info');
+                } else {
+                    showAlert('載入群組時發生錯誤', 'danger');
+                }
+            }
+        }
+
+        function renderGroupSidebar(groups) {
+            const favoriteContainer = document.getElementById('favorite-groups');
+            const allGroupsContainer = document.getElementById('all-groups');
+
+            // 清空現有內容
+            favoriteContainer.innerHTML = '';
+            allGroupsContainer.innerHTML = '';
+
+            // 分類群組
+            const groupsByType = {
+                channel: [],
+                supergroup: [],
+                group: []
+            };
+
+            groups.forEach(group => {
+                const type = group.type || 'group';
+                if (groupsByType[type]) {
+                    groupsByType[type].push(group);
+                } else {
+                    groupsByType.group.push(group);
+                }
+            });
+
+            // 按使用頻率排序常用群組
+            const favoriteGroupsData = groups.filter(group =>
+                favoriteGroups.includes(group.id.toString())
+            ).sort((a, b) => {
+                const statsA = groupStats[a.id.toString()] || { count: 0, lastAccess: 0 };
+                const statsB = groupStats[b.id.toString()] || { count: 0, lastAccess: 0 };
+                return statsB.count - statsA.count;
+            });
+
+            if (favoriteGroupsData.length > 0) {
+                favoriteGroupsData.forEach(group => {
+                    favoriteContainer.appendChild(createGroupItem(group, true));
+                });
+            } else {
+                favoriteContainer.innerHTML = '<div style="color: rgba(255,255,255,0.5); font-size: 12px; text-align: center; padding: 8px;">暫無常用群組</div>';
+            }
+
+            // 渲染所有群組（按類型分組）
+            const typeLabels = {
+                channel: '頻道',
+                supergroup: '超級群組',
+                group: '群組'
+            };
+
+            Object.keys(groupsByType).forEach(type => {
+                if (groupsByType[type].length > 0) {
+                    // 按使用頻率排序
+                    groupsByType[type].sort((a, b) => {
+                        const statsA = groupStats[a.id.toString()] || { count: 0 };
+                        const statsB = groupStats[b.id.toString()] || { count: 0 };
+                        if (statsA.count === statsB.count) {
+                            return a.title.localeCompare(b.title);
+                        }
+                        return statsB.count - statsA.count;
+                    });
+
+                    // 添加類型標題
+                    const typeHeader = document.createElement('div');
+                    typeHeader.className = 'group-type-header';
+                    typeHeader.style.cssText = `
+                        color: rgba(255,255,255,0.6);
+                        font-size: 11px;
+                        font-weight: 600;
+                        margin: 12px 0 6px 0;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    `;
+                    typeHeader.textContent = `${typeLabels[type]} (${groupsByType[type].length})`;
+                    allGroupsContainer.appendChild(typeHeader);
+
+                    // 添加該類型的群組
+                    groupsByType[type].forEach(group => {
+                        allGroupsContainer.appendChild(createGroupItem(group, false));
+                    });
+                }
+            });
+        }
+
+        function createGroupItem(group, isFavorite = false) {
+            const item = document.createElement('div');
+            item.className = 'group-item';
+            item.dataset.groupId = group.id;
+            item.dataset.groupName = group.title;
+
+            // 獲取群組圖標
+            const iconMap = {
+                channel: '📺',
+                supergroup: '👥',
+                group: '💬'
+            };
+            const icon = iconMap[group.type] || '💬';
+
+            // 獲取使用統計
+            const stats = groupStats[group.id.toString()] || { count: 0, lastAccess: 0 };
+
+            // 檢查是否為收藏群組
+            const isPinned = favoriteGroups.includes(group.id.toString());
+
+            item.innerHTML = `
+                <div class="group-icon">${icon}</div>
+                <div class="group-name">${group.title}</div>
+                ${stats.count > 0 ? `<div class="group-badge">${stats.count}</div>` : ''}
+                <button class="group-pin-btn ${isPinned ? 'pinned' : ''}" data-group-id="${group.id}" title="${isPinned ? '取消收藏' : '收藏群組'}">
+                    <i class="fas ${isPinned ? 'fa-thumbtack' : 'fa-thumbtack'}"></i>
+                </button>
+            `;
+
+            // 添加群組點擊事件
+            const nameElement = item.querySelector('.group-name');
+            const iconElement = item.querySelector('.group-icon');
+
+            [nameElement, iconElement].forEach(element => {
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectGroup(group.id, group.title);
+                });
+            });
+
+            // 添加 pin/unpin 事件
+            const pinBtn = item.querySelector('.group-pin-btn');
+            pinBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleGroupPin(group.id, group);
+            });
+
+            return item;
+        }
+
+        function toggleGroupPin(groupId, group) {
+            const groupIdStr = groupId.toString();
+            const index = favoriteGroups.indexOf(groupIdStr);
+
+            if (index > -1) {
+                // 取消收藏
+                favoriteGroups.splice(index, 1);
+            } else {
+                // 添加收藏
+                favoriteGroups.push(groupIdStr);
+            }
+
+            // 保存到 localStorage
+            localStorage.setItem('favoriteGroups', JSON.stringify(favoriteGroups));
+
+            // 重新渲染邊欄
+            const allGroups = JSON.parse(localStorage.getItem('allGroups') || '[]');
+            if (allGroups.length > 0) {
+                renderGroupSidebar(allGroups);
+            }
+        }
+
+        function selectGroup(groupId, groupTitle) {
+            // 移除所有活躍狀態
+            document.querySelectorAll('.group-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // 添加活躍狀態到選中的群組
+            document.querySelectorAll(`[data-group-id="${groupId}"]`).forEach(item => {
+                item.classList.add('active');
+            });
+
+            // 更新群組指示器
+            const indicator = document.getElementById('current-group-indicator');
+            const nameSpan = document.getElementById('current-group-name');
+            if (indicator && nameSpan) {
+                nameSpan.textContent = groupTitle;
+                indicator.style.display = 'block';
+            }
+
+            // 更新使用統計
+            updateGroupStats(groupId);
+
+            // 設置當前群組並載入訊息
+            currentChatId = groupId;
+            loadMessages(true);
+        }
+
+        function updateGroupStats(groupId) {
+            const groupIdStr = groupId.toString();
+            if (!groupStats[groupIdStr]) {
+                groupStats[groupIdStr] = { count: 0, lastAccess: 0 };
+            }
+
+            groupStats[groupIdStr].count += 1;
+            groupStats[groupIdStr].lastAccess = Date.now();
+
+            // 保存到 localStorage
+            localStorage.setItem('groupStats', JSON.stringify(groupStats));
+        }
+
+        function setupGroupSearch(groups) {
+            const searchInput = document.getElementById('group-search');
+            if (!searchInput) return;
+
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+
+                if (query === '') {
+                    // 重新渲染所有群組
+                    renderGroupSidebar(groups);
+                } else {
+                    // 過濾群組
+                    const filteredGroups = groups.filter(group =>
+                        group.title.toLowerCase().includes(query)
+                    );
+                    renderGroupSidebar(filteredGroups);
+                }
+            });
+        }
+
+        async function loadMessages(resetOffset = true) {
+            if (!currentChatId || isLoading) return;
+
+            if (resetOffset) {
+                lastMessageId = 0;
+                previousLastMessageId = 0;
+                noProgressCount = 0;
+                hasMoreMessages = true;
+                allMessages = [];
+                const container = document.getElementById('messages-list');
+                container.innerHTML = '';
+                hideMessages();
+            }
+
+            if (!hasMoreMessages) return;
+
+            isLoading = true;
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/groups/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chat_id: currentChatId,
+                        limit: MESSAGES_PER_PAGE,
+                        offset_id: lastMessageId,
+                        media_only: false
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.success && data.messages) {
+                    const newMessages = data.messages;
+                    
+                    console.log('📨 載入訊息結果:', {
+                        newMessagesCount: newMessages.length,
+                        messagesPerPage: MESSAGES_PER_PAGE,
+                        resetOffset,
+                        hasMoreMessagesBefore: hasMoreMessages
+                    });
+                    
+                    // 檢查是否還有更多訊息的邏輯
+                    // 只有當返回 0 條訊息，或者明確從後端得到 "沒有更多" 的訊息時才設為 false
+                    if (newMessages.length === 0) {
+                        hasMoreMessages = false;
+                        console.log('❌ 沒有更多訊息了 (返回 0 條訊息)');
+                    } else if (data.has_more !== undefined) {
+                        // 如果後端提供了 has_more 字段，使用它
+                        hasMoreMessages = data.has_more;
+                        console.log(hasMoreMessages ? '✅ 後端確認還有更多訊息' : '❌ 後端確認沒有更多訊息');
+                    } else if (newMessages.length < MESSAGES_PER_PAGE) {
+                        // 如果返回的數量少於請求數量，可能是到達了最舊的訊息
+                        // 但我們不能確定，保持 hasMoreMessages 為 true，讓用戶手動觸發檢查
+                        // 只有連續多次返回少於頁面大小的結果時才設為 false
+                        console.log('⚠️ 返回的訊息少於請求數量，但保持 hasMoreMessages = true 以便繼續檢查');
+                    } else {
+                        // 返回了完整的一頁，很可能還有更多
+                        hasMoreMessages = true;
+                        console.log('✅ 返回完整頁面，可能還有更多訊息');
+                    }
+                    
+                    if (newMessages.length > 0) {
+                        allMessages = [...allMessages, ...newMessages];
+                        renderMessages(newMessages, !resetOffset); // append mode
+                        
+                        // Update lastMessageId for next pagination
+                        const newLastMessageId = Math.min(...newMessages.map(m => m.message_id));
+                        
+                        // 檢查是否有進展
+                        if (previousLastMessageId > 0 && newLastMessageId >= previousLastMessageId) {
+                            noProgressCount++;
+                            console.log(`⚠️ 沒有進展：newLastMessageId (${newLastMessageId}) >= previousLastMessageId (${previousLastMessageId}), 計數: ${noProgressCount}/${MAX_NO_PROGRESS_ATTEMPTS}`);
+                            
+                            if (noProgressCount >= MAX_NO_PROGRESS_ATTEMPTS) {
+                                hasMoreMessages = false;
+                                console.log('❌ 達到最大無進展嘗試次數，停止載入更多訊息');
+                            }
+                        } else {
+                            noProgressCount = 0; // 重置計數
+                            console.log('✅ 有進展，重置無進展計數');
+                        }
+                        
+                        previousLastMessageId = lastMessageId;
+                        lastMessageId = newLastMessageId;
+                        console.log('📍 更新 lastMessageId:', lastMessageId, '(previous:', previousLastMessageId, ')');
+                        
+                        if (resetOffset) {
+                            showMessages();
+                            
+                            // 處理初始狀態：檢查是否需要自動加載更多
+                            setTimeout(() => {
+                                if (hasMoreMessages && !isLoading) {
+                                    const messagesList = document.getElementById('messages-list');
+                                    const container = document.getElementById('messages-container');
+                                    
+                                    if (messagesList && container) {
+                                        const chatBubbles = messagesList.querySelectorAll('.chat-bubble');
+                                        
+                                        if (chatBubbles.length > 0) {
+                                            // 檢查最後一個氣泡是否在可視區域內
+                                            const lastBubble = chatBubbles[chatBubbles.length - 1];
+                                            const containerRect = container.getBoundingClientRect();
+                                            const bubbleRect = lastBubble.getBoundingClientRect();
+                                            
+                                            const bubbleBottom = bubbleRect.bottom;
+                                            const containerBottom = containerRect.bottom;
+                                            
+                                            // 如果最後一個氣泡完全在可視區域內，自動載入更多
+                                            if (bubbleBottom < containerBottom) {
+                                                console.log('🔄 初始內容可視區域有空間，自動載入更多訊息');
+                                                loadMessages(false); // 繼續載入，不重置
+                                            }
+                                        }
+                                    }
+                                }
+                            }, 100); // 等待 DOM 更新
+                        }
+                    } else if (resetOffset) {
+                        hasMoreMessages = false;
+                        const container = document.getElementById('messages-list');
+                        container.innerHTML = '<div class="text-center text-muted p-4">沒有找到訊息</div>';
+                        showMessages();
+                    }
+                } else {
+                    showAlert('載入訊息失敗: ' + (data.error || data.message || '未知錯誤'), 'danger');
+                }
+            } catch (error) {
+                console.error('載入訊息錯誤:', error);
+                showAlert('載入訊息時發生錯誤', 'danger');
+            } finally {
+                isLoading = false;
+                showLoading(false);
+                
+                // 載入完成後，延遲重置阻止自動載入標記，讓用戶可以繼續滾動
+                setTimeout(() => {
+                    preventAutoLoad = false;
+                    console.log('🔓 重置阻止自動載入標記，可以再次檢測滾動');
+                }, 1000); // 1秒後允許再次自動載入
+            }
+        }
+
+        function renderMessages(messages, appendMode = false) {
+            const container = document.getElementById('messages-list');
+            
+            if (!appendMode) {
+                container.innerHTML = '';
+            }
+
+            console.log('🎨 渲染訊息狀態:', {
+                messagesCount: messages.length,
+                appendMode,
+                hasMoreMessages,
+                isLoading,
+                lastMessageId
+            });
+            if (messages.length > 0) {
+                console.log('📝 第一條訊息範例:', {
+                    id: messages[0].message_id,
+                    date: messages[0].date,
+                    mediaType: messages[0].media_type
+                });
+            }
+
+            if (!messages || messages.length === 0) {
+                if (!appendMode) {
+                    container.innerHTML = '<div class="text-center text-muted p-4">沒有找到訊息</div>';
+                }
+                return;
+            }
+
+            // 簡化：只添加訊息，不添加載入指示器
+            messages.forEach((message, index) => {
+                const messageElement = createMessageElement(message);
+                if (appendMode) {
+                    // Add delay for smooth animation
+                    messageElement.style.animationDelay = `${index * 0.05}s`;
+                }
+                container.appendChild(messageElement);
+
+                // 元素添加到DOM後，加載縮圖
+                if (messageElement.dataset.needsThumbnail === 'true') {
+                    const messageData = JSON.parse(messageElement.dataset.messageData);
+                    console.log(`Scheduling thumbnail load for message ${messageData.message_id} after DOM addition`);
+                    // 使用 setTimeout 確保DOM完全更新
+                    setTimeout(() => {
+                        console.log(`DOM update timeout reached, attempting to load thumbnail for message ${messageData.message_id}`);
+                        const thumbContainer = document.getElementById(`thumb-${messageData.message_id}`);
+                        console.log(`Thumbnail container check:`, thumbContainer);
+                        if (thumbContainer) {
+                            loadThumbnailFromMessage(messageData);
+                        } else {
+                            console.warn(`Still no thumbnail container found for message ${messageData.message_id} even after timeout`);
+                        }
+                    }, 50); // 增加延遲到50ms
+                }
+            });
+            
+            // 如果沒有更多訊息，添加結束提示
+            if (!hasMoreMessages && !container.querySelector('.end-message')) {
+                const endMessage = document.createElement('div');
+                endMessage.className = 'text-center p-3 end-message';
+                endMessage.innerHTML = `
+                    <div class="text-muted" style="font-size: 12px; color: rgba(255, 255, 255, 0.5) !important;">
+                        <i class="fas fa-check"></i>
+                        已載入所有訊息
+                    </div>
+                `;
+                container.appendChild(endMessage);
+            }
+        }
+
+        function createMessageElement(message) {
+            const div = document.createElement('div');
+            div.className = 'chat-bubble';
+            div.dataset.messageId = message.message_id;
+            
+            // Get media type and file info
+            const mediaInfo = getMediaInfo(message);
+            const mediaIcon = getMediaIcon(mediaInfo.type);
+            
+            div.innerHTML = `
+                <div class="message-header">
+                    <div class="message-checkbox">
+                        <input type="checkbox" class="message-select" 
+                               onchange="updateSelection(this, ${message.message_id})"
+                               onclick="event.stopPropagation()">
+                    </div>
+                    <div class="message-info">
+                        <span class="message-id">#${message.message_id}</span>
+                        <span class="message-date">${formatDate(message.date)}</span>
+                        <span class="media-badge ${mediaInfo.type}">
+                            ${mediaIcon} ${mediaInfo.type.toUpperCase()}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="message-content">
+                    ${message.caption ? `<div class="message-text">${escapeHtml(message.caption)}</div>` : ''}
+
+                    <div class="media-placeholder ${mediaInfo.type} ${mediaInfo.type === 'photo' || mediaInfo.type === 'video' ? 'with-thumbnail' : ''}" id="media-${message.message_id}">
+                        ${mediaInfo.type === 'photo' || mediaInfo.type === 'video' ? `
+                            <div class="media-thumbnail" id="thumb-${message.message_id}">
+                                <div class="loading-placeholder">
+                                    <i class="fas fa-image"></i>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="media-icon">
+                                ${mediaIcon}
+                            </div>
+                        `}
+                        <div class="media-content">
+                            <div class="media-info">
+                                <div class="media-filename">${mediaInfo.filename || 'Unknown file'}</div>
+                                <div class="media-size">${mediaInfo.size || 'Unknown size'}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add click event for row selection
+            div.onclick = function(event) {
+                if (event.target.type !== 'checkbox') {
+                    const checkbox = div.querySelector('.message-select');
+                    checkbox.checked = !checkbox.checked;
+                    updateSelection(checkbox, message.message_id);
+                }
+            };
+
+            // 如果是照片或影片，標記需要加載縮圖（延遲到DOM添加後執行）
+            if (mediaInfo.type === 'photo' || mediaInfo.type === 'video') {
+                div.dataset.needsThumbnail = 'true';
+                div.dataset.messageData = JSON.stringify(message);
+            }
+
+            return div;
+        }
+
+        function getMediaInfo(message) {
+            console.log('處理訊息媒體資訊:', message);
+            
+            // Use the flattened structure returned by the backend
+            let type = message.media_type || 'document';
+            let filename = message.file_name || '';
+            let size = message.file_size ? formatFileSize(message.file_size) : '';
+
+            // If no filename, provide default based on media type
+            if (!filename) {
+                switch (type) {
+                    case 'photo':
+                        filename = 'Photo';
+                        break;
+                    case 'video':
+                        filename = 'Video';
+                        break;
+                    case 'audio':
+                        filename = 'Audio';
+                        break;
+                    case 'voice':
+                        filename = 'Voice Message';
+                        break;
+                    case 'animation':
+                        filename = 'Animation';
+                        break;
+                    case 'sticker':
+                        filename = 'Sticker';
+                        break;
+                    case 'document':
+                    default:
+                        filename = 'Document';
+                        break;
+                }
+            }
+
+            // If no size info, set default
+            if (!size) {
+                size = 'Unknown size';
+            }
+
+            return { type, filename, size };
+        }
+
+        function getMediaIcon(type) {
+            const icons = {
+                'photo': '<i class="fas fa-image"></i>',
+                'video': '<i class="fas fa-video"></i>',
+                'audio': '<i class="fas fa-music"></i>',
+                'document': '<i class="fas fa-file"></i>'
+            };
+            return icons[type] || '<i class="fas fa-file"></i>';
+        }
+
+        // 從消息數據加載縮圖
+        async function loadThumbnailFromMessage(message) {
+            console.log(`Loading thumbnail for message ${message.message_id}`, message);
+            console.log(`Message thumbnail_url:`, message.thumbnail_url);
+            console.log(`Message thumbnail:`, message.thumbnail);
+
+            try {
+                const thumbnailContainer = document.getElementById(`thumb-${message.message_id}`);
+                if (!thumbnailContainer) {
+                    console.log(`No thumbnail container found for message ${message.message_id}`);
+                    return;
+                }
+
+                // 檢查消息是否有縮圖數據
+                if (!message.thumbnail) {
+                    console.log(`No thumbnail data found for message ${message.message_id}`);
+                    // 顯示默認圖標
+                    const mediaType = message.media_type === 'photo' ? 'image' :
+                                     message.media_type === 'video' ? 'video' : 'file';
+                    thumbnailContainer.innerHTML = `
+                        <div class="loading-placeholder">
+                            <i class="fas fa-${mediaType}"></i>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 顯示加載指示器
+                thumbnailContainer.innerHTML = `
+                    <div class="loading-placeholder">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                `;
+
+                // 使用 Fast Test 專用的縮圖API
+                if (message.media_type === 'photo' || message.media_type === 'video') {
+                    console.log(`Loading thumbnail for ${message.media_type} message ${message.message_id}`);
+                    console.log(`Thumbnail API URL: /api/message_downloader_thumbnail/${currentChatId}/${message.message_id}`);
+
+                    try {
+                        const response = await fetch(`/api/message_downloader_thumbnail/${currentChatId}/${message.message_id}`);
+                        console.log(`Thumbnail API response status: ${response.status}`);
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log('Thumbnail API response data:', data);
+
+                            if (data.success && data.thumbnail) {
+                                console.log(`Thumbnail loaded successfully for message ${message.message_id}`);
+                                thumbnailContainer.innerHTML = `<img src="${data.thumbnail}" alt="Thumbnail" />`;
+                            } else {
+                                throw new Error(data.error || 'API returned no thumbnail data');
+                            }
+                        } else {
+                            // 嘗試讀取錯誤響應
+                            const errorText = await response.text();
+                            console.error(`API error response: ${errorText}`);
+                            throw new Error(`API returned ${response.status}: ${errorText}`);
+                        }
+                    } catch (error) {
+                        console.error(`Fast Test thumbnail API failed for message ${message.message_id}:`, error);
+                        // 顯示默認圖標
+                        const mediaType = message.media_type === 'photo' ? 'image' :
+                                         message.media_type === 'video' ? 'video' : 'file';
+                        thumbnailContainer.innerHTML = `
+                            <div class="loading-placeholder">
+                                <i class="fas fa-${mediaType}"></i>
+                            </div>
+                        `;
+                    }
+                } else {
+                    console.log(`No thumbnail needed for media type: ${message.media_type}`);
+                    // 顯示默認圖標
+                    // 縮圖加載失敗，顯示默認圖標
+                    const mediaType = message.media_type === 'photo' ? 'image' :
+                                     message.media_type === 'video' ? 'video' : 'file';
+                    thumbnailContainer.innerHTML = `
+                        <div class="loading-placeholder">
+                            <i class="fas fa-${mediaType}"></i>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading thumbnail:', error);
+                // 加載錯誤時顯示默認圖標
+                const thumbnailContainer = document.getElementById(`thumb-${message.message_id}`);
+                if (thumbnailContainer) {
+                    thumbnailContainer.innerHTML = `
+                        <div class="loading-placeholder">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // 原有的縮圖加載函數（保持兼容性）
+        async function loadThumbnail(messageId, chatId) {
+            console.log(`Loading thumbnail for message ${messageId} in chat ${chatId}`);
+            try {
+                const mediaElement = document.getElementById(`media-${messageId}`);
+                if (!mediaElement) {
+                    console.log(`No media element found for message ${messageId}`);
+                    return;
+                }
+
+                const thumbnailContainer = mediaElement.querySelector('.media-thumbnail');
+                if (!thumbnailContainer) {
+                    console.log(`No thumbnail container found for message ${messageId}`);
+                    return;
+                }
+
+                // 顯示加載指示器
+                thumbnailContainer.innerHTML = `
+                    <div class="loading-placeholder">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                `;
+
+                // 請求縮圖
+                console.log(`Making API request to: /api/thumbnail/${chatId}/${messageId}`);
+                const response = await fetch(`/api/thumbnail/${chatId}/${messageId}`);
+                console.log(`API response status: ${response.status}`);
+                const data = await response.json();
+                console.log(`API response data:`, data);
+
+                if (data.success && data.thumbnail) {
+                    // 顯示縮圖
+                    thumbnailContainer.innerHTML = `<img src="${data.thumbnail}" alt="Thumbnail" />`;
+                } else {
+                    // 縮圖加載失敗，顯示默認圖標
+                    const mediaType = mediaElement.classList.contains('photo') ? 'image' :
+                                     mediaElement.classList.contains('video') ? 'video' : 'file';
+                    thumbnailContainer.innerHTML = `
+                        <div class="loading-placeholder">
+                            <i class="fas fa-${mediaType}"></i>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading thumbnail:', error);
+                // 加載錯誤時顯示默認圖標
+                const mediaElement = document.getElementById(`media-${messageId}`);
+                const thumbnailContainer = mediaElement?.querySelector('.media-thumbnail');
+                if (thumbnailContainer) {
+                    thumbnailContainer.innerHTML = `
+                        <div class="loading-placeholder">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function updateSelection(checkbox, messageId) {
+            const chatBubble = checkbox.closest('.chat-bubble');
+            
+            if (checkbox.checked) {
+                if (!selectedMessages.includes(messageId)) {
+                    selectedMessages.push(messageId);
+                }
+                chatBubble.classList.add('selected');
+            } else {
+                selectedMessages = selectedMessages.filter(id => id !== messageId);
+                chatBubble.classList.remove('selected');
+            }
+
+            updateSelectionUI();
+        }
+
+        function updateSelectionUI() {
+            const count = selectedMessages.length;
+            document.getElementById('selected-count').textContent = count;
+            document.getElementById('fast-test-download-btn').disabled = count === 0;
+        }
+
+        function selectAllMessages() {
+            const checkboxes = document.querySelectorAll('.message-select');
+            selectedMessages = [];
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                const chatBubble = checkbox.closest('.chat-bubble');
+                const messageId = parseInt(chatBubble.dataset.messageId);
+                selectedMessages.push(messageId);
+                chatBubble.classList.add('selected');
+            });
+            
+            updateSelectionUI();
+        }
+
+        function clearSelection() {
+            const checkboxes = document.querySelectorAll('.message-select');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                const chatBubble = checkbox.closest('.chat-bubble');
+                chatBubble.classList.remove('selected');
+            });
+            selectedMessages = [];
+            updateSelectionUI();
+        }
+
+        async function startDownload() {
+            if (!currentChatId || selectedMessages.length === 0) {
+                showNotification('warning', '注意', '請選擇要下載的訊息');
+                return;
+            }
+
+            console.log('開始下載，群組ID:', currentChatId);
+            console.log('選中的訊息ID:', selectedMessages);
+            
+            // Show loading state on download button
+            const downloadBtn = document.getElementById('fast-test-download-btn');
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 準備中...';
+            downloadBtn.disabled = true;
+            
+            // 顯示即時通知
+            showDownloadStartNotification(selectedMessages.length);
+
+            try {
+                const response = await fetch('/api/fast_download/add_tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chat_id: currentChatId,
+                        message_ids: selectedMessages
+                    })
+                });
+
+                console.log('下載 API 響應狀態:', response.status);
+                const data = await response.json();
+                console.log('下載 API 響應數據:', data);
+                
+                if (data.success) {
+                    // 更新通知為成功狀態
+                    if (downloadNotificationId) {
+                        updateNotification(downloadNotificationId, {
+                            title: '任務已加入隊列',
+                            message: `✅ 成功加入 ${data.added_count} 個下載任務到隊列`
+                        });
+                    }
+
+                    clearSelection();
+
+                    // 顯示提示
+                    setTimeout(() => {
+                        showNotification('info', '提示', '您可以在此頁面查看下載進度，或透過 Telegram bot 接收通知', { duration: 4000 });
+                    }, 2000);
+                } else {
+                    // 如果失敗，停止進度檢查並顯示錯誤
+                    stopProgressChecking();
+                    if (downloadNotificationId) {
+                        removeNotification(downloadNotificationId);
+                        downloadNotificationId = null;
+                    }
+                    showNotification('error', '下載失敗', data.error || data.message || '未知錯誤');
+                }
+            } catch (error) {
+                console.error('下載錯誤:', error);
+                // 如果出現異常，停止進度檢查並顯示錯誤
+                stopProgressChecking();
+                if (downloadNotificationId) {
+                    removeNotification(downloadNotificationId);
+                    downloadNotificationId = null;
+                }
+                showNotification('error', '連接錯誤', '下載請求時發生錯誤：' + error.message);
+            } finally {
+                // Restore download button
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = selectedMessages.length === 0;
+            }
+        }
+
+        // Utility functions
+        function showLoading(show) {
+            const spinner = document.getElementById('loading-spinner');
+            spinner.style.display = show ? 'block' : 'none';
+        }
+
+        function showMessages() {
+            document.getElementById('group-selector').style.display = 'none';
+            document.getElementById('messages-content').style.display = 'flex';
+            document.getElementById('chat-controls').style.display = 'block';
+
+            // 設置滾動事件監聽器
+            setupScrollListener();
+        }
+
+        function hideMessages() {
+            document.getElementById('messages-content').style.display = 'none';
+            document.getElementById('group-selector').style.display = 'flex';
+            document.getElementById('chat-controls').style.display = 'none';
+            clearSelection();
+
+            // Reset lazy loading state
+            lastMessageId = 0;
+            hasMoreMessages = true;
+            allMessages = [];
+
+            // Reset group indicator
+            const indicator = document.getElementById('current-group-indicator');
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+
+            // Remove active states
+            document.querySelectorAll('.group-item').forEach(item => {
+                item.classList.remove('active');
+            });
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('status-alert');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            // Info messages disappear faster
+            const timeout = type === 'info' ? 3000 : 5000;
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, timeout);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-TW') + ' ' + date.toLocaleTimeString('zh-TW', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Authentication functions
+        async function checkAuthStatus() {
+            showLoginStatusLoading();
+            
+            try {
+                console.log('檢查認證狀態...');
+                const response = await fetch('/api/auth/status');
+                const data = await response.json();
+                console.log('認證狀態響應:', data);
+                
+                if (data.success && data.authenticated) {
+                    console.log('用戶已認證, 用戶資訊:', data.user_info);
+                    showLoginStatusSuccess(data.user_info);
+                    showAuthSuccess(data.user_info);
+                    loadGroups();
+                } else {
+                    console.log('用戶未認證');
+                    showLoginStatusError();
+                    showAuthForm();
+                }
+            } catch (error) {
+                console.error('檢查認證狀態錯誤:', error);
+                showLoginStatusError();
+                showAuthForm();
+            }
+        }
+
+        function showAuthForm() {
+            document.getElementById('auth-section').style.display = 'block';
+            document.getElementById('main-app-layout').style.display = 'none';
+            setupAuthEventListeners();
+        }
+
+        function showAuthSuccess(userInfo) {
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('main-app-layout').style.display = 'flex';
+
+            // Show success message in a temporary alert
+            const userName = userInfo.first_name || userInfo.phone_number || 'User';
+            showAlert(`認證成功！歡迎，${userName}`, 'success');
+        }
+        
+        // Login status indicator functions
+        function showLoginStatusLoading() {
+            document.getElementById('login-status').style.display = 'block';
+            document.getElementById('login-status-loading').style.display = 'block';
+            document.getElementById('login-status-success').style.display = 'none';
+            document.getElementById('login-status-error').style.display = 'none';
+        }
+        
+        function showLoginStatusSuccess(userInfo) {
+            document.getElementById('login-status').style.display = 'block';
+            document.getElementById('login-status-loading').style.display = 'none';
+            document.getElementById('login-status-success').style.display = 'block';
+            document.getElementById('login-status-error').style.display = 'none';
+            
+            const userName = userInfo.first_name || userInfo.phone_number || 'User';
+            document.getElementById('login-user-info').textContent = `已登入為: ${userName}`;
+        }
+        
+        function showLoginStatusError() {
+            document.getElementById('login-status').style.display = 'block';
+            document.getElementById('login-status-loading').style.display = 'none';
+            document.getElementById('login-status-success').style.display = 'none';
+            document.getElementById('login-status-error').style.display = 'block';
+        }
+        
+        function hideLoginStatus() {
+            document.getElementById('login-status').style.display = 'none';
+        }
+
+        function setupAuthEventListeners() {
+            // Authentication form buttons (only set up if not already done)
+            const sendCodeBtn = document.getElementById('send-code-btn');
+            const verifyCodeBtn = document.getElementById('verify-code-btn');
+            const verifyPasswordBtn = document.getElementById('verify-password-btn');
+            const phoneInput = document.getElementById('phone-number');
+            const codeInput = document.getElementById('verification-code');
+            const passwordInput = document.getElementById('two-factor-password');
+            
+            if (sendCodeBtn && !sendCodeBtn.hasAttribute('data-listener-added')) {
+                sendCodeBtn.addEventListener('click', sendVerificationCode);
+                sendCodeBtn.setAttribute('data-listener-added', 'true');
+            }
+            if (verifyCodeBtn && !verifyCodeBtn.hasAttribute('data-listener-added')) {
+                verifyCodeBtn.addEventListener('click', verifyCode);
+                verifyCodeBtn.setAttribute('data-listener-added', 'true');
+            }
+            if (verifyPasswordBtn && !verifyPasswordBtn.hasAttribute('data-listener-added')) {
+                verifyPasswordBtn.addEventListener('click', verifyPassword);
+                verifyPasswordBtn.setAttribute('data-listener-added', 'true');
+            }
+            
+            // Enter key handlers
+            if (phoneInput && !phoneInput.hasAttribute('data-listener-added')) {
+                phoneInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') sendVerificationCode();
+                });
+                phoneInput.setAttribute('data-listener-added', 'true');
+            }
+            
+            if (codeInput && !codeInput.hasAttribute('data-listener-added')) {
+                codeInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') verifyCode();
+                });
+                codeInput.setAttribute('data-listener-added', 'true');
+            }
+            
+            if (passwordInput && !passwordInput.hasAttribute('data-listener-added')) {
+                passwordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') verifyPassword();
+                });
+                passwordInput.setAttribute('data-listener-added', 'true');
+            }
+        }
+
+        async function sendVerificationCode() {
+            const phoneNumber = document.getElementById('phone-number').value.trim();
+            const sendBtn = document.getElementById('send-code-btn');
+            
+            if (!phoneNumber) {
+                showAlert('請輸入電話號碼', 'warning');
+                return;
+            }
+            
+            // Show loading state
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發送中...';
+            
+            try {
+                const response = await fetch('/api/auth/send_code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone_number: phoneNumber,
+                        api_id: 29060182,  // From config
+                        api_hash: '071ea901d6271a50e8f86b403b244826'  // From config
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('auth-phone-step').style.display = 'none';
+                    document.getElementById('auth-code-step').style.display = 'block';
+                    showAlert('驗證碼已發送，請檢查您的 Telegram', 'info');
+                } else {
+                    showAlert('發送驗證碼失敗: ' + data.error, 'danger');
+                    // Reset button on error
+                    sendBtn.disabled = false;
+                    sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 發送驗證碼';
+                }
+            } catch (error) {
+                console.error('發送驗證碼錯誤:', error);
+                showAlert('發送驗證碼時發生錯誤', 'danger');
+                // Reset button on error
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 發送驗證碼';
+            }
+        }
+
+        async function verifyCode() {
+            const verificationCode = document.getElementById('verification-code').value.trim();
+            
+            if (!verificationCode) {
+                showAlert('請輸入驗證碼', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/verify_code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        verification_code: verificationCode
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.requires_password) {
+                        document.getElementById('auth-code-step').style.display = 'none';
+                        document.getElementById('auth-password-step').style.display = 'block';
+                        showAlert('需要兩步驗證密碼', 'info');
+                    } else {
+                        showLoginStatusSuccess(data.user_info);
+                        showAuthSuccess(data.user_info);
+                        loadGroups();
+                    }
+                } else {
+                    showAlert('驗證碼驗證失敗: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('驗證碼驗證錯誤:', error);
+                showAlert('驗證碼驗證時發生錯誤', 'danger');
+            }
+        }
+
+        async function verifyPassword() {
+            const password = document.getElementById('two-factor-password').value.trim();
+            
+            if (!password) {
+                showAlert('請輸入密碼', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/verify_password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showLoginStatusSuccess(data.user_info);
+                    showAuthSuccess(data.user_info);
+                    loadGroups();
+                } else {
+                    showAlert('密碼驗證失敗: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('密碼驗證錯誤:', error);
+                showAlert('密碼驗證時發生錯誤', 'danger');
+            }
+        }
+
+        async function logout() {
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('已成功登出', 'info');
+                    // 跳轉到登入頁面而不是顯示認證表單
+                    setTimeout(() => {
+                        window.location.href = '/message_downloader/login';
+                    }, 1000); // 給用戶時間看到登出成功訊息
+                } else {
+                    showAlert('登出失敗: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('登出錯誤:', error);
+                showAlert('登出時發生錯誤', 'danger');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // ==================== 通知系統功能 ====================
+        
+        function createNotification(type, title, message, options = {}) {
+            notificationCount++;
+            const id = options.id || `notification-${notificationCount}`;
+            const container = document.getElementById('notification-container');
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.id = id;
+            
+            let progressHtml = '';
+            if (options.showProgress) {
+                progressHtml = `
+                    <div class="notification-progress">
+                        <div class="notification-progress-bar">
+                            <div class="notification-progress-fill" id="${id}-progress"></div>
+                        </div>
+                        <div class="notification-progress-text" id="${id}-progress-text">0%</div>
+                    </div>
+                `;
+            }
+            
+            notification.innerHTML = `
+                <div class="notification-header">
+                    <div class="notification-title">
+                        ${getNotificationIcon(type)}
+                        <span>${title}</span>
+                    </div>
+                    <button class="notification-close" onclick="removeNotification('${id}')">
+                        ×
+                    </button>
+                </div>
+                <div class="notification-body" id="${id}-body">
+                    ${message}
+                </div>
+                ${progressHtml}
+            `;
+            
+            container.appendChild(notification);
+            
+            // 添加動畫效果
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            // 保存通知引用
+            activeNotifications.set(id, {
+                element: notification,
+                type: type,
+                autoClose: options.autoClose !== false
+            });
+            
+            // 自動關閉
+            if (options.autoClose !== false) {
+                const delay = options.duration || (type === 'error' ? 8000 : 5000);
+                setTimeout(() => {
+                    removeNotification(id);
+                }, delay);
+            }
+            
+            return id;
+        }
+        
+        function updateNotification(id, updates) {
+            const notification = activeNotifications.get(id);
+            if (!notification) return;
+            
+            if (updates.message) {
+                const body = document.getElementById(`${id}-body`);
+                if (body) body.innerHTML = updates.message;
+            }
+            
+            if (updates.progress !== undefined) {
+                const progressFill = document.getElementById(`${id}-progress`);
+                const progressText = document.getElementById(`${id}-progress-text`);
+                if (progressFill) {
+                    progressFill.style.width = `${updates.progress}%`;
+                }
+                if (progressText) {
+                    progressText.textContent = `${updates.progress}%`;
+                }
+            }
+            
+            if (updates.title) {
+                const titleElement = notification.element.querySelector('.notification-title span');
+                if (titleElement) titleElement.textContent = updates.title;
+            }
+        }
+        
+        function removeNotification(id) {
+            const notification = activeNotifications.get(id);
+            if (!notification) return;
+            
+            notification.element.classList.remove('show');
+            
+            setTimeout(() => {
+                if (notification.element.parentNode) {
+                    notification.element.parentNode.removeChild(notification.element);
+                }
+                activeNotifications.delete(id);
+            }, 400);
+        }
+        
+        function getNotificationIcon(type) {
+            const icons = {
+                'success': '<i class="fas fa-check-circle"></i>',
+                'info': '<i class="fas fa-info-circle"></i>',
+                'warning': '<i class="fas fa-exclamation-triangle"></i>',
+                'error': '<i class="fas fa-times-circle"></i>'
+            };
+            return icons[type] || '<i class="fas fa-bell"></i>';
+        }
+        
+        // 顯示下載開始通知
+        function showDownloadStartNotification(count) {
+            if (downloadNotificationId) {
+                removeNotification(downloadNotificationId);
+            }
+            
+            downloadNotificationId = createNotification(
+                'info',
+                '下載開始',
+                `正在準備下載 ${count} 個檔案...`,
+                {
+                    id: 'download-progress',
+                    showProgress: true,
+                    autoClose: false
+                }
+            );
+            
+            // 開始檢查進度
+            startProgressChecking();
+        }
+        
+        // 開始檢查下載進度
+        function startProgressChecking() {
+            if (progressCheckInterval) {
+                clearInterval(progressCheckInterval);
+            }
+            
+            progressCheckInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/download_progress');
+                    const data = await response.json();
+                    
+                    if (data.success && downloadNotificationId) {
+                        const progress = data.progress;
+                        
+                        if (progress.active) {
+                            const percentage = progress.total_task > 0 
+                                ? Math.round((progress.completed_task / progress.total_task) * 100) 
+                                : 0;
+                            
+                            let statusText = progress.status_text || `下載中... ${progress.completed_task}/${progress.total_task}`;
+                            
+                            updateNotification(downloadNotificationId, {
+                                title: '下載進行中',
+                                message: statusText,
+                                progress: percentage
+                            });
+                        } else if (progress.completed_task > 0) {
+                            // 下載完成
+                            updateNotification(downloadNotificationId, {
+                                title: '下載完成',
+                                message: `✅ 成功完成 ${progress.completed_task} 個檔案的下載！`,
+                                progress: 100
+                            });
+                            
+                            // 將通知改為成功類型
+                            const notificationElement = document.getElementById(downloadNotificationId);
+                            if (notificationElement) {
+                                notificationElement.className = 'notification success show';
+                            }
+                            
+                            // 5秒後自動關閉
+                            setTimeout(() => {
+                                removeNotification(downloadNotificationId);
+                                downloadNotificationId = null;
+                            }, 5000);
+                            
+                            // 停止檢查進度
+                            clearInterval(progressCheckInterval);
+                            progressCheckInterval = null;
+                        }
+                    }
+                } catch (error) {
+                    console.error('檢查下載進度時發生錯誤:', error);
+                }
+            }, 2000); // 每2秒檢查一次
+        }
+        
+        // 停止進度檢查
+        function stopProgressChecking() {
+            if (progressCheckInterval) {
+                clearInterval(progressCheckInterval);
+                progressCheckInterval = null;
+            }
+        }
+        
+        // 顯示一般通知
+        function showNotification(type, title, message, options = {}) {
+            return createNotification(type, title, message, options);
+        }
+    </script>
+
+    <!-- Fixed Animated Chat Controls - Bottom Right Corner -->
+    <div id="chat-controls" class="chat-navigation" style="display: none;">
+        <div class="chat-menu-toggle"></div>
+        <div class="chat-menu">
+            <div class="selection-info">
+                已選擇 <span id="selected-count">0</span> 項
+            </div>
+            <ul>
+                <li style="--i:0.1s;">
+                    <div class="menu-item">
+                        <button id="select-all-btn" title="全選">
+                            <i class="fas fa-check-double"></i>
+                        </button>
+                        <span class="menu-label">全選</span>
+                    </div>
+                </li>
+                <li style="--i:0.2s;">
+                    <div class="menu-item">
+                        <button id="clear-selection-btn" title="清除選擇">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <span class="menu-label">清除</span>
+                    </div>
+                </li>
+                <li style="--i:0.3s;">
+                    <div class="menu-item">
+                        <button id="refresh-messages-btn" title="載入更多訊息">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <span class="menu-label">載入</span>
+                    </div>
+                </li>
+                <li style="--i:0.4s;">
+                    <div class="menu-item">
+                        <button id="fast-test-download-btn" title="開始下載" disabled>
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <span class="menu-label">下載</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
