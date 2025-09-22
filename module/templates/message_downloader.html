@@ -57,11 +57,11 @@
             animation: floatingOrbs 25s ease-in-out infinite;
         }
         
-        .container {
-            max-width: 1400px;
+        .container-fluid {
+            max-width: none; /* 移除最大寬度限制 */
             width: 100%;
-            margin: 0 auto;
-            padding: env(safe-area-inset-top, 20px) 16px env(safe-area-inset-bottom, 20px) 16px;
+            margin: 0;
+            padding: env(safe-area-inset-top, 20px) 16px env(safe-area-inset-bottom, 20px) 16px !important;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -373,17 +373,49 @@
             font-size: 12px;
         }
 
+        .group-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0; /* 允許 flex 子元素收縮 */
+            margin-right: 8px;
+        }
+
+        .group-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0; /* 防止被壓縮 */
+            margin-left: auto; /* 推到右邊 */
+        }
+
+        .group-badge {
+            background: rgba(0, 122, 255, 0.8);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+            flex-shrink: 0; /* 防止被壓縮 */
+        }
+
         .group-pin-btn {
-            position: absolute;
-            right: 8px;
             opacity: 0;
             transition: opacity 0.2s ease;
             background: none;
             border: none;
             color: var(--theme-text-tertiary);
             cursor: pointer;
-            padding: 2px;
+            padding: 4px;
             border-radius: 4px;
+            flex-shrink: 0; /* 防止被壓縮 */
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .group-item:hover .group-pin-btn {
@@ -398,23 +430,6 @@
         .group-pin-btn.pinned {
             opacity: 1;
             color: var(--apple-blue);
-        }
-
-        .group-name {
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .group-badge {
-            background: rgba(0, 122, 255, 0.8);
-            color: white;
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 10px;
-            min-width: 16px;
-            text-align: center;
         }
 
         /* 右側主內容區 */
@@ -1515,9 +1530,9 @@
                 min-height: 60vh;
             }
 
-            .container {
-                max-width: 100%;
-                padding: env(safe-area-inset-top, 16px) 12px env(safe-area-inset-bottom, 16px) 12px;
+            .container-fluid {
+                max-width: none;
+                padding: env(safe-area-inset-top, 16px) 12px env(safe-area-inset-bottom, 16px) 12px !important;
             }
 
             .compact-toolbar {
@@ -1566,9 +1581,9 @@
                 padding: 6px 10px 6px 28px;
             }
 
-            .container {
-                padding: env(safe-area-inset-top, 12px) 8px env(safe-area-inset-bottom, 12px) 8px;
-                max-width: 100%;
+            .container-fluid {
+                padding: env(safe-area-inset-top, 12px) 8px env(safe-area-inset-bottom, 12px) 8px !important;
+                max-width: none;
             }
 
             .chat-bubble {
@@ -1680,8 +1695,8 @@
         
         /* Desktop optimization */
         @media (min-width: 1200px) {
-            .container {
-                max-width: 1000px;
+            .container-fluid {
+                max-width: none; /* 保持全寬度 */
             }
         }
         
@@ -1816,7 +1831,7 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <!-- 緊湊頂部工具列 -->
         <div class="compact-toolbar">
             <div class="toolbar-left">
@@ -2387,10 +2402,12 @@
             item.innerHTML = `
                 <div class="group-icon">${icon}</div>
                 <div class="group-name">${group.title}</div>
-                ${stats.count > 0 ? `<div class="group-badge">${stats.count}</div>` : ''}
-                <button class="group-pin-btn ${isPinned ? 'pinned' : ''}" data-group-id="${group.id}" title="${isPinned ? '取消收藏' : '收藏群組'}">
-                    <i class="fas ${isPinned ? 'fa-thumbtack' : 'fa-thumbtack'}"></i>
-                </button>
+                <div class="group-info">
+                    ${stats.count > 0 ? `<div class="group-badge">${stats.count}</div>` : ''}
+                    <button class="group-pin-btn ${isPinned ? 'pinned' : ''}" data-group-id="${group.id}" title="${isPinned ? '取消收藏' : '收藏群組'}">
+                        <i class="fas ${isPinned ? 'fa-thumbtack' : 'fa-thumbtack'}"></i>
+                    </button>
+                </div>
             `;
 
             // 添加群組點擊事件
