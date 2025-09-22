@@ -96,7 +96,7 @@ class CustomDownloadManager:
             chat_title = self.app.config.get("custom_downloads", {}).get("group_tags", {}).get(chat_key, f"chat_{chat_key}")
             chat_title = validate_title(chat_title)
             
-            logger.debug(f"Checking file existence for message {message_id} in chat {chat_title} ({chat_key})")
+           # logger.debug(f"Checking file existence for message {message_id} in chat {chat_title} ({chat_key})")
             
             # 檢查兩種可能的保存路徑 (bot和regular)
             for is_bot in [False, True]:
@@ -382,11 +382,11 @@ class CustomDownloadManager:
         from module.app import DownloadStatus
         
         # Wait for downloads to complete by checking node status
-        max_wait_time = 300  # 5 minutes maximum wait
-        check_interval = 2   # Check every 2 seconds
+        max_wait_time = 1000  # 5 minutes maximum wait
+        check_interval = 5   # Check every 2 seconds
         waited_time = 0
         
-        logger.info(f"Waiting for {len(self.download_nodes)} downloads to complete...")
+       # logger.info(f"Waiting for {len(self.download_nodes)} downloads to complete...")
         
         while waited_time < max_wait_time:
             all_completed = True
@@ -430,17 +430,17 @@ class CustomDownloadManager:
                 
                 # Debug 資訊
                 print(f"Progress Debug: completed={completed_count}, total={total_tasks}, downloading={downloading_count}, pending={pending_count}")
-                logger.debug(f"Web progress updated: {completed_count}/{total_tasks} - {status_text}")
+              #  logger.debug(f"Web progress updated: {completed_count}/{total_tasks} - {status_text}")
             except Exception as e:
                 logger.debug(f"Error updating web progress: {e}")
             
             # Log current status every 10 seconds
-            if waited_time % 10 == 0:
-                logger.info(f"Download status: {downloading_count} downloading, {pending_count} pending, {completed_count} completed, waited {waited_time}s")
+            # if waited_time % 10 == 0:
+            #     logger.info(f"Download status: {downloading_count} downloading, {pending_count} pending, {completed_count} completed, waited {waited_time}s")
             
-            if all_completed:
-                logger.info("All downloads completed")
-                break
+            # if all_completed:
+            #     logger.info("All downloads completed")
+            #     break
                 
             await asyncio.sleep(check_interval)
             waited_time += check_interval

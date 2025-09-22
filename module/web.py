@@ -6,6 +6,7 @@ import threading
 
 from flask import Flask, jsonify, render_template, request, session
 from flask_login import LoginManager, UserMixin, login_required, login_user
+from flask_cors import CORS
 from loguru import logger
 
 import utils
@@ -24,6 +25,7 @@ log = logging.getLogger("werkzeug")
 log.setLevel(logging.ERROR)
 
 _flask_app = Flask(__name__)
+CORS(_flask_app)
 
 _flask_app.secret_key = "tdl"
 # Configure persistent sessions (30 days)
