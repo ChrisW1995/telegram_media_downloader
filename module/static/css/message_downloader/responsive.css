@@ -1,0 +1,209 @@
+/*
+ * Responsive Design and Media Queries
+ * ===================================
+ *
+ * This file contains:
+ * - Desktop optimizations
+ * - Tablet layout adjustments
+ * - Mobile landscape adaptations
+ * - Mobile portrait optimizations
+ * - Chat controls responsive behavior
+ * - Scrollbar customizations
+ */
+
+/* Desktop optimization */
+@media (min-width: 1200px) {
+    .container-fluid {
+        max-width: none; /* 保持全寬度 */
+    }
+}
+
+/* 響應式設計 - 平板 */
+@media (max-width: 1024px) {
+    .group-sidebar {
+        width: 240px;
+        min-width: 240px;
+    }
+}
+
+/* 響應式設計 - 手機橫向 */
+@media (max-width: 768px) {
+    .main-app-layout {
+        flex-direction: column;
+        height: auto;
+        min-height: calc(100vh - 100px);
+    }
+
+    .group-sidebar {
+        width: 100%;
+        height: 200px;
+        min-width: auto;
+        margin-bottom: 12px;
+        overflow-y: auto;
+    }
+
+    .main-content {
+        flex: 1;
+        min-height: 60vh;
+    }
+
+    .container-fluid {
+        max-width: none;
+        padding: env(safe-area-inset-top, 16px) 12px env(safe-area-inset-bottom, 16px) 12px !important;
+    }
+
+    .compact-toolbar {
+        height: 40px;
+        padding: 8px 16px;
+    }
+
+    .app-title {
+        font-size: 14px;
+    }
+
+    .current-group-indicator {
+        font-size: 12px;
+        padding: 2px 8px;
+    }
+
+    /* Chat controls responsive */
+    .chat-navigation {
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .chat-menu-toggle {
+        width: 55px;
+        height: 55px;
+    }
+
+    .chat-menu-toggle::before {
+        font-size: 1.6em;
+    }
+
+    .chat-menu-toggle.active ~ .chat-menu {
+        width: 280px;
+        height: 80px;
+        transform: translate(-50%, calc(-50% - 95px));
+        border-radius: 25px;
+    }
+
+    .chat-menu ul {
+        height: 80px;
+        gap: 15px;
+        padding: 8px 12px;
+    }
+
+    .chat-menu ul li button {
+        width: 42px;
+        height: 42px;
+        font-size: 16px;
+        border-radius: 14px;
+    }
+
+    .menu-label {
+        font-size: 10px;
+    }
+}
+
+/* 響應式設計 - 手機直向 */
+@media (max-width: 480px) {
+    .main-app-layout {
+        gap: 8px;
+    }
+
+    .group-sidebar {
+        height: 160px;
+        padding: 12px;
+    }
+
+    .sidebar-title {
+        font-size: 11px;
+    }
+
+    .group-item {
+        padding: 6px 8px;
+        font-size: 13px;
+    }
+
+    .group-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+    }
+
+    .search-box input {
+        font-size: 12px;
+        padding: 6px 10px 6px 28px;
+    }
+
+    .container-fluid {
+        padding: env(safe-area-inset-top, 12px) 8px env(safe-area-inset-bottom, 12px) 8px !important;
+        max-width: none;
+    }
+
+    .chat-bubble {
+        max-width: 95%;
+        margin: 6px auto;
+        padding: 12px 16px;
+    }
+
+    .compact-toolbar {
+        height: 36px;
+        padding: 6px 12px;
+        margin-bottom: 8px;
+    }
+
+    .app-title {
+        font-size: 13px;
+    }
+
+    .current-group-indicator {
+        font-size: 11px;
+        padding: 2px 6px;
+    }
+
+    .btn-primary, .btn-secondary {
+        padding: 10px 20px;
+        font-size: 13px;
+        width: 100%;
+        margin-bottom: 8px;
+    }
+}
+
+/* 滾動條美化 */
+.messages-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.group-sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.group-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-sidebar::-webkit-scrollbar-thumb {
+    background: var(--sidebar-scrollbar);
+    border-radius: 2px;
+}
+
+.group-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-text-tertiary);
+}

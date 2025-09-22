@@ -1,0 +1,186 @@
+/*
+ * Layout and Structure Styles
+ * ===========================
+ *
+ * This file contains:
+ * - Grid and flexbox layouts
+ * - Container structures
+ * - App layout systems
+ * - Chat layout components
+ * - Responsive layout foundations
+ */
+
+/* Chat App Layout - 全寬布局 */
+.chat-app-layout {
+    display: none; /* 預設隱藏，只在顯示訊息時出現 */
+    flex: 1;
+    flex-direction: column;
+    min-height: calc(100vh - 120px);
+}
+
+.chat-app-layout.active {
+    display: flex;
+}
+
+/* 主要應用佈局 - 左右分割 */
+.main-app-layout {
+    display: flex;
+    gap: 16px;
+    height: calc(100vh - 120px);
+    min-height: 600px;
+}
+
+/* 左側群組邊欄 */
+.group-sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--sidebar-bg);
+    backdrop-filter: blur(40px) saturate(180%) brightness(1.05);
+    border: 0.5px solid var(--sidebar-border);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow:
+        0 8px 32px var(--theme-shadow),
+        0 2px 8px var(--theme-shadow-light),
+        inset 0 1px 0 var(--theme-inset-light);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* 右側主內容區 */
+.main-content {
+    flex: 1;
+    background:
+        linear-gradient(135deg,
+            var(--theme-bg-primary) 0%,
+            var(--theme-bg-secondary) 50%,
+            var(--theme-bg-tertiary) 100%);
+    backdrop-filter: blur(30px) saturate(150%) brightness(1.1);
+    border: 0.5px solid var(--theme-border);
+    border-radius: 12px;
+    box-shadow:
+        0 8px 32px var(--theme-shadow),
+        0 2px 8px var(--theme-shadow-light),
+        inset 0 1px 0 var(--theme-inset-light);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 訊息顯示區域 - 全寬 */
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 120px);
+    max-height: calc(100vh - 120px);
+    overflow: hidden;
+}
+
+/* 訊息內容區域 */
+.messages-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Apple-style Liquid Glass Messages Container */
+.messages-container {
+    flex: 1;
+    background: transparent;
+    padding: 16px 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* 緊湊頂部工具列 */
+.compact-toolbar {
+    background:
+        linear-gradient(135deg,
+            var(--theme-bg-primary) 0%,
+            var(--theme-bg-secondary) 50%,
+            var(--theme-bg-tertiary) 100%);
+    backdrop-filter: blur(50px) saturate(200%) brightness(1.1);
+    border: 0.5px solid var(--theme-border);
+    border-radius: 16px;
+    padding: 12px 20px;
+    margin-bottom: 16px;
+    box-shadow:
+        0 4px 20px var(--theme-shadow-light),
+        0 1px 4px var(--theme-shadow-light),
+        inset 0 1px 0 var(--theme-inset-light);
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+}
+
+.toolbar-left, .toolbar-center, .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toolbar-center {
+    flex: 1;
+    justify-content: center;
+}
+
+/* Sidebar sections */
+.sidebar-section {
+    margin-bottom: 20px;
+}
+
+/* 覆蓋層樣式 */
+.content-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.overlay-content {
+    text-align: center;
+    color: var(--theme-text-secondary);
+}
+
+.overlay-content h5 {
+    color: var(--theme-text-primary);
+    margin-bottom: 8px;
+}
+
+/* 認證覆蓋層 */
+.auth-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-overlay .group-selector {
+    background:
+        linear-gradient(135deg,
+            rgba(255, 255, 255, 0.3) 0%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(255, 255, 255, 0.25) 100%);
+    backdrop-filter: blur(40px) saturate(180%) brightness(1.05);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    padding: 28px;
+    margin: 0;
+    max-width: 500px;
+    width: 90%;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.3),
+        0 8px 32px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
