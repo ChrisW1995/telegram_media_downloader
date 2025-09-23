@@ -86,15 +86,23 @@ function clearSelection() {
 // ==================== 下載管理 ====================
 
 /**
- * 開始下載選中的訊息
+ * 開始下載選中的訊息 - 顯示下載選擇對話框
  */
-async function startDownload() {
+function startDownload() {
     if (!currentChatId || selectedMessages.length === 0) {
         showNotification('warning', '注意', '請選擇要下載的訊息');
         return;
     }
 
-    console.log('開始下載，群組ID:', currentChatId);
+    // 顯示下載選擇對話框
+    showDownloadChoiceModal();
+}
+
+/**
+ * 執行 Bot 內下載
+ */
+async function startBotDownload() {
+    console.log('開始 Bot 下載，群組ID:', currentChatId);
     console.log('選中的訊息ID:', selectedMessages);
 
     // Show loading state on download button
@@ -161,5 +169,133 @@ async function startDownload() {
         // Restore download button
         downloadBtn.innerHTML = originalText;
         downloadBtn.disabled = selectedMessages.length === 0;
+    }
+}
+
+/**
+ * 執行本地 ZIP 下載
+ */
+async function startLocalDownload() {
+    console.log('開始本地 ZIP 下載，群組ID:', currentChatId);
+    console.log('選中的訊息ID:', selectedMessages);
+
+    // 顯示下載進度通知
+    const zipNotificationId = showNotification('info', 'ZIP 下載', `正在準備 ${selectedMessages.length} 個檔案...`, {
+        duration: 0, // 不自動消失
+        progress: true // 顯示進度條
+    });
+
+    try {
+        // 更新通知狀態為下載中
+        updateNotification(zipNotificationId, {
+            title: 'ZIP 下載',
+            message: '正在從 Telegram 下載檔案並打包...',
+            progress: 30
+        });
+
+        const response = await fetch('/api/download/zip', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                chat_id: currentChatId,
+                message_ids: selectedMessages
+            })
+        });
+
+        if (response.ok) {
+            // 更新進度
+            updateNotification(zipNotificationId, {
+                title: 'ZIP 下載',
+                message: '正在下載 ZIP 檔案到您的電腦...',
+                progress: 80
+            });
+
+            // 取得檔案名稱從回應標頭
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = 'download.zip';
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename=["']?([^"';]+)["']?/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            // 下載檔案
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            // 更新為完成狀態
+            updateNotification(zipNotificationId, {
+                title: '下載完成',
+                message: `✅ ${filename} 已下載到您的電腦`,
+                progress: 100
+            });
+
+            // 3秒後移除通知
+            setTimeout(() => {
+                removeNotification(zipNotificationId);
+            }, 3000);
+
+            clearSelection();
+        } else {
+            const data = await response.json();
+
+            // 顯示錯誤
+            updateNotification(zipNotificationId, {
+                title: '下載失敗',
+                message: `❌ ${data.error || data.message || '未知錯誤'}`,
+                type: 'error'
+            });
+
+            // 5秒後移除通知
+            setTimeout(() => {
+                removeNotification(zipNotificationId);
+            }, 5000);
+        }
+    } catch (error) {
+        console.error('ZIP 下載錯誤:', error);
+
+        // 顯示錯誤
+        updateNotification(zipNotificationId, {
+            title: '連接錯誤',
+            message: `❌ ZIP 下載時發生錯誤：${error.message}`,
+            type: 'error'
+        });
+
+        // 5秒後移除通知
+        setTimeout(() => {
+            removeNotification(zipNotificationId);
+        }, 5000);
+    }
+}
+
+/**
+ * 執行兩種下載方式
+ */
+async function startBothDownload() {
+    console.log('開始執行 Bot 和本地雙重下載');
+
+    showNotification('info', '雙重下載', '正在同時執行 Bot 下載和本地 ZIP 下載...');
+
+    try {
+        // 同時執行兩種下載
+        await Promise.all([
+            startBotDownload(),
+            startLocalDownload()
+        ]);
+
+        showNotification('success', '完成', '兩種下載方式都已開始執行');
+    } catch (error) {
+        console.error('雙重下載錯誤:', error);
+        showNotification('error', '下載錯誤', '執行雙重下載時發生錯誤');
     }
 }

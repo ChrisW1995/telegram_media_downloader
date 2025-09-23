@@ -47,6 +47,9 @@ function initializeEventListeners() {
         downloadBtn.addEventListener('click', startDownload);
     }
 
+    // Download choice modal event listeners
+    initializeDownloadModal();
+
     // Header logout button
     const headerLogoutBtn = document.getElementById('header-logout-btn');
     if (headerLogoutBtn) {
@@ -180,4 +183,117 @@ function hideMessages() {
     if (typeof lastMessageId !== 'undefined') lastMessageId = 0;
     if (typeof hasMoreMessages !== 'undefined') hasMoreMessages = true;
     if (typeof allMessages !== 'undefined') allMessages.length = 0;
+}
+
+// ==================== 下載選擇對話框控制 ====================
+
+/**
+ * 初始化下載對話框事件監聽器
+ */
+function initializeDownloadModal() {
+    // 關閉按鈕事件
+    const closeBtn = document.getElementById('download-modal-close');
+    const cancelBtn = document.getElementById('download-modal-cancel');
+    const overlay = document.getElementById('download-choice-modal');
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', hideDownloadChoiceModal);
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', hideDownloadChoiceModal);
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                hideDownloadChoiceModal();
+            }
+        });
+    }
+
+    // 下載選項按鈕事件
+    const botOption = document.getElementById('download-bot-option');
+    const localOption = document.getElementById('download-local-option');
+    const bothOption = document.getElementById('download-both-option');
+
+    if (botOption) {
+        botOption.addEventListener('click', function() {
+            hideDownloadChoiceModal();
+            startBotDownload();
+        });
+    }
+
+    if (localOption) {
+        localOption.addEventListener('click', function() {
+            hideDownloadChoiceModal();
+            startLocalDownload();
+        });
+    }
+
+    if (bothOption) {
+        bothOption.addEventListener('click', function() {
+            hideDownloadChoiceModal();
+            startBothDownload();
+        });
+    }
+
+    // ESC 鍵關閉對話框
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('download-choice-modal');
+            if (modal && modal.style.display !== 'none') {
+                hideDownloadChoiceModal();
+            }
+        }
+    });
+}
+
+/**
+ * 顯示下載選擇對話框
+ */
+function showDownloadChoiceModal() {
+    const modal = document.getElementById('download-choice-modal');
+    const countElement = document.getElementById('download-modal-count');
+
+    if (!modal) {
+        console.error('找不到下載選擇對話框元素');
+        return;
+    }
+
+    // 更新選中檔案數量
+    if (countElement) {
+        countElement.textContent = selectedMessages.length;
+    }
+
+    // 顯示對話框
+    modal.style.display = 'flex';
+
+    // 防止背景滾動
+    document.body.style.overflow = 'hidden';
+
+    // 聚焦到對話框以支援鍵盤導航
+    modal.focus();
+}
+
+/**
+ * 隱藏下載選擇對話框
+ */
+function hideDownloadChoiceModal() {
+    const modal = document.getElementById('download-choice-modal');
+
+    if (modal) {
+        modal.style.display = 'none';
+    }
+
+    // 恢復背景滾動
+    document.body.style.overflow = '';
+}
+
+/**
+ * 檢查是否有選擇對話框正在顯示
+ */
+function isDownloadModalVisible() {
+    const modal = document.getElementById('download-choice-modal');
+    return modal && modal.style.display !== 'none';
 }
