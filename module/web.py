@@ -3241,3 +3241,13 @@ def get_fast_download_status():
     except Exception as e:
         logger.error(f"Failed to get download status: {e}")
         return jsonify({'success': False, 'error': f'獲取下載狀態失敗: {str(e)}'})
+
+
+# =============================================================================
+# Import ZIP Download API
+# =============================================================================
+try:
+    from . import web_zip_api
+    logger.info("ZIP 下載 API 已載入")
+except ImportError as e:
+    logger.error(f"無法載入 ZIP 下載 API: {e}")

@@ -88,9 +88,6 @@
             </div>
         </div>
 
-        <!-- Status Alert -->
-        <div id="status-alert" class="alert alert-info" style="display: none;"></div>
-
         <!-- Loading Spinner -->
         <div id="loading-spinner" class="loading-spinner" style="display: none;">
             <div class="spinner-border text-primary" role="status">
@@ -163,6 +160,63 @@
     <!-- 即時通知容器 -->
     <div id="notification-container" class="notification-container">
         <!-- 動態通知會在這裡顯示 -->
+    </div>
+
+    <!-- 下載選擇對話框 -->
+    <div id="download-choice-modal" class="download-modal-overlay" style="display: none;">
+        <div class="download-modal">
+            <div class="download-modal-header">
+                <h5 class="download-modal-title">
+                    <i class="fas fa-download"></i>
+                    選擇下載方式
+                </h5>
+                <button class="download-modal-close" id="download-modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="download-modal-body">
+                <p class="download-modal-description">
+                    已選擇 <span id="download-modal-count">0</span> 個檔案，請選擇下載方式：
+                </p>
+
+                <div class="download-options">
+                    <button class="download-option" id="download-bot-option">
+                        <div class="download-option-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="download-option-content">
+                            <h6>Bot 內下載</h6>
+                            <p>下載到伺服器配置路徑，可透過 Bot 接收通知</p>
+                        </div>
+                    </button>
+
+                    <button class="download-option" id="download-local-option">
+                        <div class="download-option-icon">
+                            <i class="fas fa-laptop"></i>
+                        </div>
+                        <div class="download-option-content">
+                            <h6>本地電腦下載</h6>
+                            <p>打包成 ZIP 檔案直接下載到您的電腦</p>
+                        </div>
+                    </button>
+
+                    <button class="download-option" id="download-both-option">
+                        <div class="download-option-icon">
+                            <i class="fas fa-arrows-alt-h"></i>
+                        </div>
+                        <div class="download-option-content">
+                            <h6>以上皆是</h6>
+                            <p>同時執行 Bot 下載和本地 ZIP 下載</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="download-modal-footer">
+                <button class="btn-secondary" id="download-modal-cancel">取消</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>

@@ -90,23 +90,43 @@ function showLoading(show) {
 }
 
 /**
- * 顯示提示訊息
+ * 顯示提示訊息 - 使用 Toast 通知系統
  * @param {string} message - 提示訊息
  * @param {string} type - 訊息類型 (info, success, warning, danger)
  */
 function showAlert(message, type) {
-    const alert = document.getElementById('status-alert');
-    if (!alert) return;
+    // 將 Bootstrap 的 alert 類型轉換為通知系統的類型
+    const typeMapping = {
+        'success': 'success',
+        'danger': 'error',
+        'warning': 'warning',
+        'info': 'info'
+    };
 
-    alert.className = `alert alert-${type}`;
-    alert.textContent = message;
-    alert.style.display = 'block';
+    const notificationType = typeMapping[type] || 'info';
 
-    // Info messages disappear faster
-    const timeout = type === 'info' ? 3000 : 5000;
-    setTimeout(() => {
-        alert.style.display = 'none';
-    }, timeout);
+    // 使用現有的通知系統
+    if (typeof showNotification === 'function') {
+        showNotification(notificationType, getTypeTitle(notificationType), message);
+    } else {
+        // 降級方案：使用瀏覽器原生提示
+        console.log(`${notificationType.toUpperCase()}: ${message}`);
+    }
+}
+
+/**
+ * 根據類型獲取標題
+ * @param {string} type - 通知類型
+ * @returns {string} 標題
+ */
+function getTypeTitle(type) {
+    const titles = {
+        'success': '成功',
+        'error': '錯誤',
+        'warning': '警告',
+        'info': '提示'
+    };
+    return titles[type] || '通知';
 }
 
 /**

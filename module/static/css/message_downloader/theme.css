@@ -58,10 +58,18 @@ body {
     --theme-border: rgba(255, 255, 255, 0.1);
     --theme-text-primary: rgba(255, 255, 255, 0.9);
     --theme-text-secondary: rgba(255, 255, 255, 0.6);
-    --theme-text-tertiary: rgba(255, 255, 255, 0.3);
+    --theme-text-tertiary: rgba(255, 255, 255, 0.7);
     --theme-shadow: rgba(0, 0, 0, 0.3);
     --theme-shadow-light: rgba(0, 0, 0, 0.15);
     --theme-inset-light: rgba(255, 255, 255, 0.05);
+
+    /* 深色主題下的藍色調整 - 更明亮和更高對比度 */
+    --apple-blue: #64B5F6;
+    --apple-link: #64B5F6;
+
+    /* 深色主題下的文字顏色調整 */
+    --apple-label-secondary: rgba(255, 255, 255, 0.8);
+    --apple-label-tertiary: rgba(255, 255, 255, 0.7);
 
     /* Sidebar Dark Theme */
     --sidebar-bg: linear-gradient(135deg, rgba(28, 28, 30, 0.88) 0%, rgba(28, 28, 30, 0.85) 50%, rgba(28, 28, 30, 0.87) 100%);
@@ -75,6 +83,19 @@ body {
     --sidebar-search-border: rgba(255, 255, 255, 0.2);
     --sidebar-search-text: rgba(255, 255, 255, 0.9);
     --sidebar-scrollbar: rgba(255, 255, 255, 0.2);
+}
+
+/* 深色主題下覆蓋 modern.css 的強制樣式 */
+[data-theme="dark"] .message-date {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme="dark"] .message-media-info {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme="dark"] .chat-file-size {
+    color: rgba(255, 255, 255, 0.7) !important;
 }
 
 /* Theme Toggle Button */
