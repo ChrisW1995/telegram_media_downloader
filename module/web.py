@@ -2446,17 +2446,28 @@ def verify_verification_code():
             session['message_downloader_authenticated'] = True
             session['message_downloader_user_info'] = result.get('user_info', {})
             session.permanent = True  # Make session persistent
-            
+
             # Store user session in database for persistence
             if 'user_id' in result:
-                session['message_downloader_user_id'] = result['user_id']
-                
+                user_id = result['user_id']
+                session['message_downloader_user_id'] = user_id
+
+                # Update session key to user_id for consistency with active_clients
+                new_session_key = str(user_id)
+                session['message_downloader_session_key'] = new_session_key
+
+                # Move session data to new key
+                if session_key in message_downloader_auth_sessions:
+                    message_downloader_auth_sessions[new_session_key] = message_downloader_auth_sessions[session_key]
+                    if session_key != new_session_key:
+                        del message_downloader_auth_sessions[session_key]
+
                 # Update persistent storage with authentication success
                 import time
                 session_storage = get_session_storage()
-                session_storage.update_session(session_key, {
+                session_storage.update_session(new_session_key, {
                     'status': 'authenticated',
-                    'user_id': result['user_id'],
+                    'user_id': user_id,
                     'user_info': result.get('user_info', {}),
                     'authenticated_at': time.time()
                 })
@@ -2512,17 +2523,28 @@ def verify_two_factor_password():
             session['message_downloader_authenticated'] = True
             session['message_downloader_user_info'] = result.get('user_info', {})
             session.permanent = True  # Make session persistent
-            
+
             # Store user session in database for persistence
             if 'user_id' in result:
-                session['message_downloader_user_id'] = result['user_id']
-                
+                user_id = result['user_id']
+                session['message_downloader_user_id'] = user_id
+
+                # Update session key to user_id for consistency with active_clients
+                new_session_key = str(user_id)
+                session['message_downloader_session_key'] = new_session_key
+
+                # Move session data to new key
+                if session_key in message_downloader_auth_sessions:
+                    message_downloader_auth_sessions[new_session_key] = message_downloader_auth_sessions[session_key]
+                    if session_key != new_session_key:
+                        del message_downloader_auth_sessions[session_key]
+
                 # Update persistent storage with authentication success
                 import time
                 session_storage = get_session_storage()
-                session_storage.update_session(session_key, {
+                session_storage.update_session(new_session_key, {
                     'status': 'authenticated',
-                    'user_id': result['user_id'],
+                    'user_id': user_id,
                     'user_info': result.get('user_info', {}),
                     'authenticated_at': time.time()
                 })
@@ -2748,13 +2770,24 @@ def check_qr_status():
                 session.permanent = True
 
                 if 'user_id' in result:
-                    session['message_downloader_user_id'] = result['user_id']
+                    user_id = result['user_id']
+                    session['message_downloader_user_id'] = user_id
+
+                    # Update session key to user_id for consistency with active_clients
+                    new_session_key = str(user_id)
+                    session['message_downloader_session_key'] = new_session_key
+
+                    # Move session data to new key
+                    if session_key in message_downloader_auth_sessions:
+                        message_downloader_auth_sessions[new_session_key] = message_downloader_auth_sessions[session_key]
+                        if session_key != new_session_key:
+                            del message_downloader_auth_sessions[session_key]
 
                     # Update persistent storage
                     session_storage = get_session_storage()
-                    session_storage.update_session(session_key, {
+                    session_storage.update_session(new_session_key, {
                         'status': 'authenticated',
-                        'user_id': result['user_id'],
+                        'user_id': user_id,
                         'user_info': result.get('user_info', {}),
                         'authenticated_at': time.time()
                     })
@@ -2944,11 +2977,29 @@ def message_downloader_thumbnail(chat_id, message_id):
             logger.error("Auth manager not available or no active_clients attribute")
             return jsonify({'success': False, 'error': '客戶端不可用'}), 500
 
+        # 首先嘗試用 session_key 直接查找客戶端
         client = auth_manager.active_clients.get(session_key)
-        logger.info(f"Client: {client}")
-        logger.info(f"Active clients: {list(auth_manager.active_clients.keys())}")
+        logger.info(f"Client with session_key: {client}")
+
+        # 如果沒找到，嘗試用 user_id 查找（處理認證後 key 變化的情況）
         if not client:
-            logger.error(f"No client found for session {session_key}")
+            user_id = session.get('message_downloader_user_id')
+            if user_id:
+                client = auth_manager.active_clients.get(str(user_id))
+                logger.info(f"Client with user_id {user_id}: {client}")
+
+        # 如果還是沒找到，嘗試找第一個數字 key 的客戶端（回退機制）
+        if not client:
+            logger.info(f"Looking for numeric keys in active_clients: {list(auth_manager.active_clients.keys())}")
+            for key in auth_manager.active_clients.keys():
+                if key.isdigit():
+                    client = auth_manager.active_clients[key]
+                    logger.info(f"Found client with numeric key {key}: {client}")
+                    break
+
+        if not client:
+            logger.error(f"No client found for session {session_key}, user_id {session.get('message_downloader_user_id')}")
+            logger.error(f"Available clients: {list(auth_manager.active_clients.keys())}")
             return jsonify({'success': False, 'error': '找不到有效的客戶端連接'}), 500
 
         # 簡化的縮圖獲取函數
