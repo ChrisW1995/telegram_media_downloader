@@ -222,15 +222,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 
     <!-- Message Downloader JavaScript Modules -->
-    <script src="{{ url_for('static', filename='js/message_downloader/core.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/theme.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/auth.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/groups.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/messages.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/selection.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/notifications.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/ui.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/core.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/theme.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/auth.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/groups.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/messages.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/selection.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/notifications.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/ui.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/main.js') }}?v=2.0"></script>
+
 
     <!-- Fixed Animated Chat Controls - Bottom Right Corner -->
     <div id="chat-controls" class="chat-navigation" style="display: none;">
@@ -273,6 +274,108 @@
                     </div>
                 </li>
             </ul>
+        </div>
+    </div>
+
+    <!-- 常駐浮動進度條 -->
+    <div id="floating-progress-modal" class="floating-progress-modal" style="display: none;">
+        <div class="floating-progress-header">
+            <div class="floating-progress-title">
+                <i class="fas fa-download"></i>
+                <span>下載進度</span>
+            </div>
+            <div class="floating-progress-controls">
+                <button id="minimize-progress-btn" class="progress-control-btn" title="最小化">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button id="close-progress-btn" class="progress-control-btn" title="關閉">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="floating-progress-body">
+            <div class="progress-overview">
+                <div class="progress-status">
+                    <span id="progress-status-text">準備中...</span>
+                </div>
+                <div class="progress-percentage">
+                    <span id="progress-percentage-text">0%</span>
+                </div>
+            </div>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar">
+                    <div id="progress-bar-fill" class="progress-bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="progress-details">
+                <div class="progress-stats">
+                    <div class="stat-row">
+                        <div class="stat-item">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>速度</span>
+                            <span id="progress-speed">計算中...</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-clock"></i>
+                            <span>剩餘時間</span>
+                            <span id="progress-eta">--:--</span>
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-item">
+                            <i class="fas fa-database"></i>
+                            <span>大小</span>
+                            <span id="progress-size">0 B / 0 B</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-file"></i>
+                            <span>檔案</span>
+                            <span id="progress-files">0 / 0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 個別檔案下載進度 -->
+            <div class="individual-progress-section">
+                <div class="individual-progress-header">
+                    <h6>
+                        <i class="fas fa-list"></i>
+                        個別檔案進度
+                    </h6>
+                    <button id="toggle-individual-progress" class="toggle-btn">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+
+                <div id="individual-progress-container" class="individual-progress-container">
+                    <div class="individual-progress-list" id="individual-progress-list">
+                        <!-- 個別檔案進度項目將動態加載到這裡 -->
+                        <div class="no-files-message">
+                            <i class="fas fa-hourglass-start"></i>
+                            <span>等待下載開始...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最小化進度指示器 -->
+    <div id="minimized-progress-indicator" class="minimized-progress-indicator" style="display: none;">
+        <div class="minimized-progress-content">
+            <div class="minimized-icon">
+                <i class="fas fa-download"></i>
+            </div>
+            <div class="minimized-info">
+                <div class="minimized-percentage">0%</div>
+                <div class="minimized-bar">
+                    <div id="minimized-progress-fill" class="minimized-bar-fill"></div>
+                </div>
+            </div>
         </div>
     </div>
 </body>

@@ -468,6 +468,8 @@ async def download_task(
         file_size,
     )
 
+    return download_status, file_name
+
 
 # pylint: disable = R0915,R0914
 
@@ -535,7 +537,10 @@ async def download_media(
                 ui_file_name = f"****{os.path.splitext(file_name)[-1]}"
 
             if _can_download(_type, file_formats, file_format):
-                if _is_exist(file_name):
+                # 檢查是否是 ZIP 下載，如果是則強制重新下載
+                is_zip_download = hasattr(node, 'zip_download_manager') and node.zip_download_manager
+
+                if _is_exist(file_name) and not is_zip_download:
                     file_size = os.path.getsize(file_name)
                     if file_size or file_size == media_size:
                         logger.info(
@@ -545,6 +550,12 @@ async def download_media(
                         )
 
                         return DownloadStatus.SkipDownload, file_name
+                elif is_zip_download and _is_exist(file_name):
+                    logger.info(f"id={message.id} ZIP 下載模式 - 強制重新下載已存在檔案: {ui_file_name}")
+                    # 為 ZIP 下載產生臨時檔案名，避免覆蓋原檔案
+                    import tempfile
+                    temp_dir = tempfile.mkdtemp(prefix='zip_download_')
+                    file_name = os.path.join(temp_dir, os.path.basename(file_name))
             else:
                 return DownloadStatus.SkipDownload, None
 
@@ -679,6 +690,11 @@ def _check_config() -> bool:
 async def worker(client: pyrogram.client.Client):
     """Work for download task"""
     while app.is_running:
+        download_status = None
+        file_path = None
+        message = None
+        node = None
+
         try:
             item = await queue.get()
             message = item[0]
@@ -693,12 +709,40 @@ async def worker(client: pyrogram.client.Client):
             if node.is_stop_transmission:
                 continue
 
+            # 執行下載任務
             if node.client:
-                await download_task(node.client, message, node)
+                download_status, file_path = await download_task(node.client, message, node)
             else:
-                await download_task(client, message, node)
+                download_status, file_path = await download_task(client, message, node)
+
+            # 通知 ZIP 下載管理器（如果是 ZIP 下載的一部分）
+            if hasattr(node, 'zip_download_manager') and node.zip_download_manager:
+                from module.app import DownloadStatus
+                message_id = getattr(node, 'zip_message_id', message.id)
+
+                if download_status in [DownloadStatus.SuccessDownload, DownloadStatus.SkipDownload] and file_path:
+                    try:
+                        import os
+                        file_size = os.path.getsize(file_path) if file_path else 0
+                        node.zip_download_manager.on_file_downloaded(message_id, file_path, file_size)
+                    except Exception as zip_error:
+                        logger.error(f"ZIP 管理器通知下載完成失敗: {zip_error}")
+                        node.zip_download_manager.on_file_failed(message_id, str(zip_error))
+                else:
+                    # 真正的下載失敗
+                    error_msg = f"下載狀態: {download_status}"
+                    node.zip_download_manager.on_file_failed(message_id, error_msg)
+
         except Exception as e:
             logger.exception(f"{e}")
+
+            # 如果有 ZIP 管理器，也要通知失敗
+            try:
+                if node and hasattr(node, 'zip_download_manager') and node.zip_download_manager:
+                    message_id = getattr(node, 'zip_message_id', getattr(message, 'id', 'unknown') if message else 'unknown')
+                    node.zip_download_manager.on_file_failed(message_id, str(e))
+            except Exception as zip_error:
+                logger.error(f"ZIP 管理器通知異常失敗: {zip_error}")
 
 
 async def download_chat_task(

@@ -1594,11 +1594,11 @@ def _get_download_progress_data():
     """獲取當前下載進度"""
     global download_progress
     print(f"Progress API called: {download_progress}")
-    
+
     # 選擇一個活躍的下載作為主要顯示（包括正在下載和剛完成的）
     all_files = [f for f in download_progress['current_files'].values() if f['total_bytes'] > 0]
     active_files = [f for f in all_files if f['downloaded_bytes'] < f['total_bytes']]
-    
+
     if active_files:
         # 優先選擇正在下載的檔案
         main_file = max(active_files, key=lambda x: x['downloaded_bytes'] / max(x['total_bytes'], 1))
@@ -1607,15 +1607,20 @@ def _get_download_progress_data():
         # 如果沒有正在下載的，選擇最近完成的
         main_file = max(all_files, key=lambda x: x['downloaded_bytes'] / max(x['total_bytes'], 1))
         download_progress['current_file'] = main_file
-    
+
+    # 計算已完成檔案數（進度達到100%或已標記為完成）
+    completed_files = len([f for f in download_progress['current_files'].values()
+                          if f.get('completed', False) or
+                          (f['total_bytes'] > 0 and f['downloaded_bytes'] >= f['total_bytes'])])
+
     # 獲取總下載速度，參考原始設計
     total_download_speed = format_byte(get_total_download_speed()) + '/s'
-    
+
     return jsonify({
         'success': True,
         'progress': {
-            'total_task': download_progress['total_count'],
-            'completed_task': download_progress['completed_count'],
+            'total_task': download_progress['total_count'],  # 使用設定的總檔案數，而非動態計算
+            'completed_task': completed_files,  # 使用計算的已完成檔案數
             'status_text': download_progress['status_text'],
             'active': download_progress['active'],
             'current_file': download_progress['current_file'],
@@ -3223,21 +3228,90 @@ def add_fast_download_tasks():
         return jsonify({'success': False, 'error': f'添加下載任務失敗: {str(e)}'})
 
 
+def calculate_detailed_progress():
+    """計算詳細的下載進度資訊"""
+    global download_progress
+
+    try:
+        current_files = download_progress.get('current_files', {})
+
+        # 計算總下載大小和已下載大小
+        total_size = 0
+        downloaded_size = 0
+        total_speed = 0
+
+        for file_info in current_files.values():
+            total_size += file_info.get('total_bytes', 0)
+            downloaded_size += file_info.get('downloaded_bytes', 0)
+            total_speed += file_info.get('download_speed', 0)
+
+        # 如果沒有活動文件，使用單一文件資訊
+        if not current_files and download_progress.get('current_file'):
+            single_file = download_progress['current_file']
+            total_size = single_file.get('total_bytes', 0)
+            downloaded_size = single_file.get('downloaded_bytes', 0)
+            total_speed = single_file.get('download_speed', 0)
+
+        # 計算預估剩餘時間
+        remaining_size = total_size - downloaded_size
+        eta_seconds = 0
+        if total_speed > 0 and remaining_size > 0:
+            eta_seconds = remaining_size / total_speed
+
+        return {
+            'downloaded_size': downloaded_size,
+            'total_size': total_size,
+            'download_speed': total_speed,
+            'remaining_files': download_progress.get('total_count', 0) - download_progress.get('completed_count', 0),
+            'current_files': list(current_files.keys()),
+            'eta_seconds': eta_seconds
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to calculate detailed progress: {e}")
+        return {
+            'downloaded_size': 0,
+            'total_size': 0,
+            'download_speed': 0,
+            'remaining_files': 0,
+            'current_files': [],
+            'eta_seconds': 0
+        }
+
 @_flask_app.route("/api/fast_download/status", methods=["GET"])
 @require_message_downloader_auth
 def get_fast_download_status():
-    """Get download status for fast test interface"""
+    """Get download status for fast test interface with detailed progress"""
     try:
         # Use existing download progress system
         global download_progress, active_download_session
-        
+
+        # Calculate detailed statistics
+        detailed_progress = calculate_detailed_progress()
+
+        # Create enhanced progress data
+        enhanced_progress = {
+            'active': download_progress.get('active', False),
+            'total_task': download_progress.get('total_count', 0),
+            'completed_task': download_progress.get('completed_count', 0),
+            'status_text': download_progress.get('status_text', ''),
+
+            # Detailed progress information
+            'downloaded_size': detailed_progress.get('downloaded_size', 0),
+            'total_size': detailed_progress.get('total_size', 0),
+            'download_speed': detailed_progress.get('download_speed', 0),
+            'remaining_files': detailed_progress.get('remaining_files', 0),
+            'current_files': detailed_progress.get('current_files', []),
+            'eta_seconds': detailed_progress.get('eta_seconds', 0)
+        }
+
         return jsonify({
             'success': True,
-            'progress': download_progress,
+            'progress': enhanced_progress,
             'session': active_download_session,
             'download_state': get_download_state().name
         })
-        
+
     except Exception as e:
         logger.error(f"Failed to get download status: {e}")
         return jsonify({'success': False, 'error': f'獲取下載狀態失敗: {str(e)}'})

@@ -86,6 +86,75 @@ function clearSelection() {
 // ==================== 下載管理 ====================
 
 /**
+ * 獲取選中訊息的檔案資訊
+ * @returns {Array} 檔案資訊陣列
+ */
+function getSelectedFileInfos() {
+    const fileInfos = [];
+
+    selectedMessages.forEach((messageId, index) => {
+        // 從 DOM 中找到對應的訊息元素
+        const messageBubble = document.querySelector(`[data-message-id="${messageId}"]`);
+        if (!messageBubble) return;
+
+        // 尋找檔案資訊
+        const fileNameElement = messageBubble.querySelector('.media-filename');
+        const fileSizeElement = messageBubble.querySelector('.media-size');
+
+        let fileName = `檔案 ${index + 1}`;
+        let fileSize = 100000 + Math.random() * 500000; // 預設大小
+
+        if (fileNameElement) {
+            fileName = fileNameElement.textContent.trim();
+        }
+
+        if (fileSizeElement) {
+            const sizeText = fileSizeElement.textContent.trim();
+            // 解析檔案大小 (例如: "524.02 MB", "1.5 GB", "750 KB")
+            fileSize = parseSizeString(sizeText);
+        }
+
+        fileInfos.push({
+            id: `message_${messageId}`,
+            messageId: messageId,
+            name: fileName,
+            size: fileSize
+        });
+    });
+
+    return fileInfos;
+}
+
+/**
+ * 解析檔案大小字串為位元組數
+ * @param {string} sizeStr - 大小字串，例如 "524.02 MB"
+ * @returns {number} 位元組數
+ */
+function parseSizeString(sizeStr) {
+    if (!sizeStr || sizeStr === 'Unknown size') {
+        return 100000 + Math.random() * 500000; // 預設大小
+    }
+
+    const matches = sizeStr.match(/^([\d.]+)\s*(B|KB|MB|GB|TB)?$/i);
+    if (!matches) {
+        return 100000 + Math.random() * 500000; // 預設大小
+    }
+
+    const value = parseFloat(matches[1]);
+    const unit = (matches[2] || 'B').toLowerCase();
+
+    const multipliers = {
+        'b': 1,
+        'kb': 1024,
+        'mb': 1024 * 1024,
+        'gb': 1024 * 1024 * 1024,
+        'tb': 1024 * 1024 * 1024 * 1024
+    };
+
+    return Math.round(value * (multipliers[unit] || 1));
+}
+
+/**
  * 開始下載選中的訊息 - 顯示下載選擇對話框
  */
 function startDownload() {
@@ -179,11 +248,24 @@ async function startLocalDownload() {
     console.log('開始本地 ZIP 下載，群組ID:', currentChatId);
     console.log('選中的訊息ID:', selectedMessages);
 
+    // 收集選中訊息的檔案資訊
+    const fileInfos = getSelectedFileInfos();
+    console.log('收集到的檔案資訊:', fileInfos);
+
+    // 顯示浮動進度視窗
+    showFloatingProgress();
+
+    // 初始化個別檔案進度
+    initializeIndividualProgress(fileInfos);
+
     // 顯示下載進度通知
     const zipNotificationId = showNotification('info', 'ZIP 下載', `正在準備 ${selectedMessages.length} 個檔案...`, {
         duration: 0, // 不自動消失
         progress: true // 顯示進度條
     });
+
+    // 開始進度檢查（使用統一的進度函數）
+    startProgressChecking();
 
     try {
         // 更新通知狀態為下載中
@@ -204,57 +286,117 @@ async function startLocalDownload() {
             })
         });
 
-        if (response.ok) {
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            const managerId = data.manager_id;
+            const expectedFilename = data.expected_zip_filename;
+
             // 更新進度
             updateNotification(zipNotificationId, {
                 title: 'ZIP 下載',
-                message: '正在下載 ZIP 檔案到您的電腦...',
-                progress: 80
+                message: `正在併發下載 ${selectedMessages.length} 個檔案...`,
+                progress: 30
             });
 
-            // 取得檔案名稱從回應標頭
-            const contentDisposition = response.headers.get('Content-Disposition');
-            let filename = 'download.zip';
-            if (contentDisposition) {
-                const filenameMatch = contentDisposition.match(/filename=["']?([^"';]+)["']?/);
-                if (filenameMatch) {
-                    filename = filenameMatch[1];
+            // 開始輪詢檢查下載狀態
+            const pollStatus = async () => {
+                try {
+                    const statusResponse = await fetch(`/api/download/zip/status/${managerId}`);
+
+                    if (statusResponse.ok) {
+                        // 檢查回應的 Content-Type
+                        const contentType = statusResponse.headers.get('Content-Type');
+
+                        if (contentType && contentType.includes('application/zip')) {
+                            // 這是 ZIP 檔案回應，下載完成
+                            const blob = await statusResponse.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = expectedFilename;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+
+                            // 更新為完成狀態
+                            updateNotification(zipNotificationId, {
+                                title: '下載完成',
+                                message: `✅ ${expectedFilename} 已下載到您的電腦`,
+                                progress: 100
+                            });
+
+                            // 停止進度檢查並隱藏浮動進度視窗
+                            stopProgressChecking();
+                            hideFloatingProgress();
+
+                            // 3秒後移除通知
+                            setTimeout(() => {
+                                removeNotification(zipNotificationId);
+                            }, 3000);
+
+                            clearSelection();
+                            return;
+                        } else {
+                            // 這是狀態回應，檢查進度
+                            const statusData = await statusResponse.json();
+
+                            if (statusData.success && !statusData.completed) {
+                                // 更新進度
+                                const progress = statusData.progress;
+                                const percentage = Math.max(30, Math.min(90, 30 + (progress.percentage * 0.6)));
+
+                                updateNotification(zipNotificationId, {
+                                    title: 'ZIP 下載',
+                                    message: `下載進度：${progress.downloaded_files}/${progress.total_files} 檔案完成 (${progress.percentage}%)`,
+                                    progress: percentage
+                                });
+
+                                // 繼續輪詢
+                                setTimeout(pollStatus, 2000);
+                            } else if (statusData.error) {
+                                throw new Error(statusData.error);
+                            }
+                        }
+                    } else {
+                        throw new Error('無法檢查下載狀態');
+                    }
+                } catch (error) {
+                    console.error('ZIP 下載狀態檢查錯誤:', error);
+
+                    // 顯示錯誤
+                    updateNotification(zipNotificationId, {
+                        title: '下載失敗',
+                        message: `❌ ${error.message}`,
+                        type: 'error'
+                    });
+
+                    // 停止進度檢查並隱藏浮動進度視窗
+                    stopProgressChecking();
+                    hideFloatingProgress();
+
+                    // 5秒後移除通知
+                    setTimeout(() => {
+                        removeNotification(zipNotificationId);
+                    }, 5000);
                 }
-            }
+            };
 
-            // 下載檔案
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
+            // 開始第一次狀態檢查
+            setTimeout(pollStatus, 1000);
 
-            // 更新為完成狀態
-            updateNotification(zipNotificationId, {
-                title: '下載完成',
-                message: `✅ ${filename} 已下載到您的電腦`,
-                progress: 100
-            });
-
-            // 3秒後移除通知
-            setTimeout(() => {
-                removeNotification(zipNotificationId);
-            }, 3000);
-
-            clearSelection();
         } else {
-            const data = await response.json();
-
             // 顯示錯誤
             updateNotification(zipNotificationId, {
                 title: '下載失敗',
                 message: `❌ ${data.error || data.message || '未知錯誤'}`,
                 type: 'error'
             });
+
+            // 停止進度檢查並隱藏浮動進度視窗
+            stopProgressChecking();
+            hideFloatingProgress();
 
             // 5秒後移除通知
             setTimeout(() => {
@@ -263,6 +405,10 @@ async function startLocalDownload() {
         }
     } catch (error) {
         console.error('ZIP 下載錯誤:', error);
+
+        // 停止真實進度查詢並隱藏浮動進度視窗
+        stopRealProgressPolling();
+        hideFloatingProgress();
 
         // 顯示錯誤
         updateNotification(zipNotificationId, {

@@ -347,3 +347,742 @@
         0 8px 32px rgba(0, 0, 0, 0.15),
         inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
+
+/* ==================== 下載選擇對話框樣式 ==================== */
+
+/* Download Choice Modal */
+.download-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px) saturate(180%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+.download-modal {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+    width: 90%;
+    max-width: 480px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow:
+        0 25px 50px rgba(0, 0, 0, 0.15),
+        0 15px 35px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    animation: modalSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.download-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.download-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--apple-label-primary);
+}
+
+.download-modal-title i {
+    color: #007AFF;
+    font-size: 16px;
+}
+
+.download-modal-close {
+    background: none;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--apple-label-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.download-modal-close:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--apple-label-primary);
+}
+
+.download-modal-body {
+    padding: 24px;
+}
+
+.download-modal-description {
+    margin: 0 0 24px;
+    color: var(--apple-label-secondary);
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.download-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.download-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px) saturate(120%);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    text-align: left;
+    width: 100%;
+}
+
+.download-option:hover {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 122, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow:
+        0 8px 25px rgba(0, 122, 255, 0.15),
+        0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.download-option:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.download-option-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%);
+    border-radius: 12px;
+    color: white;
+    font-size: 18px;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.download-option-content {
+    flex: 1;
+}
+
+.download-option-content h6 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--apple-label-primary);
+}
+
+.download-option-content p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--apple-label-secondary);
+    line-height: 1.3;
+}
+
+.download-modal-footer {
+    padding: 16px 24px 24px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Modal Animations */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Dark Theme Support for Modal */
+@media (prefers-color-scheme: dark) {
+    .download-modal {
+        background: rgba(28, 28, 30, 0.95);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .download-modal-header {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .download-option {
+        background: rgba(44, 44, 46, 0.8);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .download-option:hover {
+        background: rgba(44, 44, 46, 0.95);
+        border-color: rgba(0, 122, 255, 0.5);
+    }
+}
+
+/* Responsive Design for Modal */
+@media (max-width: 480px) {
+    .download-modal {
+        width: 95%;
+        margin: 20px;
+    }
+
+    .download-modal-header,
+    .download-modal-body,
+    .download-modal-footer {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .download-option {
+        padding: 14px;
+        gap: 12px;
+    }
+
+    .download-option-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+    }
+}
+
+/* ==================== 浮動進度條樣式 ==================== */
+
+/* 浮動進度條主體 */
+.floating-progress-modal {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 420px;
+    max-height: 70vh;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    box-shadow:
+        0 25px 50px rgba(0, 0, 0, 0.15),
+        0 15px 35px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    z-index: 9998;
+    overflow: hidden;
+    animation: slideInFromRight 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.floating-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(248, 249, 250, 0.6);
+}
+
+.floating-progress-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--apple-label-primary);
+}
+
+.floating-progress-title i {
+    color: #007AFF;
+    font-size: 14px;
+}
+
+.floating-progress-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.progress-control-btn {
+    background: none;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--apple-label-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+}
+
+.progress-control-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--apple-label-primary);
+}
+
+.floating-progress-body {
+    padding: 20px;
+    max-height: calc(70vh - 64px);
+    overflow-y: auto;
+}
+
+/* 進度概覽 */
+.progress-overview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.progress-status {
+    color: var(--apple-label-primary);
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.progress-percentage {
+    color: #007AFF;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* 進度條 */
+.progress-bar-container {
+    margin-bottom: 20px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(0, 122, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #007AFF 0%, #5AC8FA 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+/* 進度統計 */
+.progress-stats .stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.progress-stats .stat-row:last-child {
+    margin-bottom: 0;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--apple-label-secondary);
+}
+
+.stat-item i {
+    color: #007AFF;
+    font-size: 12px;
+    width: 14px;
+}
+
+/* ==================== 個別檔案進度樣式 ==================== */
+
+/* 個別進度區段 */
+.individual-progress-section {
+    margin-top: 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding-top: 20px;
+}
+
+.individual-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.individual-progress-header h6 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--apple-label-primary);
+}
+
+.individual-progress-header h6 i {
+    color: #007AFF;
+    font-size: 12px;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--apple-label-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 10px;
+}
+
+.toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--apple-label-primary);
+}
+
+/* 個別進度容器 */
+.individual-progress-container {
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    background: rgba(248, 249, 250, 0.3);
+}
+
+.individual-progress-list {
+    padding: 8px;
+}
+
+/* 無檔案訊息 */
+.no-files-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    color: var(--apple-label-tertiary);
+    font-size: 13px;
+    text-align: center;
+}
+
+.no-files-message i {
+    font-size: 20px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+}
+
+/* 個別檔案項目 */
+.individual-file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.individual-file-item:last-child {
+    margin-bottom: 0;
+}
+
+.individual-file-item:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 122, 255, 0.2);
+}
+
+/* 檔案狀態顏色 */
+.individual-file-item[data-status="waiting"] {
+    border-left: 3px solid #8E8E93;
+}
+
+.individual-file-item[data-status="downloading"] {
+    border-left: 3px solid #007AFF;
+    background: rgba(0, 122, 255, 0.03);
+}
+
+.individual-file-item[data-status="completed"] {
+    border-left: 3px solid #34C759;
+    background: rgba(52, 199, 89, 0.03);
+}
+
+.individual-file-item[data-status="error"] {
+    border-left: 3px solid #FF3B30;
+    background: rgba(255, 59, 48, 0.03);
+}
+
+/* 檔案資訊區域 */
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0; /* 允許文字省略 */
+}
+
+.file-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%);
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.file-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--apple-label-primary);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--apple-label-tertiary);
+}
+
+.file-status-text {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.individual-file-item[data-status="waiting"] .file-status-text {
+    background: rgba(142, 142, 147, 0.1);
+    color: #8E8E93;
+}
+
+.individual-file-item[data-status="downloading"] .file-status-text {
+    background: rgba(0, 122, 255, 0.1);
+    color: #007AFF;
+}
+
+.individual-file-item[data-status="completed"] .file-status-text {
+    background: rgba(52, 199, 89, 0.1);
+    color: #34C759;
+}
+
+.individual-file-item[data-status="error"] .file-status-text {
+    background: rgba(255, 59, 48, 0.1);
+    color: #FF3B30;
+}
+
+/* 檔案進度區域 */
+.file-progress-section {
+    width: 100px;
+    flex-shrink: 0;
+}
+
+.file-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(0, 122, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.file-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #007AFF 0%, #5AC8FA 100%);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.file-progress-text {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+}
+
+.progress-percentage {
+    color: var(--apple-label-secondary);
+    font-weight: 500;
+}
+
+.progress-speed {
+    color: var(--apple-label-tertiary);
+    font-size: 9px;
+}
+
+/* 最小化進度指示器 */
+.minimized-progress-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 122, 255, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 50px;
+    padding: 12px 16px;
+    cursor: pointer;
+    z-index: 9997;
+    box-shadow:
+        0 8px 20px rgba(0, 122, 255, 0.4),
+        0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: bounceIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.minimized-progress-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+}
+
+.minimized-icon {
+    font-size: 12px;
+}
+
+.minimized-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.minimized-percentage {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.minimized-bar {
+    width: 60px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.minimized-bar-fill {
+    height: 100%;
+    background: white;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+/* 動畫效果 */
+@keyframes slideInFromRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes bounceIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 黑暗主題支援 */
+@media (prefers-color-scheme: dark) {
+    .floating-progress-modal {
+        background: rgba(28, 28, 30, 0.95);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .floating-progress-header {
+        background: rgba(44, 44, 46, 0.6);
+        border-bottom-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .individual-progress-container {
+        background: rgba(44, 44, 46, 0.3);
+        border-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .individual-file-item {
+        background: rgba(44, 44, 46, 0.8);
+        border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .individual-file-item:hover {
+        background: rgba(44, 44, 46, 0.95);
+        border-color: rgba(0, 122, 255, 0.3);
+    }
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .floating-progress-modal {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-height: 60vh;
+    }
+
+    .file-progress-section {
+        width: 80px;
+    }
+
+    .file-name {
+        max-width: 120px;
+    }
+}

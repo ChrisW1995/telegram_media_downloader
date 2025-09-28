@@ -195,3 +195,64 @@ function getMediaInfo(message) {
 
     return { type, filename, size };
 }
+
+/**
+ * 測試浮動進度條功能
+ */
+function testFloatingProgress() {
+    console.log('🧪 測試浮動進度條功能');
+
+    // 檢查元素是否存在
+    const modal = document.getElementById('floating-progress-modal');
+    const minimized = document.getElementById('minimized-progress-indicator');
+
+    console.log('floating-progress-modal 元素:', modal);
+    console.log('minimized-progress-indicator 元素:', minimized);
+
+    if (!modal) {
+        console.error('❌ floating-progress-modal 元素不存在');
+        return;
+    }
+
+    if (!minimized) {
+        console.error('❌ minimized-progress-indicator 元素不存在');
+        return;
+    }
+
+    // 檢查 showFloatingProgress 函數是否存在
+    if (typeof showFloatingProgress === 'function') {
+        console.log('✅ showFloatingProgress 函數存在，嘗試顯示進度條');
+        showFloatingProgress();
+
+        // 測試更新進度
+        setTimeout(() => {
+            updateFloatingProgress({
+                percentage: 25,
+                status: '測試進度顯示...',
+                details: {
+                    downloadSpeed: 1024 * 1024,
+                    downloadedSize: 25 * 1024 * 1024,
+                    totalSize: 100 * 1024 * 1024,
+                    remainingSize: 75 * 1024 * 1024,
+                    completedFiles: 1,
+                    totalFiles: 4
+                }
+            });
+        }, 1000);
+
+        // 測試最小化
+        setTimeout(() => {
+            console.log('🔄 測試最小化功能');
+            minimizeFloatingProgress();
+        }, 3000);
+
+        // 測試恢復
+        setTimeout(() => {
+            console.log('🔄 測試恢復功能');
+            restoreFloatingProgress();
+        }, 5000);
+
+    } else {
+        console.error('❌ showFloatingProgress 函數不存在');
+    }
+}

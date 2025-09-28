@@ -445,3 +445,423 @@
     margin-top: 4px;
     text-align: right;
 }
+
+/* 詳細進度資訊樣式 */
+.notification-details {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.progress-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.04);
+    padding: 6px 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.stat-item:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.stat-item i {
+    width: 12px;
+    text-align: center;
+    color: var(--notification-color, #007AFF);
+    opacity: 0.8;
+}
+
+.stat-item span {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+/* 在小尺寸通知上調整統計項目的佈局 */
+@media (max-width: 450px) {
+    .notification-container {
+        left: 20px;
+        right: 20px;
+        max-width: none;
+    }
+
+    .progress-stats {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .stat-item {
+        font-size: 10px;
+        padding: 4px 6px;
+    }
+}
+
+/* ==================== 常駐浮動進度條樣式 ==================== */
+
+/* 浮動進度條主容器 */
+.floating-progress-modal {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 400px;
+    background:
+        linear-gradient(135deg,
+            rgba(255, 255, 255, 0.25) 0%,
+            rgba(255, 255, 255, 0.15) 50%,
+            rgba(255, 255, 255, 0.2) 100%);
+    backdrop-filter: blur(40px) saturate(200%);
+    border: 0.5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    box-shadow:
+        0 16px 40px rgba(0, 0, 0, 0.25),
+        0 8px 16px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    z-index: 2000;
+    animation: slideInFromBottom 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.floating-progress-modal:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.05) 100%);
+    pointer-events: none;
+}
+
+/* 浮動進度條動畫 */
+@keyframes slideInFromBottom {
+    from {
+        transform: translateY(100%) scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* 進度條標題區 */
+.floating-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px 12px 20px;
+    background: linear-gradient(135deg,
+        rgba(0, 122, 255, 0.9) 0%,
+        rgba(90, 200, 250, 0.8) 100%);
+    border-radius: 20px 20px 0 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.floating-progress-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.floating-progress-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.progress-control-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+}
+
+.progress-control-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.progress-control-btn:active {
+    transform: scale(0.95);
+}
+
+/* 進度條主體 */
+.floating-progress-body {
+    padding: 20px;
+}
+
+/* 進度概覽區 */
+.progress-overview {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.progress-status {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.8);
+}
+
+.progress-percentage {
+    font-size: 18px;
+    font-weight: 700;
+    color: #007AFF;
+    text-shadow: 0 1px 2px rgba(0, 122, 255, 0.1);
+}
+
+/* 進度條容器 */
+.progress-bar-container {
+    margin-bottom: 20px;
+}
+
+.progress-bar {
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    height: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-bar:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0.3) 0%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.1) 100%);
+    pointer-events: none;
+}
+
+.progress-bar-fill {
+    background: linear-gradient(90deg,
+        #007AFF 0%,
+        #5AC8FA 50%,
+        #00C7F7 100%);
+    height: 100%;
+    border-radius: 12px;
+    transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    width: 0%;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar-fill:after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.4) 50%,
+        transparent 100%);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* 進度詳細資訊 */
+.progress-details {
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 12px;
+    padding: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.progress-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stat-row {
+    display: flex;
+    gap: 16px;
+}
+
+.stat-row .stat-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.7);
+    background: rgba(255, 255, 255, 0.4);
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 0.5px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(20px);
+    transition: all 0.2s ease;
+}
+
+.stat-row .stat-item:hover {
+    background: rgba(255, 255, 255, 0.6);
+    transform: translateY(-1px);
+}
+
+.stat-row .stat-item i {
+    width: 14px;
+    text-align: center;
+    color: #007AFF;
+    opacity: 0.8;
+}
+
+.stat-row .stat-item span:last-child {
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.9);
+    margin-left: auto;
+}
+
+/* 最小化進度指示器 */
+.minimized-progress-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 80px;
+    height: 80px;
+    background:
+        linear-gradient(135deg,
+            rgba(255, 255, 255, 0.3) 0%,
+            rgba(255, 255, 255, 0.2) 100%);
+    backdrop-filter: blur(40px) saturate(200%);
+    border: 0.5px solid rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.2),
+        0 4px 8px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    z-index: 1900;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    animation: pulse 2s infinite ease-in-out;
+}
+
+.minimized-progress-indicator:hover {
+    transform: scale(1.05);
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.25),
+        0 6px 12px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow:
+            0 8px 32px rgba(0, 0, 0, 0.2),
+            0 4px 8px rgba(0, 0, 0, 0.1),
+            0 0 0 0 rgba(0, 122, 255, 0.4);
+    }
+    50% {
+        box-shadow:
+            0 8px 32px rgba(0, 0, 0, 0.2),
+            0 4px 8px rgba(0, 0, 0, 0.1),
+            0 0 0 8px rgba(0, 122, 255, 0.1);
+    }
+}
+
+.minimized-progress-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 8px;
+}
+
+.minimized-icon {
+    font-size: 18px;
+    color: #007AFF;
+    margin-bottom: 4px;
+}
+
+.minimized-info {
+    width: 100%;
+    text-align: center;
+}
+
+.minimized-percentage {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.8);
+    margin-bottom: 4px;
+}
+
+.minimized-bar {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    height: 4px;
+    overflow: hidden;
+}
+
+.minimized-bar-fill {
+    background: linear-gradient(90deg, #007AFF 0%, #5AC8FA 100%);
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .floating-progress-modal {
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        width: auto;
+    }
+
+    .minimized-progress-indicator {
+        bottom: 20px;
+        right: 20px;
+        width: 70px;
+        height: 70px;
+    }
+
+    .stat-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .stat-row .stat-item {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+}

@@ -2,8 +2,10 @@
 ZIP 下載 API 端點
 為 Message Downloader 提供 ZIP 打包下載功能
 """
+import asyncio
 import os
 import tempfile
+import time
 import zipfile
 from datetime import datetime
 from flask import jsonify, request, send_file
@@ -13,80 +15,154 @@ from .web import _flask_app, require_message_downloader_auth, logger, _app, _cli
 from flask import session
 
 
-async def download_messages_async(client, chat_id, message_ids, temp_dir):
-    """
-    異步下載訊息並打包為 ZIP
-    """
-    downloaded_files = []
-    failed_downloads = []
+class ZipDownloadManager:
+    """管理使用主下載系統的 ZIP 下載任務"""
 
-    # 取得群組資訊
-    try:
-        chat = await client.get_chat(chat_id)
-        chat_title = getattr(chat, 'title', None) or getattr(chat, 'first_name', f'Chat_{chat_id}')
-        safe_chat_title = secure_filename(chat_title)
-    except Exception as e:
-        logger.warning(f"無法取得群組資訊: {e}")
-        safe_chat_title = f"Chat_{chat_id}"
+    def __init__(self, chat_id, message_ids, temp_dir):
+        self.chat_id = chat_id
+        self.message_ids = message_ids
+        self.temp_dir = temp_dir
+        self.downloaded_files = []
+        self.failed_downloads = []
+        self.task_node = None
+        self.zip_path = None
+        self.safe_chat_title = None
+        self.timestamp = None
 
-    # 生成 ZIP 檔案名稱
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    zip_filename = f"{safe_chat_title}_{timestamp}.zip"
-    zip_path = os.path.join(temp_dir, zip_filename)
+    async def prepare_download(self):
+        """準備下載，設置檔案名和TaskNode"""
+        # 取得群組資訊
+        try:
+            from .multiuser_auth import get_auth_manager
+            auth_manager = get_auth_manager()
+            if auth_manager and hasattr(auth_manager, 'active_clients') and auth_manager.active_clients:
+                session_key = list(auth_manager.active_clients.keys())[0]
+                client = auth_manager.active_clients[session_key]
+                chat = await client.get_chat(self.chat_id)
+                chat_title = getattr(chat, 'title', None) or getattr(chat, 'first_name', f'Chat_{self.chat_id}')
+                self.safe_chat_title = secure_filename(chat_title)
+            else:
+                self.safe_chat_title = f"Chat_{self.chat_id}"
+        except Exception as e:
+            logger.warning(f"無法取得群組資訊: {e}")
+            self.safe_chat_title = f"Chat_{self.chat_id}"
 
-    # 下載訊息並打包
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for message_id in message_ids:
+        # 生成 ZIP 檔案名稱
+        self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        zip_filename = f"{self.safe_chat_title}_{self.timestamp}.zip"
+        self.zip_path = os.path.join(self.temp_dir, zip_filename)
+
+        # 創建 TaskNode 來追蹤整體進度
+        from module.app import TaskNode
+        self.task_node = TaskNode(chat_id=self.chat_id)
+        self.task_node.total_task = len(self.message_ids)
+        self.task_node.zip_download_manager = self  # 保存對管理器的引用
+
+    async def start_downloads_via_worker_pool(self):
+        """使用主下載系統的 worker pool 開始下載"""
+        from .web import _queue, _client
+        from module.app import DownloadStatus
+
+        if not _queue:
+            raise Exception("主下載隊列未初始化")
+
+        logger.info(f"開始通過 worker pool 下載 {len(self.message_ids)} 個檔案")
+
+        # 獲取所有需要下載的訊息
+        messages_to_download = []
+        for message_id in self.message_ids:
             try:
-                # 取得訊息
-                message = await client.get_messages(chat_id, message_id)
-                if not message:
-                    failed_downloads.append(f"訊息 {message_id} 不存在")
-                    continue
+                # 獲取客戶端
+                from .multiuser_auth import get_auth_manager
+                auth_manager = get_auth_manager()
+                if auth_manager and hasattr(auth_manager, 'active_clients') and auth_manager.active_clients:
+                    session_key = list(auth_manager.active_clients.keys())[0]
+                    client = auth_manager.active_clients[session_key]
 
-                # 檢查是否有媒體檔案
-                if not message.media:
-                    failed_downloads.append(f"訊息 {message_id} 沒有媒體檔案")
-                    continue
+                    message = await client.get_messages(self.chat_id, message_id)
+                    if message and message.media:
+                        messages_to_download.append(message)
+                        logger.info(f"訊息 {message_id} 已加入下載隊列")
+                    else:
+                        self.failed_downloads.append(f"訊息 {message_id} 沒有媒體檔案或不存在")
 
-                # 下載媒體檔案到臨時位置
-                try:
-                    file_path = await client.download_media(message, file_name=temp_dir + "/")
+            except Exception as e:
+                logger.error(f"無法獲取訊息 {message_id}: {e}")
+                self.failed_downloads.append(f"無法獲取訊息 {message_id}: {str(e)}")
 
-                    if file_path and os.path.exists(file_path):
+        # 將所有訊息加入主下載隊列
+        for message in messages_to_download:
+            # 創建一個節點來追蹤這個特定訊息的下載
+            from module.app import TaskNode
+            message_node = TaskNode(chat_id=self.chat_id)
+            message_node.download_status[message.id] = DownloadStatus.Downloading
+            message_node.zip_download_manager = self  # 關聯到 ZIP 管理器
+            message_node.zip_message_id = message.id  # 標記這是 ZIP 下載的一部分
+
+            # 加入下載隊列，讓 worker 處理
+            await _queue.put((message, message_node))
+            logger.info(f"訊息 {message.id} 已加入主下載隊列")
+
+    def on_file_downloaded(self, message_id, file_path, file_size):
+        """當檔案下載完成時的回調"""
+        logger.info(f"檔案下載完成: 訊息 {message_id}, 路徑: {file_path}")
+        self.downloaded_files.append({
+            'message_id': message_id,
+            'file_path': file_path,
+            'size': file_size
+        })
+
+        # 檢查是否所有檔案都已下載完成
+        total_expected = len(self.message_ids) - len(self.failed_downloads)
+        if len(self.downloaded_files) >= total_expected:
+            logger.info("所有檔案下載完成，開始打包 ZIP")
+            # 在事件循環中安排 ZIP 打包
+            import asyncio
+            asyncio.create_task(self.create_zip_file())
+
+    def on_file_failed(self, message_id, error_message):
+        """當檔案下載失敗時的回調"""
+        logger.error(f"檔案下載失敗: 訊息 {message_id}, 錯誤: {error_message}")
+        self.failed_downloads.append(f"訊息 {message_id}: {error_message}")
+
+        # 檢查是否所有檔案都已處理完成
+        total_processed = len(self.downloaded_files) + len(self.failed_downloads)
+        if total_processed >= len(self.message_ids):
+            logger.info("所有檔案處理完成，開始打包 ZIP")
+            # 在事件循環中安排 ZIP 打包
+            import asyncio
+            asyncio.create_task(self.create_zip_file())
+
+    async def create_zip_file(self):
+        """創建 ZIP 檔案"""
+        logger.info(f"開始創建 ZIP 檔案: {self.zip_path}")
+
+        try:
+            with zipfile.ZipFile(self.zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for file_info in self.downloaded_files:
+                    try:
                         # 生成 ZIP 內的檔案名稱
-                        original_filename = os.path.basename(file_path)
-                        zip_filename_in_archive = f"msg_{message_id}_{original_filename}"
+                        original_filename = os.path.basename(file_info['file_path'])
+                        zip_filename_in_archive = f"msg_{file_info['message_id']}_{original_filename}"
 
                         # 加入到 ZIP 檔案
-                        zipf.write(file_path, zip_filename_in_archive)
-                        downloaded_files.append({
-                            'message_id': message_id,
-                            'filename': zip_filename_in_archive,
-                            'size': os.path.getsize(file_path)
-                        })
+                        zipf.write(file_info['file_path'], zip_filename_in_archive)
+                        logger.info(f"檔案 {original_filename} 已加入 ZIP")
 
                         # 刪除臨時檔案
-                        os.remove(file_path)
-                    else:
-                        failed_downloads.append(f"訊息 {message_id} 下載失敗")
+                        os.remove(file_info['file_path'])
+                    except Exception as zip_error:
+                        logger.error(f"打包檔案 {file_info['message_id']} 失敗: {zip_error}")
+                        self.failed_downloads.append(f"打包檔案 {file_info['message_id']} 失敗: {str(zip_error)}")
 
-                except Exception as download_error:
-                    logger.error(f"下載訊息 {message_id} 失敗: {download_error}")
-                    failed_downloads.append(f"訊息 {message_id} 下載錯誤: {str(download_error)}")
+            logger.success(f"ZIP 檔案創建完成: {self.zip_path}")
 
-            except Exception as message_error:
-                logger.error(f"處理訊息 {message_id} 失敗: {message_error}")
-                failed_downloads.append(f"訊息 {message_id} 處理錯誤: {str(message_error)}")
+            # 設置完成標誌
+            self.zip_ready = True
 
-    return {
-        'zip_path': zip_path,
-        'zip_filename': zip_filename,
-        'downloaded_files': downloaded_files,
-        'failed_downloads': failed_downloads,
-        'safe_chat_title': safe_chat_title,
-        'timestamp': timestamp
-    }
+        except Exception as e:
+            logger.error(f"創建 ZIP 檔案失敗: {e}")
+            raise e
 
 
 @_flask_app.route("/api/download/auth_debug", methods=["GET"])
@@ -128,16 +204,14 @@ def flexible_auth_check():
     return False
 
 
+# 全局變數儲存活躍的 ZIP 下載管理器
+active_zip_managers = {}
+
 @_flask_app.route("/api/download/zip", methods=["POST"])
 def download_messages_as_zip():
     """
-    下載選中的訊息為 ZIP 檔案
+    下載選中的訊息為 ZIP 檔案 - 使用主下載系統的 worker pool
     """
-    # Temporarily disable auth check for testing
-    # TODO: Re-enable proper authentication once user workflow is confirmed
-    # if not flexible_auth_check():
-    #     return jsonify({'success': False, 'error': '需要先進行認證'})
-
     try:
         data = request.get_json()
         chat_id = data.get('chat_id')
@@ -151,11 +225,10 @@ def download_messages_as_zip():
                 'error': '請提供群組 ID 和訊息 ID 列表'
             }), 400
 
-        # 取得 Pyrogram 客戶端 - 直接使用 auth_manager 的客戶端
+        # 檢查客戶端可用性
         from .multiuser_auth import get_auth_manager
         from .web import restore_session_if_needed, get_session_storage, run_async_in_thread
 
-        # 獲取認證管理器和客戶端
         auth_manager = get_auth_manager()
         if not auth_manager:
             logger.error("認證管理器未初始化")
@@ -164,13 +237,11 @@ def download_messages_as_zip():
                 'error': '認證管理器未初始化'
             }), 500
 
-        # 嘗試恢復用戶 session 如果沒有可用的客戶端
+        # 嘗試恢復 session 如果需要
         if not hasattr(auth_manager, 'active_clients') or not auth_manager.active_clients:
             logger.info("沒有活躍客戶端，嘗試恢復 session...")
-
-            # 從 session storage 獲取已認證的 session
             session_storage = get_session_storage()
-            all_sessions = session_storage.get_all_sessions()
+            all_sessions = session_storage.list_active_sessions()
 
             restored = False
             for session_key, session_data in all_sessions.items():
@@ -188,7 +259,7 @@ def download_messages_as_zip():
                     'error': '沒有可用的已認證客戶端，請重新登入'
                 }), 500
 
-        # 再次檢查是否有可用的客戶端
+        # 再次檢查客戶端可用性
         if not hasattr(auth_manager, 'active_clients') or not auth_manager.active_clients:
             logger.error("恢復 session 後仍沒有可用的已認證客戶端")
             return jsonify({
@@ -196,82 +267,140 @@ def download_messages_as_zip():
                 'error': '沒有可用的已認證客戶端'
             }), 500
 
-        # 使用第一個可用的客戶端
-        session_key = list(auth_manager.active_clients.keys())[0]
-        client = auth_manager.active_clients[session_key]
-        logger.info(f"使用 session_key: {session_key}")
-        logger.info(f"使用客戶端: {client}")
-
         # 建立臨時目錄
         temp_dir = tempfile.mkdtemp(prefix='tgdl_zip_')
 
-        try:
-            # 直接在主事件循環中執行，避免跨循環問題
-            import asyncio
-            import concurrent.futures
+        # 創建 ZIP 下載管理器
+        zip_manager = ZipDownloadManager(chat_id, message_ids, temp_dir)
 
-            # 獲取主應用的事件循環
-            from .web import _app
+        # 使用唯一ID儲存管理器
+        manager_id = f"{chat_id}_{int(time.time() * 1000)}"
+        active_zip_managers[manager_id] = zip_manager
+
+        try:
+            # 獲取主應用的事件循環並執行下載準備和啟動
+            from .web import _app, run_async_in_thread
+
+            async def prepare_and_start_download():
+                await zip_manager.prepare_download()
+                await zip_manager.start_downloads_via_worker_pool()
+                return {
+                    'manager_id': manager_id,
+                    'zip_path': zip_manager.zip_path,
+                    'safe_chat_title': zip_manager.safe_chat_title,
+                    'timestamp': zip_manager.timestamp
+                }
 
             if hasattr(_app, 'loop') and _app.loop and not _app.loop.is_closed():
                 # 在主事件循環中執行
                 future = asyncio.run_coroutine_threadsafe(
-                    download_messages_async(client, chat_id, message_ids, temp_dir),
+                    prepare_and_start_download(),
                     _app.loop
                 )
-                result = future.result(timeout=300)  # 5 分鐘超時
+                result = future.result(timeout=30)  # 30 秒超時用於準備階段
             else:
                 # 使用現有的方法作為後備
-                from .web import run_async_in_thread
-                result = run_async_in_thread(download_messages_async(client, chat_id, message_ids, temp_dir))
+                result = run_async_in_thread(prepare_and_start_download())
 
-            # 檢查是否有成功下載的檔案
-            if not result['downloaded_files']:
-                return jsonify({
-                    'success': False,
-                    'error': '沒有成功下載任何檔案',
-                    'failed_downloads': result['failed_downloads']
-                }), 400
+            logger.info(f"ZIP 下載已啟動，管理器ID: {manager_id}")
 
-            # 檢查 ZIP 檔案是否存在且有內容
-            if not os.path.exists(result['zip_path']) or os.path.getsize(result['zip_path']) == 0:
-                return jsonify({
-                    'success': False,
-                    'error': 'ZIP 檔案生成失敗'
-                }), 500
+            # 激活進度追蹤
+            from .web import download_progress
+            download_progress['active'] = True
+            download_progress['status_text'] = 'ZIP 下載進行中...'
+            download_progress['total_count'] = len(message_ids)
+            download_progress['completed_count'] = 0
 
-            # 記錄成功資訊
-            total_size = sum(f['size'] for f in result['downloaded_files'])
-            logger.info(f"ZIP 下載完成 - 檔案數量: {len(result['downloaded_files'])}, 總大小: {total_size} bytes")
-
-            # 回傳檔案
-            return send_file(
-                result['zip_path'],
-                as_attachment=True,
-                download_name=f"{result['safe_chat_title']}_{result['timestamp']}.zip",
-                mimetype='application/zip'
-            )
+            # 回傳成功響應，前端需要輪詢檢查完成狀態
+            return jsonify({
+                'success': True,
+                'message': f'ZIP 下載已啟動，正在通過 {len(message_ids)} 個 worker 併發下載',
+                'manager_id': manager_id,
+                'expected_zip_filename': f"{result['safe_chat_title']}_{result['timestamp']}.zip"
+            })
 
         except Exception as process_error:
-            logger.error(f"ZIP 處理過程錯誤: {process_error}")
-            return jsonify({
-                'success': False,
-                'error': f'處理過程發生錯誤: {str(process_error)}'
-            }), 500
+            logger.error(f"ZIP 下載啟動過程錯誤: {process_error}")
+            # 清理失敗的管理器
+            if manager_id in active_zip_managers:
+                del active_zip_managers[manager_id]
 
-        finally:
             # 清理臨時目錄
             try:
-                # 清理臨時目錄中的所有檔案
                 import shutil
                 if os.path.exists(temp_dir):
                     shutil.rmtree(temp_dir)
             except Exception as cleanup_error:
                 logger.warning(f"清理臨時檔案失敗: {cleanup_error}")
 
+            return jsonify({
+                'success': False,
+                'error': f'ZIP 下載啟動失敗: {str(process_error)}'
+            }), 500
+
     except Exception as e:
         logger.error(f"ZIP 下載 API 錯誤: {e}")
         return jsonify({
             'success': False,
             'error': f'ZIP 下載失敗: {str(e)}'
+        }), 500
+
+
+@_flask_app.route("/api/download/zip/status/<manager_id>", methods=["GET"])
+def check_zip_download_status(manager_id):
+    """檢查 ZIP 下載狀態"""
+    try:
+        if manager_id not in active_zip_managers:
+            return jsonify({
+                'success': False,
+                'error': '下載任務不存在或已過期'
+            }), 404
+
+        zip_manager = active_zip_managers[manager_id]
+
+        total_files = len(zip_manager.message_ids)
+        downloaded_files = len(zip_manager.downloaded_files)
+        failed_files = len(zip_manager.failed_downloads)
+
+        # 檢查是否完成
+        is_completed = hasattr(zip_manager, 'zip_ready') and zip_manager.zip_ready
+
+        if is_completed:
+            # 檢查 ZIP 檔案是否存在
+            if os.path.exists(zip_manager.zip_path) and os.path.getsize(zip_manager.zip_path) > 0:
+                # 準備檔案傳送
+                zip_filename = f"{zip_manager.safe_chat_title}_{zip_manager.timestamp}.zip"
+
+                # 清理管理器
+                del active_zip_managers[manager_id]
+
+                return send_file(
+                    zip_manager.zip_path,
+                    as_attachment=True,
+                    download_name=zip_filename,
+                    mimetype='application/zip'
+                )
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'ZIP 檔案不存在或為空'
+                }), 500
+        else:
+            # 回傳進度狀態
+            return jsonify({
+                'success': True,
+                'completed': False,
+                'progress': {
+                    'total_files': total_files,
+                    'downloaded_files': downloaded_files,
+                    'failed_files': failed_files,
+                    'percentage': round((downloaded_files + failed_files) / total_files * 100, 2) if total_files > 0 else 0
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"檢查 ZIP 下載狀態錯誤: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
         }), 500
