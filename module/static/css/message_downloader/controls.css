@@ -235,8 +235,11 @@
 
 .menu-label {
     font-size: 11px;
-    color: rgb(110, 110, 115);
-    font-weight: 500;
+    background: linear-gradient(0deg, rgb(122, 143, 164), rgb(29, 29, 31) 60%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 600;
     opacity: 0;
     visibility: hidden;
     transition: all 0.25s ease;
@@ -267,13 +270,7 @@
     font-weight: 600;
 }
 
-#fast-test-download-btn:not(:disabled) + .menu-label {
-    background: linear-gradient(0deg, rgb(122, 143, 164), rgb(29, 29, 31) 60%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-weight: 600;
-}
+/* 下載按鈕的 menu-label 樣式現在統一由 .menu-label 處理 */
 
 .chat-menu ul li button:disabled {
     opacity: 0.4;

@@ -121,7 +121,7 @@
         }
 
         .form-control::placeholder {
-            color: var(--apple-label-tertiary);
+            color: rgba(0, 0, 0, 0.5);
             font-weight: 400;
         }
 
@@ -192,26 +192,38 @@
             text-align: center;
             margin: 30px 0;
             position: relative;
-            color: var(--apple-label-secondary);
+            color: rgba(255, 255, 255, 0.8);
             font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
-        .divider::before {
+        .divider::before,
+        .divider::after {
             content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
+            flex: 1;
             height: 1px;
-            background: var(--apple-label-tertiary);
-            z-index: 1;
+            background: linear-gradient(to right,
+                transparent 0%,
+                rgba(255, 255, 255, 0.1) 20%,
+                rgba(255, 255, 255, 0.3) 80%,
+                rgba(255, 255, 255, 0.3) 100%);
+        }
+
+        .divider::after {
+            background: linear-gradient(to left,
+                transparent 0%,
+                rgba(255, 255, 255, 0.1) 20%,
+                rgba(255, 255, 255, 0.3) 80%,
+                rgba(255, 255, 255, 0.3) 100%);
         }
 
         .divider span {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 0 16px;
-            position: relative;
-            z-index: 2;
+            background: transparent;
+            padding: 0;
+            white-space: nowrap;
         }
 
         .alert {
