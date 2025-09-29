@@ -348,7 +348,7 @@ function startProgressChecking() {
             const data = await response.json();
 
             if (data.success) {
-                const progress = data.progress;
+                const progress = data.message ? data.message.progress : data.progress;
 
                 if (progress && progress.active) {
                     const percentage = progress.total_task > 0

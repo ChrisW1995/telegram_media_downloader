@@ -5,33 +5,91 @@
  * 處理用戶登入、認證流程、會話管理等功能
  */
 
-// ==================== 認證狀態檢查 ====================
+// ==================== 認證狀態管理 ====================
+
+// 全域變數控制認證檢查狀態，防止重複調用
+let isCheckingAuth = false;
+let authCheckCompleted = false;
+
+/**
+ * 重置認證狀態，允許重新檢查
+ */
+function resetAuthStatus() {
+    console.log('🔄 重置認證狀態');
+    isCheckingAuth = false;
+    authCheckCompleted = false;
+}
 
 /**
  * 檢查用戶認證狀態
  * 在頁面載入時檢查用戶是否已認證
  */
 async function checkAuthStatus() {
+    // 防止重複調用認證檢查
+    if (isCheckingAuth) {
+        console.log('🔄 認證檢查已在進行中，跳過重複調用');
+        return;
+    }
+
+    if (authCheckCompleted) {
+        console.log('✅ 認證檢查已完成，跳過重複調用');
+        return;
+    }
+
+    isCheckingAuth = true;
     showLoginStatusLoading();
 
     try {
-        console.log('檢查認證狀態...');
+        console.log('🔍 開始檢查認證狀態...');
         const response = await fetch('/api/auth/status');
         const data = await response.json();
-        console.log('認證狀態響應:', data);
+        console.log('📋 認證狀態響應:', data);
 
-        if (data.success && data.authenticated) {
-            console.log('用戶已認證, 用戶資訊:', data.user_info);
-            showLoginStatusSuccess(data.user_info);
-            showAuthSuccess(data.user_info);
+        if (data.success && data.data && data.data.authenticated) {
+            console.log('✅ 用戶已認證, 用戶資訊:', data.data.user_info);
+            authCheckCompleted = true;
+            isCheckingAuth = false;
+            showLoginStatusSuccess(data.data.user_info);
+            showAuthSuccess(data.data.user_info);
             loadGroups();
         } else {
-            console.log('用戶未認證');
+            console.log('❌ 用戶未認證，data:', data);
+
+            // 額外檢查：如果從登入頁面重新導向過來，再次確認
+            if (window.location.pathname === '/message_downloader' && document.referrer.includes('/login')) {
+                console.log('⏰ 從登入頁面跳轉，等待 1 秒後重新檢查...');
+                setTimeout(async () => {
+                    const retryResponse = await fetch('/api/auth/status');
+                    const retryData = await retryResponse.json();
+                    console.log('🔄 重新檢查認證狀態:', retryData);
+
+                    if (retryData.success && retryData.data && retryData.data.authenticated) {
+                        console.log('✅ 重新檢查：用戶已認證');
+                        authCheckCompleted = true;
+                        isCheckingAuth = false;
+                        showLoginStatusSuccess(retryData.data.user_info);
+                        showAuthSuccess(retryData.data.user_info);
+                        loadGroups();
+                    } else {
+                        console.log('❌ 重新檢查：用戶仍未認證');
+                        authCheckCompleted = true;
+                        isCheckingAuth = false;
+                        showLoginStatusError();
+                        showAuthForm();
+                    }
+                }, 1000);
+                return;
+            }
+
+            authCheckCompleted = true;
+            isCheckingAuth = false;
             showLoginStatusError();
             showAuthForm();
         }
     } catch (error) {
-        console.error('檢查認證狀態錯誤:', error);
+        console.error('❌ 檢查認證狀態錯誤:', error);
+        authCheckCompleted = true;
+        isCheckingAuth = false;
         showLoginStatusError();
         showAuthForm();
     }
@@ -43,9 +101,22 @@ async function checkAuthStatus() {
  * 顯示認證表單
  */
 function showAuthForm() {
+    // 防禦性檢查：如果當前在 message_downloader 主頁面且剛從登入頁面過來，給一點延遲時間
+    if (window.location.pathname === '/message_downloader' && document.referrer.includes('/login')) {
+        console.log('🔄 從登入頁面跳轉，延遲檢查認證狀態...');
+        // 重置認證檢查狀態，允許重新檢查
+        authCheckCompleted = false;
+        isCheckingAuth = false;
+        setTimeout(() => {
+            checkAuthStatus();
+        }, 500);
+        return;
+    }
+
     const authSection = document.getElementById('auth-section');
     const mainLayout = document.getElementById('main-app-layout');
 
+    console.log('👤 顯示認證表單');
     if (authSection) authSection.style.display = 'block';
     if (mainLayout) mainLayout.style.display = 'none';
 
@@ -264,6 +335,8 @@ async function verifyCode() {
                 document.getElementById('auth-password-step').style.display = 'block';
                 showAlert('需要兩步驗證密碼', 'info');
             } else {
+                // 認證成功，重置認證檢查狀態
+                resetAuthStatus();
                 showLoginStatusSuccess(data.user_info);
                 showAuthSuccess(data.user_info);
                 loadGroups();
@@ -302,6 +375,8 @@ async function verifyPassword() {
         const data = await response.json();
 
         if (data.success) {
+            // 認證成功，重置認證檢查狀態
+            resetAuthStatus();
             showLoginStatusSuccess(data.user_info);
             showAuthSuccess(data.user_info);
             loadGroups();
@@ -318,6 +393,9 @@ async function verifyPassword() {
  * 登出
  */
 async function logout() {
+    // 重置認證狀態
+    resetAuthStatus();
+
     try {
         const response = await fetch('/api/auth/logout', {
             method: 'POST'

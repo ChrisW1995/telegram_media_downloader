@@ -58,6 +58,11 @@ class ZipDownloadManager:
         self.task_node.total_task = len(self.message_ids)
         self.task_node.zip_download_manager = self  # 保存對管理器的引用
 
+        # 初始化全域進度系統
+        from module.web.core.progress_system import initialize_download_session
+        initialize_download_session(len(self.message_ids))
+        logger.info(f"初始化 ZIP 下載進度系統：總檔案數 {len(self.message_ids)}")
+
     async def start_downloads_via_worker_pool(self):
         """使用主下載系統的 worker pool 開始下載"""
         from .web import _queue, _client
@@ -112,6 +117,12 @@ class ZipDownloadManager:
             'size': file_size
         })
 
+        # 更新全域進度
+        from module.web.core.progress_system import update_download_progress
+        completed = len(self.downloaded_files) + len(self.failed_downloads)
+        total = len(self.message_ids)
+        update_download_progress(completed, total, f"下載進度：{completed}/{total} 個檔案")
+
         # 檢查是否所有檔案都已下載完成
         total_expected = len(self.message_ids) - len(self.failed_downloads)
         if len(self.downloaded_files) >= total_expected:
@@ -124,6 +135,12 @@ class ZipDownloadManager:
         """當檔案下載失敗時的回調"""
         logger.error(f"檔案下載失敗: 訊息 {message_id}, 錯誤: {error_message}")
         self.failed_downloads.append(f"訊息 {message_id}: {error_message}")
+
+        # 更新全域進度
+        from module.web.core.progress_system import update_download_progress
+        completed = len(self.downloaded_files) + len(self.failed_downloads)
+        total = len(self.message_ids)
+        update_download_progress(completed, total, f"下載進度：{completed}/{total} 個檔案")
 
         # 檢查是否所有檔案都已處理完成
         total_processed = len(self.downloaded_files) + len(self.failed_downloads)
@@ -160,8 +177,18 @@ class ZipDownloadManager:
             # 設置完成標誌
             self.zip_ready = True
 
+            # 更新進度為完成狀態
+            from module.web.core.progress_system import update_download_progress
+            total = len(self.message_ids)
+            update_download_progress(total, total, f"✅ ZIP 檔案創建完成！共處理 {total} 個檔案")
+
         except Exception as e:
             logger.error(f"創建 ZIP 檔案失敗: {e}")
+            # 更新進度為失敗狀態
+            from module.web.core.progress_system import update_download_progress
+            completed = len(self.downloaded_files) + len(self.failed_downloads)
+            total = len(self.message_ids)
+            update_download_progress(completed, total, f"❌ ZIP 檔案創建失敗: {str(e)}")
             raise e
 
 
@@ -207,8 +234,9 @@ def flexible_auth_check():
 # 全局變數儲存活躍的 ZIP 下載管理器
 active_zip_managers = {}
 
-@_flask_app.route("/api/download/zip", methods=["POST"])
-def download_messages_as_zip():
+# 舊版路由已禁用 - 使用新版 Blueprint 架構
+# @_flask_app.route("/api/download/zip", methods=["POST"])
+def download_messages_as_zip_legacy():
     """
     下載選中的訊息為 ZIP 檔案 - 使用主下載系統的 worker pool
     """
@@ -346,8 +374,9 @@ def download_messages_as_zip():
         }), 500
 
 
-@_flask_app.route("/api/download/zip/status/<manager_id>", methods=["GET"])
-def check_zip_download_status(manager_id):
+# 舊版路由已禁用 - 使用新版 Blueprint 架構
+# @_flask_app.route("/api/download/zip/status/<manager_id>", methods=["GET"])
+def check_zip_download_status_legacy(manager_id):
     """檢查 ZIP 下載狀態"""
     try:
         if manager_id not in active_zip_managers:

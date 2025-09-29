@@ -289,8 +289,8 @@ async function startLocalDownload() {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            const managerId = data.manager_id;
-            const expectedFilename = data.expected_zip_filename;
+            const managerId = data.message.manager_id;
+            const expectedFilename = data.message.expected_zip_filename;
 
             // 更新進度
             updateNotification(zipNotificationId, {
@@ -342,9 +342,9 @@ async function startLocalDownload() {
                             // 這是狀態回應，檢查進度
                             const statusData = await statusResponse.json();
 
-                            if (statusData.success && !statusData.completed) {
+                            if (statusData.success && !statusData.message.completed) {
                                 // 更新進度
-                                const progress = statusData.progress;
+                                const progress = statusData.message.progress;
                                 const percentage = Math.max(30, Math.min(90, 30 + (progress.percentage * 0.6)));
 
                                 updateNotification(zipNotificationId, {

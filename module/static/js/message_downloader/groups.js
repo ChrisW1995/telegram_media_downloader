@@ -10,32 +10,61 @@
  */
 async function loadGroups() {
     try {
-        console.log('開始載入群組...');
+        console.log('🔍 開始載入群組...');
+
+        // 先檢查認證狀態，避免在未認證時發送請求
+        console.log('🔒 檢查認證狀態...');
+        const authResponse = await fetch('/api/auth/status');
+        const authData = await authResponse.json();
+
+        if (!authData.success || !authData.data || !authData.data.authenticated) {
+            console.log('❌ 用戶未認證，無法載入群組');
+            if (typeof showAuthForm === 'function') {
+                console.log('🔄 顯示認證表單...');
+                showAuthForm();
+            }
+            return;
+        }
+
+        console.log('✅ 認證狀態確認，開始載入群組');
         const response = await fetch('/api/groups/list');
         console.log('API 回應狀態:', response.status);
+
+        const data = await response.json();
+        console.log('API 回應數據:', data);
+
+        // 檢查是否為 401 認證錯誤
+        if (response.status === 401) {
+            console.log('認證錯誤，需要重新登入');
+            if (data.error && (data.error.includes('認證') || data.error.includes('需要'))) {
+                if (typeof showAuthForm === 'function') {
+                    showAuthForm();
+                }
+            }
+            return;
+        }
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        const data = await response.json();
-        console.log('API 回應數據:', data);
-
         if (data.success) {
-            console.log('群組載入成功，數量:', data.groups ? data.groups.length : 0);
+            // 獲取群組數據，考慮 API 回應格式
+            const groups = data.data ? data.data.groups : data.groups;
+            console.log('群組載入成功，數量:', groups ? groups.length : 0);
 
             // 從本地存儲獲取釘選群組列表
             const favoriteGroups = JSON.parse(localStorage.getItem('favoriteGroups') || '[]');
 
             // 更新群組數據的 is_favorite 狀態
-            if (data.groups) {
-                data.groups.forEach(group => {
+            if (groups) {
+                groups.forEach(group => {
                     group.is_favorite = favoriteGroups.includes(group.id.toString());
                 });
             }
 
-            renderGroupSidebar(data.groups);
-            window.originalGroups = data.groups;
+            renderGroupSidebar(groups);
+            window.originalGroups = groups;
         } else {
             const errorMsg = data.error || data.message || '未知錯誤';
             console.error('載入群組失敗:', errorMsg);
@@ -66,6 +95,12 @@ function renderGroupSidebar(groups) {
     if (!mainContainer) {
         console.error('群組容器元素不存在');
         return;
+    }
+
+    // 防禦性檢查：確保 groups 是陣列
+    if (!Array.isArray(groups)) {
+        console.error('群組資料無效，應為陣列:', groups);
+        groups = []; // 提供預設空陣列
     }
 
     // 創建完整的群組結構

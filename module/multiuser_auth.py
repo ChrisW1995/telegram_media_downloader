@@ -255,10 +255,18 @@ class TelegramAuthManager:
         try:
             logger.info(f"Getting groups for session_key: {session_key}")
             logger.info(f"Active clients keys: {list(self.active_clients.keys())}")
-            
-            # Extract user_id from session key or active clients
+            logger.info(f"Available user sessions: {list(self.user_sessions.keys())}")
+
+            # Extract user_id from session key
             user_id = None
-            if session_key in self.active_clients:
+
+            # First, check if session_key is already a user_id (numeric)
+            if session_key.isdigit() and session_key in self.user_sessions:
+                user_id = session_key
+                logger.info(f"Session key is user_id: {user_id}")
+
+            # If still no user_id, check active clients
+            if not user_id and session_key in self.active_clients:
                 logger.info(f"Found session_key in active_clients")
                 # Find user_id by client
                 for uid, client in self.active_clients.items():
@@ -266,7 +274,7 @@ class TelegramAuthManager:
                         user_id = uid
                         logger.info(f"Found matching user_id: {user_id}")
                         break
-            
+
             # Try to find user_id among active clients by checking all numeric keys
             if not user_id:
                 logger.info("Checking all active clients for user connections")
@@ -275,7 +283,7 @@ class TelegramAuthManager:
                         logger.info(f"Found potential user_id: {uid}")
                         user_id = uid
                         break
-            
+
             if not user_id:
                 logger.info("No user_id found, trying temp auth session")
                 # Get from temp auth session

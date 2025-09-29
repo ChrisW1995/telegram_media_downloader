@@ -495,9 +495,9 @@ async function loadThumbnailFromMessage(message) {
                     const data = await response.json();
                     console.log('Thumbnail API response data:', data);
 
-                    if (data.success && data.thumbnail) {
+                    if (data.success && data.message.thumbnail) {
                         console.log(`Thumbnail loaded successfully for message ${message.message_id}`);
-                        thumbnailContainer.innerHTML = `<img src="${data.thumbnail}" alt="Thumbnail" />`;
+                        thumbnailContainer.innerHTML = `<img src="${data.message.thumbnail}" alt="Thumbnail" />`;
                     } else {
                         throw new Error(data.error || 'API returned no thumbnail data');
                     }

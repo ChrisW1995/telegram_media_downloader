@@ -6,7 +6,6 @@
     <title>Message Downloader 登入</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/modern.css') }}" rel="stylesheet">
     <style>
         /* Apple-inspired Design with Liquid Glass - Dark Theme */
         body {
@@ -302,6 +301,12 @@
                 <button id="qr-login-from-phone-btn" class="btn btn-secondary">
                     <i class="fas fa-qrcode me-2"></i>使用 QR Code 登入
                 </button>
+                <div class="divider mt-3">
+                    <span>遇到問題？</span>
+                </div>
+                <button id="force-clear-session-btn" class="btn btn-outline-warning btn-sm">
+                    <i class="fas fa-broom me-2"></i>清除瀏覽器 Session 殘留
+                </button>
             </div>
 
             <!-- 步驟 3: 驗證碼輸入 -->
@@ -383,6 +388,41 @@
         document.getElementById('qr-login-from-phone-btn').addEventListener('click', () => {
             showStep(5);
             startQRLogin();
+        });
+
+        // 強制清除 Session 按鈕
+        document.getElementById('force-clear-session-btn').addEventListener('click', async () => {
+            const button = document.getElementById('force-clear-session-btn');
+            const originalText = button.innerHTML;
+
+            try {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>清除中...';
+
+                const response = await fetch('/api/auth/force_clear_session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('所有 Session 數據已清除，請重新整理頁面', 'success');
+                    // 延遲重載頁面
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showAlert(result.message || '清除失敗，請稍後再試');
+                }
+            } catch (error) {
+                showAlert('網路錯誤，請稍後再試');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
         });
 
         // QR Code 刷新按鈕

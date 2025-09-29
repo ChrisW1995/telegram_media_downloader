@@ -633,7 +633,12 @@ async def run_custom_download(app: Application, client: pyrogram.Client, queue_r
     manager = CustomDownloadManager(app)
     manager.queue_ref = queue_ref  # Pass the queue reference
     manager.task_node = task_node  # Pass the TaskNode for progress tracking
-    
+
+    # 設置 client 到 task_node 以啟用 bot 進度報告
+    if task_node and client:
+        task_node.client = client
+        logger.info(f"✅ Set client to TaskNode {task_node.task_id} for bot progress reporting")
+
     # 只清理失敗記錄，保留已下載記錄以避免重複下載
     logger.info("Clearing failed download records for re-download...")
     for chat_id, message_ids in target_ids.items():
@@ -663,7 +668,7 @@ async def run_custom_download(app: Application, client: pyrogram.Client, queue_r
     # download_stats 仍然可用於其他目的
 
 
-async def run_custom_download_for_selected(app: Application, client: pyrogram.Client, queue_ref=None, selected_target_ids=None):
+async def run_custom_download_for_selected(app: Application, client: pyrogram.Client, queue_ref=None, selected_target_ids=None, task_node=None):
     """為選中的項目運行自訂下載"""
     import asyncio
     
@@ -678,7 +683,13 @@ async def run_custom_download_for_selected(app: Application, client: pyrogram.Cl
 
     manager = CustomDownloadManager(app)
     manager.queue_ref = queue_ref  # Pass the queue reference
-    
+    manager.task_node = task_node  # Pass the TaskNode for progress tracking
+
+    # 設置 client 到 task_node 以啟用 bot 進度報告
+    if task_node and client:
+        task_node.client = client
+        logger.info(f"✅ Set client to TaskNode {task_node.task_id} for bot progress reporting")
+
     # 只清理失敗記錄，保留已下載記錄以避免重複下載
     logger.info("Clearing failed download records for selected items...")
     for chat_id, message_ids in selected_target_ids.items():
