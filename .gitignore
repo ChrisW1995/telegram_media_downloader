@@ -72,3 +72,23 @@ data.yaml
 *.css.map
 TGDL/
 downloads_bot/
+
+# Log files
+output.log
+module/log/
+
+# Backup files
+*.backup
+
+# Session files
+message_downloader_sessions.json
+
+# Database lock files
+*.db-shm
+*.db-wal
+
+# Test files
+test_download.zip
+
+# PID files
+.tgdl_pid
