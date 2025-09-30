@@ -165,7 +165,27 @@ class DownloadHistoryRepository(BaseRepository):
             "download_status": "failed"
         })
         return [record['message_id'] for record in records]
-    
+
+    def clear_failed_downloads(self, chat_id: str = None) -> bool:
+        """Clear failed download records (類似 Google Drive 行為，不保留失敗任務)."""
+        try:
+            if chat_id:
+                # 清空特定 chat 的失敗記錄
+                self.execute_custom_query(
+                    "DELETE FROM download_history WHERE chat_id = ? AND download_status = 'failed'",
+                    (chat_id,)
+                )
+            else:
+                # 清空所有失敗記錄
+                self.execute_custom_query(
+                    "DELETE FROM download_history WHERE download_status = 'failed'",
+                    ()
+                )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to clear failed downloads: {e}")
+            return False
+
     def get_download_statistics(self, chat_id: str = None) -> Dict[str, Any]:
         """Get download statistics."""
         base_query = "SELECT download_status, COUNT(*) as count, SUM(COALESCE(file_size, 0)) as total_size FROM download_history"

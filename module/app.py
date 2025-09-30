@@ -851,7 +851,8 @@ class Application:
                 if DownloadStatus.SuccessDownload != _value:
                     unfinished_ids.add(_idx)
 
-            self.chat_download_config[key].ids_to_retry = list(unfinished_ids)
+            # 清空重試列表（類似 Google Drive 行為，不保留失敗任務）
+            self.chat_download_config[key].ids_to_retry = []
 
             if idx >= len(self.app_data["chat"]):
                 self.app_data["chat"].append({})
@@ -862,7 +863,7 @@ class Application:
                 )
 
             self.app_data["chat"][idx]["chat_id"] = key
-            self.app_data["chat"][idx]["ids_to_retry"] = value.ids_to_retry
+            self.app_data["chat"][idx]["ids_to_retry"] = []  # 總是清空重試列表
             idx += 1
 
         self.config["save_path"] = self.save_path

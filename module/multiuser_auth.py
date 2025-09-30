@@ -384,7 +384,8 @@ class TelegramAuthManager:
                         'thumbnail_url': None,
                         'duration': None,
                         'width': None,
-                        'height': None
+                        'height': None,
+                        'media_group_id': message.media_group_id  # 添加媒體組 ID
                     }
                     
                     # Extract media information
@@ -464,11 +465,97 @@ class TelegramAuthManager:
                             msg_data['height'] = message.sticker.height
                     
                     messages.append(msg_data)
-                    
+
             except Exception as e:
                 logger.error(f"Failed to get messages from chat {chat_id}: {e}")
                 return {'success': False, 'error': f'獲取訊息失敗: {str(e)}'}
-            
+
+            # 檢查最後一則訊息是否屬於 media group，如果是則載入完整的 group
+            if messages and messages[-1].get('media_group_id'):
+                last_media_group_id = messages[-1]['media_group_id']
+                last_message_id = messages[-1]['message_id']
+
+                logger.info(f"最後一則訊息屬於 media group {last_media_group_id}，繼續載入完整 group")
+
+                # 繼續載入直到找到不同的 media_group_id 或沒有更多訊息
+                try:
+                    async for message in client.get_chat_history(
+                        int(chat_id),
+                        limit=20,  # 最多再載入 20 則（一個 group 最多 10 則）
+                        offset_id=last_message_id
+                    ):
+                        # 如果遇到不同的 media_group_id 或沒有 media_group_id，停止
+                        if not message.media_group_id or message.media_group_id != last_media_group_id:
+                            break
+
+                        # 跳過沒有媒體或文字的訊息
+                        if not (message.media or message.text):
+                            continue
+
+                        # 應用 media_only 過濾
+                        if media_only and not message.media:
+                            continue
+
+                        # 構建訊息數據（與上面相同的邏輯）
+                        msg_data = {
+                            'message_id': message.id,
+                            'text': message.text[:500] if message.text else '',
+                            'date': message.date.isoformat() if message.date else None,
+                            'media_type': None,
+                            'file_name': None,
+                            'file_size': None,
+                            'file_unique_id': None,
+                            'caption': message.caption[:300] if message.caption else '',
+                            'thumbnail_url': None,
+                            'duration': None,
+                            'width': None,
+                            'height': None,
+                            'media_group_id': message.media_group_id
+                        }
+
+                        # 提取媒體資訊（簡化版，只處理 photo 和 video）
+                        if message.media:
+                            if message.photo:
+                                msg_data['media_type'] = 'photo'
+                                msg_data['file_unique_id'] = message.photo.file_unique_id
+                                msg_data['width'] = message.photo.width
+                                msg_data['height'] = message.photo.height
+                                if message.photo.thumbs:
+                                    smallest_thumb = min(message.photo.thumbs, key=lambda x: x.file_size)
+                                    msg_data['thumbnail_url'] = f'/api/message_downloader_thumbnail/{chat_id}/{message.id}'
+                                    msg_data['thumbnail'] = {
+                                        'file_id': smallest_thumb.file_id,
+                                        'file_unique_id': smallest_thumb.file_unique_id,
+                                        'width': smallest_thumb.width,
+                                        'height': smallest_thumb.height,
+                                        'file_size': smallest_thumb.file_size
+                                    }
+                            elif message.video:
+                                msg_data['media_type'] = 'video'
+                                msg_data['file_name'] = message.video.file_name or f"video_{message.id}.mp4"
+                                msg_data['file_size'] = message.video.file_size
+                                msg_data['file_unique_id'] = message.video.file_unique_id
+                                msg_data['duration'] = message.video.duration
+                                msg_data['width'] = message.video.width
+                                msg_data['height'] = message.video.height
+                                if message.video.thumbs:
+                                    smallest_thumb = min(message.video.thumbs, key=lambda x: x.file_size)
+                                    msg_data['thumbnail_url'] = f'/api/message_downloader_thumbnail/{chat_id}/{message.id}'
+                                    msg_data['thumbnail'] = {
+                                        'file_id': smallest_thumb.file_id,
+                                        'file_unique_id': smallest_thumb.file_unique_id,
+                                        'width': smallest_thumb.width,
+                                        'height': smallest_thumb.height,
+                                        'file_size': smallest_thumb.file_size
+                                    }
+
+                        messages.append(msg_data)
+                        logger.debug(f"Added message {message.id} to complete media group {last_media_group_id}")
+
+                except Exception as e:
+                    logger.warning(f"Failed to load complete media group: {e}")
+                    # 即使失敗也繼續，因為已經有部分訊息了
+
             # Note: Cache messages functionality requires user_id, so we skip it for now
             # message_repo = self.db_manager.group_message_repo
             # if messages:

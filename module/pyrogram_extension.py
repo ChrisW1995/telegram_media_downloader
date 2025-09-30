@@ -882,11 +882,24 @@ async def _report_bot_status(
 
         download_result_str = ""
         download_result = get_download_result()
+
+        # 計算所有檔案的總大小（包括已完成、正在下載、待下載）
+        total_download_size = 0
+
         if node.chat_id in download_result:
             messages = download_result[node.chat_id]
             for idx, value in messages.items():
                 task_id = value["task_id"]
-                if (task_id is None or node.task_id is None or task_id != node.task_id) or value["down_byte"] == value["total_size"]:
+
+                # 只統計屬於當前任務的訊息
+                if task_id is None or node.task_id is None or task_id != node.task_id:
+                    continue
+
+                # 累加所有檔案的總大小（不管是否完成）
+                total_download_size += value["total_size"]
+
+                # 只顯示正在下載中的檔案（未完成的）
+                if value["down_byte"] == value["total_size"]:
                     continue
 
                 temp_file_name = truncate_filename(
@@ -929,7 +942,7 @@ async def _report_bot_status(
         new_msg_str = (
             f"`\n"
             f"🆔 task id: {node.task_id}\n"
-            f"📥 {_t('Downloading')}: {format_byte(node.total_download_byte)}\n"
+            f"📥 {_t('Downloading')}: {format_byte(total_download_size)}\n"
             f"├─ 📁 {_t('Total')}: {node.total_download_task}\n"
             f"├─ ✅ {_t('Success')}: {node.success_download_task}\n"
             f"├─ ❌ {_t('Failed')}: {node.failed_download_task}\n"

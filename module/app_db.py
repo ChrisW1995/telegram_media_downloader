@@ -441,6 +441,13 @@ class DatabaseApplication:
     def update_config(self, immediate: bool = True):
         """Update configuration (database version)."""
         if immediate:
+            # 清空失敗的下載記錄（類似 Google Drive 行為）
+            try:
+                self.download_history_repo.clear_failed_downloads()
+                logger.info("已清空所有失敗的下載記錄")
+            except Exception as e:
+                logger.warning(f"清空失敗記錄時發生錯誤: {e}")
+
             self.save_config_to_database()
 
     def is_user_authorized(self, user_id: Union[str, int]) -> bool:
