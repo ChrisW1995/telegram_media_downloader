@@ -29,6 +29,94 @@ function updateSelection(checkbox, messageId) {
 }
 
 /**
+ * 更新媒體組選擇狀態（全選/全不選整個組）
+ * @param {HTMLInputElement} checkbox - 選擇框元素
+ * @param {string} mediaGroupId - 媒體組ID
+ */
+function updateMediaGroupSelection(checkbox, mediaGroupId) {
+    const chatBubble = checkbox.closest('.chat-bubble');
+
+    // 從 dataset 中取得所有訊息
+    const groupMessages = JSON.parse(chatBubble.dataset.groupMessages || '[]');
+
+    if (checkbox.checked) {
+        // 將所有訊息ID加入選擇列表
+        groupMessages.forEach(msg => {
+            if (!selectedMessages.includes(msg.message_id)) {
+                selectedMessages.push(msg.message_id);
+            }
+        });
+        chatBubble.classList.add('selected');
+
+        // 同步所有媒體項目的選擇框
+        chatBubble.querySelectorAll('.media-item-select').forEach(itemCheckbox => {
+            itemCheckbox.checked = true;
+            const mediaItem = itemCheckbox.closest('.media-group-item');
+            if (mediaItem) {
+                mediaItem.classList.add('selected');
+            }
+        });
+    } else {
+        // 移除所有訊息ID
+        const messageIds = groupMessages.map(msg => msg.message_id);
+        selectedMessages = selectedMessages.filter(id => !messageIds.includes(id));
+        chatBubble.classList.remove('selected');
+
+        // 同步所有媒體項目的選擇框
+        chatBubble.querySelectorAll('.media-item-select').forEach(itemCheckbox => {
+            itemCheckbox.checked = false;
+            const mediaItem = itemCheckbox.closest('.media-group-item');
+            if (mediaItem) {
+                mediaItem.classList.remove('selected');
+            }
+        });
+    }
+
+    updateSelectionUI();
+}
+
+/**
+ * 更新媒體組內單個項目的選擇狀態
+ * @param {HTMLInputElement} checkbox - 選擇框元素
+ * @param {number} messageId - 訊息ID
+ * @param {string} mediaGroupId - 媒體組ID
+ */
+function updateMediaItemSelection(checkbox, messageId, mediaGroupId) {
+    const mediaItem = checkbox.closest('.media-group-item');
+    const chatBubble = checkbox.closest('.chat-bubble');
+
+    if (checkbox.checked) {
+        // 添加到選擇列表
+        if (!selectedMessages.includes(messageId)) {
+            selectedMessages.push(messageId);
+        }
+        mediaItem.classList.add('selected');
+
+        // 檢查是否所有項目都被選中，如果是則勾選整組選擇框
+        const allItemCheckboxes = chatBubble.querySelectorAll('.media-item-select');
+        const allChecked = Array.from(allItemCheckboxes).every(cb => cb.checked);
+        const groupCheckbox = chatBubble.querySelector('.media-group-select');
+        if (groupCheckbox && allChecked) {
+            groupCheckbox.checked = true;
+            chatBubble.classList.add('selected');
+        }
+    } else {
+        // 從選擇列表移除
+        selectedMessages = selectedMessages.filter(id => id !== messageId);
+        mediaItem.classList.remove('selected');
+
+        // 取消整組選擇框的勾選
+        const groupCheckbox = chatBubble.querySelector('.media-group-select');
+        if (groupCheckbox) {
+            groupCheckbox.checked = false;
+            chatBubble.classList.remove('selected');
+        }
+    }
+
+    updateSelectionUI();
+}
+
+/**
  * 更新選擇相關的UI元素
  */
 function updateSelectionUI() {
@@ -49,10 +137,12 @@ function updateSelectionUI() {
  * 全選所有訊息
  */
 function selectAllMessages() {
-    const checkboxes = document.querySelectorAll('.message-select');
+    const singleCheckboxes = document.querySelectorAll('.message-select');
+    const groupCheckboxes = document.querySelectorAll('.media-group-select');
     selectedMessages = [];
 
-    checkboxes.forEach(checkbox => {
+    // 選擇單一訊息
+    singleCheckboxes.forEach(checkbox => {
         checkbox.checked = true;
         const chatBubble = checkbox.closest('.chat-bubble');
         if (chatBubble) {
@@ -64,6 +154,21 @@ function selectAllMessages() {
         }
     });
 
+    // 選擇媒體組
+    groupCheckboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        const chatBubble = checkbox.closest('.chat-bubble');
+        if (chatBubble) {
+            const groupMessages = JSON.parse(chatBubble.dataset.groupMessages || '[]');
+            groupMessages.forEach(msg => {
+                if (!selectedMessages.includes(msg.message_id)) {
+                    selectedMessages.push(msg.message_id);
+                }
+            });
+            chatBubble.classList.add('selected');
+        }
+    });
+
     updateSelectionUI();
 }
 
@@ -71,14 +176,25 @@ function selectAllMessages() {
  * 清除所有選擇
  */
 function clearSelection() {
-    const checkboxes = document.querySelectorAll('.message-select');
-    checkboxes.forEach(checkbox => {
+    const singleCheckboxes = document.querySelectorAll('.message-select');
+    const groupCheckboxes = document.querySelectorAll('.media-group-select');
+
+    singleCheckboxes.forEach(checkbox => {
         checkbox.checked = false;
         const chatBubble = checkbox.closest('.chat-bubble');
         if (chatBubble) {
             chatBubble.classList.remove('selected');
         }
     });
+
+    groupCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        const chatBubble = checkbox.closest('.chat-bubble');
+        if (chatBubble) {
+            chatBubble.classList.remove('selected');
+        }
+    });
+
     selectedMessages = [];
     updateSelectionUI();
 }
@@ -182,8 +298,8 @@ async function startBotDownload() {
     downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 準備中...';
     downloadBtn.disabled = true;
 
-    // 顯示即時通知
-    showDownloadStartNotification(selectedMessages.length);
+    // Bot 下載不需要顯示浮動進度條，只顯示簡單通知
+    // showDownloadStartNotification(selectedMessages.length);
 
     try {
         const response = await fetch('/api/fast_download/add_tasks', {
@@ -202,37 +318,24 @@ async function startBotDownload() {
         console.log('下載 API 響應數據:', data);
 
         if (data.success) {
-            // 更新通知為成功狀態
-            if (downloadNotificationId) {
-                updateNotification(downloadNotificationId, {
-                    title: '任務已加入隊列',
-                    message: `✅ 成功加入 ${data.added_count} 個下載任務到隊列`
-                });
-            }
+            // Bot 下載成功 - 顯示簡單的成功通知
+            showNotification('success', '任務已加入隊列',
+                `✅ 成功加入 ${data.added_count} 個下載任務\n\n` +
+                `💡 請透過 Telegram Bot 查看下載進度和接收完成通知`,
+                {
+                    autoClose: true,
+                    duration: 5000
+                }
+            );
 
             clearSelection();
-
-            // 顯示提示
-            setTimeout(() => {
-                showNotification('info', '提示', '您可以在此頁面查看下載進度，或透過 Telegram bot 接收通知', { duration: 4000 });
-            }, 2000);
         } else {
-            // 如果失敗，停止進度檢查並顯示錯誤
-            stopProgressChecking();
-            if (downloadNotificationId) {
-                removeNotification(downloadNotificationId);
-                downloadNotificationId = null;
-            }
+            // 如果失敗，顯示錯誤
             showNotification('error', '下載失敗', data.error || data.message || '未知錯誤');
         }
     } catch (error) {
         console.error('下載錯誤:', error);
-        // 如果出現異常，停止進度檢查並顯示錯誤
-        stopProgressChecking();
-        if (downloadNotificationId) {
-            removeNotification(downloadNotificationId);
-            downloadNotificationId = null;
-        }
+        // 如果出現異常，顯示錯誤
         showNotification('error', '連接錯誤', '下載請求時發生錯誤：' + error.message);
     } finally {
         // Restore download button

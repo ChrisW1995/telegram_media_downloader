@@ -14,6 +14,11 @@ function initializeEventListeners() {
     // 初始化主題
     initializeTheme();
 
+    // 初始化 Lightbox
+    if (typeof initLightbox === 'function') {
+        initLightbox();
+    }
+
     // 主題切換按鈕事件
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
