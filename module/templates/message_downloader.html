@@ -314,26 +314,34 @@
                 <div class="progress-stats">
                     <div class="stat-row">
                         <div class="stat-item">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>速度</span>
-                            <span id="progress-speed">計算中...</span>
+                            <div class="stat-label">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>速度</span>
+                            </div>
+                            <span class="stat-value" id="progress-speed">計算中...</span>
                         </div>
                         <div class="stat-item">
-                            <i class="fas fa-clock"></i>
-                            <span>剩餘時間</span>
-                            <span id="progress-eta">--:--</span>
+                            <div class="stat-label">
+                                <i class="fas fa-clock"></i>
+                                <span>剩餘時間</span>
+                            </div>
+                            <span class="stat-value" id="progress-eta">--:--</span>
                         </div>
                     </div>
                     <div class="stat-row">
                         <div class="stat-item">
-                            <i class="fas fa-database"></i>
-                            <span>大小</span>
-                            <span id="progress-size">0 B / 0 B</span>
+                            <div class="stat-label">
+                                <i class="fas fa-database"></i>
+                                <span>大小</span>
+                            </div>
+                            <span class="stat-value" id="progress-size">0 B / 0 B</span>
                         </div>
                         <div class="stat-item">
-                            <i class="fas fa-file"></i>
-                            <span>檔案</span>
-                            <span id="progress-files">0 / 0</span>
+                            <div class="stat-label">
+                                <i class="fas fa-file"></i>
+                                <span>檔案</span>
+                            </div>
+                            <span class="stat-value" id="progress-files">0 / 0</span>
                         </div>
                     </div>
                 </div>
@@ -374,6 +382,38 @@
                 <div class="minimized-percentage">0%</div>
                 <div class="minimized-bar">
                     <div id="minimized-progress-fill" class="minimized-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal - 圖片放大預覽 -->
+    <div id="lightbox-modal" class="lightbox-overlay" style="display: none;">
+        <div class="lightbox-container">
+            <button class="lightbox-close" id="lightbox-close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+            <button class="lightbox-prev" id="lightbox-prev-btn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="lightbox-next" id="lightbox-next-btn">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <div class="lightbox-content">
+                <img id="lightbox-image" src="" alt="Preview">
+                <div class="lightbox-loading" id="lightbox-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>載入中...</span>
+                </div>
+            </div>
+            <div class="lightbox-info-bar">
+                <div class="lightbox-info-left">
+                    <span class="lightbox-filename" id="lightbox-filename">檔案名稱</span>
+                    <span class="lightbox-message-id" id="lightbox-message-id">#1234</span>
+                    <div class="lightbox-caption" id="lightbox-caption" style="display: none; margin-top: 8px; opacity: 0.9; font-size: 0.95em; max-width: 600px; line-height: 1.4;"></div>
+                </div>
+                <div class="lightbox-counter">
+                    <span id="lightbox-current">1</span> / <span id="lightbox-total">10</span>
                 </div>
             </div>
         </div>

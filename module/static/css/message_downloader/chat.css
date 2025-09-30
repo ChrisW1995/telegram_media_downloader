@@ -10,10 +10,54 @@
  * - Group list and sidebar items
  */
 
+/* Messages List Grid Layout - 響應式 2 欄佈局 */
+/* 考慮左側 sidebar 280px + 間距，訊息區實際寬度約為 (視窗寬度 - 320px) */
+#messages-list {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 訊息區域有約 800px 寬度時啟用雙欄 (視窗約 1120px) */
+@media (min-width: 1120px) {
+    #messages-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 14px !important;
+        padding: 10px !important;
+    }
+}
+
+/* 訊息區域有約 1000px 寬度時優化間距 (視窗約 1320px) */
+@media (min-width: 1320px) {
+    #messages-list {
+        gap: 16px;
+        padding: 12px;
+    }
+}
+
+/* 訊息區域有約 1400px 寬度時優化間距 (視窗約 1720px) */
+@media (min-width: 1720px) {
+    #messages-list {
+        gap: 20px;
+        padding: 16px;
+    }
+}
+
+/* 超寬螢幕優化 (視窗約 2200px+) */
+@media (min-width: 2200px) {
+    #messages-list {
+        gap: 24px;
+        padding: 20px;
+    }
+}
+
 /* Chat Message Bubbles - iOS 26 Control Center Cards */
 .chat-bubble {
-    max-width: 90%;
-    margin: 12px auto;
+    max-width: 100% !important;
+    margin: 0 !important;
     background:
         linear-gradient(135deg,
             rgba(255, 255, 255, 0.16) 0%,
@@ -32,6 +76,13 @@
     transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
     cursor: pointer;
     transform-origin: center;
+}
+
+/* Media group bubble 使用 flex 佈局 */
+.chat-bubble.media-group-bubble {
+    display: flex;
+    flex-direction: column;
+    min-height: 450px;
 }
 
 .chat-bubble:hover {
@@ -77,6 +128,7 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 8px;
+    flex-shrink: 0;
 }
 
 .message-info {
@@ -101,6 +153,9 @@
 
 .message-content {
     margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
 }
 
 .message-content * {
@@ -226,8 +281,8 @@
 
 /* Media thumbnails and placeholders */
 .media-thumbnail {
-    width: 80px;
-    height: 80px;
+    width: 150px;
+    height: 150px;
     border-radius: 12px;
     object-fit: cover;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -238,6 +293,8 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    cursor: pointer;
+    margin-right: 12px;
 }
 
 .media-thumbnail:hover {
@@ -259,7 +316,7 @@
 
 .media-placeholder {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
     padding: 12px;
     background: rgba(0, 0, 0, 0.05);
@@ -280,6 +337,18 @@
 .media-content {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 訊息文字在縮圖旁邊 */
+.media-content .message-caption {
+    color: var(--apple-label-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    margin-bottom: 8px;
 }
 
 .media-icon {
@@ -418,4 +487,613 @@
 .group-pin-btn.pinned {
     opacity: 1;
     color: var(--apple-blue);
+}
+
+/* ==================== Lightbox 圖片放大預覽 ==================== */
+
+/* Lightbox 覆蓋層 */
+.lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(20px) saturate(120%);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: lightboxFadeIn 0.3s ease;
+}
+
+@keyframes lightboxFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Lightbox 容器 */
+.lightbox-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px 120px 20px;
+}
+
+/* Lightbox 內容區 */
+.lightbox-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    max-width: calc(100vw - 200px);
+    max-height: calc(100vh - 200px);
+}
+
+.lightbox-content img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: lightboxImageZoom 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+@keyframes lightboxImageZoom {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Lightbox 載入指示器 */
+.lightbox-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.lightbox-loading i {
+    font-size: 32px;
+}
+
+/* Lightbox 關閉按鈕 */
+.lightbox-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(30px) saturate(180%);
+    border: 0.5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+    color: white;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    z-index: 10001;
+}
+
+.lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.lightbox-close:active {
+    transform: scale(0.95);
+}
+
+/* Lightbox 導航按鈕 */
+.lightbox-prev,
+.lightbox-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(30px) saturate(180%);
+    border: 0.5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 24px;
+    color: white;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    z-index: 10001;
+}
+
+.lightbox-prev {
+    left: 40px;
+}
+
+.lightbox-next {
+    right: 40px;
+}
+
+.lightbox-prev:hover,
+.lightbox-next:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.lightbox-prev:active,
+.lightbox-next:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.lightbox-prev:disabled,
+.lightbox-next:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Lightbox 資訊欄 */
+.lightbox-info-bar {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(40px) saturate(200%);
+    border: 0.5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-width: 300px;
+    max-width: 600px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.lightbox-info-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.lightbox-filename {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lightbox-message-id {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'SF Mono', 'Monaco', monospace;
+    flex-shrink: 0;
+}
+
+.lightbox-counter {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .lightbox-prev {
+        left: 16px;
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+    }
+
+    .lightbox-next {
+        right: 16px;
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+    }
+
+    .lightbox-close {
+        top: 16px;
+        right: 16px;
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+
+    .lightbox-info-bar {
+        bottom: 16px;
+        min-width: auto;
+        max-width: calc(100vw - 32px);
+        padding: 10px 16px;
+    }
+
+    .lightbox-filename {
+        font-size: 13px;
+    }
+
+    .lightbox-message-id {
+        font-size: 11px;
+    }
+
+    .lightbox-counter {
+        font-size: 12px;
+    }
+}
+
+/* ==================== 媒體組（Album）樣式 ==================== */
+
+/* 媒體組容器 */
+.media-group-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* 媒體組網格 - Telegram 風格 */
+.media-group-grid {
+    display: grid;
+    gap: 4px;
+    margin-top: 8px;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+/* 單張圖片 */
+.media-group-grid.grid-1 {
+    grid-template-columns: 1fr;
+}
+
+/* 兩張圖片 - 左右排列 */
+.media-group-grid.grid-2 {
+    grid-template-columns: 1fr 1fr;
+    flex: 1;
+    height: 100%;
+    min-height: 350px;
+}
+
+.media-group-grid.grid-2 .media-group-item {
+    height: 100%;
+}
+
+/* 兩張圖片 - 上下排列（豎圖或橫圖） */
+.media-group-grid.grid-2-vertical {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    gap: 4px;
+}
+
+.media-group-grid.grid-2-vertical .media-group-item {
+    width: 100%;
+    height: auto;
+    min-height: 200px;
+}
+
+/* 三張圖片 - 一大兩小 */
+.media-group-grid.grid-3 {
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+.media-group-grid.grid-3 .media-group-item:first-child {
+    grid-row: 1 / 3;
+}
+
+/* 四張圖片 - 2x2 網格 */
+.media-group-grid.grid-4 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+/* 五張圖片 - 2+3 佈局 */
+.media-group-grid.grid-5 {
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+.media-group-grid.grid-5 .media-group-item:nth-child(1) {
+    grid-column: 1 / 2;
+    grid-row: 1;
+}
+
+.media-group-grid.grid-5 .media-group-item:nth-child(2) {
+    grid-column: 2 / 4;
+    grid-row: 1;
+}
+
+/* 六張圖片 - 3x2 網格 */
+.media-group-grid.grid-6 {
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+/* 七張圖片 - 3+4 佈局 */
+.media-group-grid.grid-7 {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+.media-group-grid.grid-7 .media-group-item:nth-child(1),
+.media-group-grid.grid-7 .media-group-item:nth-child(2),
+.media-group-grid.grid-7 .media-group-item:nth-child(3) {
+    grid-column: span 1;
+    grid-row: 1;
+}
+
+/* 八張圖片 - 4x2 網格 */
+.media-group-grid.grid-8 {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+/* 九張圖片 - 3x3 網格 */
+.media-group-grid.grid-9 {
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+}
+
+/* 十張或更多圖片 - 4+3+3 或更多行 */
+.media-group-grid.grid-many {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: auto;
+}
+
+/* 媒體組項目 */
+.media-group-item {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.media-group-item:hover {
+    transform: scale(1.02);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+.media-group-item.selected {
+    border-color: rgba(255, 193, 7, 0.6);
+    box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.3);
+}
+
+.media-group-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 媒體組項目的選擇框 */
+.media-group-item-checkbox {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.95) 0%,
+        rgba(255, 255, 255, 0.85) 100%);
+    backdrop-filter: blur(30px) saturate(180%);
+    border: 0.5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    opacity: 0.7;
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    z-index: 20;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.media-group-item:hover .media-group-item-checkbox {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.media-group-item.selected .media-group-item-checkbox,
+.media-group-item-checkbox:has(input:checked) {
+    opacity: 1;
+    transform: scale(1.1);
+    background: linear-gradient(135deg,
+        rgba(255, 193, 7, 0.95) 0%,
+        rgba(255, 214, 102, 0.95) 100%);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 16px rgba(255, 193, 7, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.media-group-item-checkbox input[type="checkbox"] {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+    appearance: none;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    z-index: 1;
+}
+
+.media-group-item-checkbox input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 媒體類別標記 */
+.media-group-item-type {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(10px) saturate(180%);
+    border: 0.5px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    z-index: 15;
+    pointer-events: none;
+}
+
+.media-group-item-type.photo {
+    background: rgba(52, 199, 89, 0.85);
+}
+
+.media-group-item-type.video {
+    background: rgba(255, 59, 48, 0.85);
+}
+
+/* 載入中的佔位符 */
+.media-group-item .loading-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 24px;
+    z-index: 1;
+}
+
+.media-group-item .loading-placeholder img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+}
+
+/* 更多圖片指示器（+N） */
+.media-group-more {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px) saturate(180%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 32px;
+    font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    z-index: 2;
+}
+
+/* 媒體組標題區域 */
+.media-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.media-group-badge {
+    background: rgba(147, 51, 234, 0.9);
+    backdrop-filter: blur(10px);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.media-group-count {
+    color: var(--apple-label-secondary);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* 單一訊息的媒體容器調整 */
+.media-placeholder.with-thumbnail.single-media {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.media-placeholder.with-thumbnail.single-media .media-thumbnail {
+    flex-shrink: 0;
 }

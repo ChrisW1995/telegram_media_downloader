@@ -89,7 +89,8 @@
     background: transparent;
     padding: 16px 0;
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: visible;
+    width: 100%;
 }
 
 /* 緊湊頂部工具列 */

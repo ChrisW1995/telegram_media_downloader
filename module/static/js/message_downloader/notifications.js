@@ -600,6 +600,13 @@ function updateIndividualFileDisplay(fileId) {
     if (sizeElement && fileProgress.size > 0) {
         sizeElement.textContent = formatSize(fileProgress.size);
     }
+
+    // 更新檔案名稱
+    const nameElement = fileElement.querySelector('.file-name');
+    if (nameElement && fileProgress.name) {
+        nameElement.textContent = truncateFileName(fileProgress.name, 30);
+        nameElement.setAttribute('title', fileProgress.name);
+    }
 }
 
 /**

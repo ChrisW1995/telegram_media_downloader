@@ -513,19 +513,19 @@
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 400px;
+    width: 540px;
     background:
         linear-gradient(135deg,
-            rgba(255, 255, 255, 0.25) 0%,
-            rgba(255, 255, 255, 0.15) 50%,
-            rgba(255, 255, 255, 0.2) 100%);
+            rgba(30, 30, 30, 0.95) 0%,
+            rgba(20, 20, 20, 0.98) 50%,
+            rgba(25, 25, 25, 0.96) 100%);
     backdrop-filter: blur(40px) saturate(200%);
-    border: 0.5px solid rgba(255, 255, 255, 0.3);
+    border: 0.5px solid rgba(255, 255, 255, 0.15);
     border-radius: 20px;
     box-shadow:
-        0 16px 40px rgba(0, 0, 0, 0.25),
-        0 8px 16px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        0 16px 40px rgba(0, 0, 0, 0.6),
+        0 8px 16px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
     z-index: 2000;
     animation: slideInFromBottom 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
     overflow: hidden;
@@ -540,9 +540,9 @@
     right: 0;
     bottom: 0;
     background: linear-gradient(45deg,
-        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.02) 0%,
         transparent 50%,
-        rgba(255, 255, 255, 0.05) 100%);
+        rgba(255, 255, 255, 0.01) 100%);
     pointer-events: none;
 }
 
@@ -626,14 +626,14 @@
 .progress-status {
     font-size: 14px;
     font-weight: 500;
-    color: rgba(0, 0, 0, 0.8);
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .progress-percentage {
     font-size: 18px;
     font-weight: 700;
-    color: #007AFF;
-    text-shadow: 0 1px 2px rgba(0, 122, 255, 0.1);
+    color: #5AC8FA;
+    text-shadow: 0 1px 2px rgba(90, 200, 250, 0.3);
 }
 
 /* 進度條容器 */
@@ -695,56 +695,93 @@
     100% { left: 100%; }
 }
 
-/* 進度詳細資訊 */
+/* 進度詳細資訊 - Dark Theme */
 .progress-details {
-    background: rgba(0, 0, 0, 0.03);
+    background: rgba(255, 255, 255, 0.03);
     border-radius: 12px;
-    padding: 16px;
+    padding: 12px;
     backdrop-filter: blur(10px);
 }
 
 .progress-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(2, auto) !important;
+    gap: 10px !important;
+    width: 100%;
 }
 
 .stat-row {
-    display: flex;
-    gap: 16px;
+    display: contents !important;
 }
 
 .stat-row .stat-item {
-    flex: 1;
-    display: flex;
+    display: flex !important;
+    flex-direction: row;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    max-width: 100%;
+    height: 80px;
     font-size: 12px;
-    color: rgba(0, 0, 0, 0.7);
-    background: rgba(255, 255, 255, 0.4);
-    padding: 8px 12px;
-    border-radius: 10px;
-    border: 0.5px solid rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.08);
+    padding: 14px 20px;
+    border-radius: 14px;
+    border: 0.5px solid rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(20px);
     transition: all 0.2s ease;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .stat-row .stat-item:hover {
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.12);
     transform: translateY(-1px);
 }
 
-.stat-row .stat-item i {
-    width: 14px;
-    text-align: center;
-    color: #007AFF;
-    opacity: 0.8;
+.stat-row .stat-item .stat-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    min-width: 60px;
+    width: 60px;
 }
 
-.stat-row .stat-item span:last-child {
+.stat-row .stat-item .stat-label i {
+    font-size: 22px;
+    color: #5AC8FA;
+    opacity: 0.9;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-row .stat-item .stat-label span {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    text-align: center;
+    width: 100%;
+}
+
+.stat-row .stat-item .stat-value {
     font-weight: 600;
-    color: rgba(0, 0, 0, 0.9);
-    margin-left: auto;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 17px;
+    text-align: right;
+    flex: 1;
+    min-width: 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.3;
 }
 
 /* 最小化進度指示器 */

@@ -318,7 +318,8 @@ function renderMessages(messages, appendMode = false) {
         console.log('📝 第一條訊息範例:', {
             id: messages[0].message_id,
             date: messages[0].date,
-            mediaType: messages[0].media_type
+            mediaType: messages[0].media_type,
+            mediaGroupId: messages[0].media_group_id
         });
     }
 
@@ -329,31 +330,36 @@ function renderMessages(messages, appendMode = false) {
         return;
     }
 
-    // 渲染每條訊息
-    messages.forEach((message, index) => {
-        const messageElement = createMessageElement(message);
+    // 對訊息進行分組處理
+    const groupedMessages = groupMessagesByMediaGroup(messages);
+
+    // 渲染每個訊息或訊息組
+    groupedMessages.forEach((item, index) => {
+        let messageElement;
+
+        if (item.isGroup) {
+            // 渲染媒體組
+            messageElement = createMediaGroupElement(item.messages);
+        } else {
+            // 渲染單個訊息
+            messageElement = createMessageElement(item.message);
+
+            // 元素添加到DOM後，加載縮圖
+            if (messageElement.dataset.needsThumbnail === 'true') {
+                const messageData = JSON.parse(messageElement.dataset.messageData);
+                setTimeout(() => {
+                    const thumbContainer = document.getElementById(`thumb-${messageData.message_id}`);
+                    if (thumbContainer) {
+                        loadThumbnailFromMessage(messageData);
+                    }
+                }, 50);
+            }
+        }
+
         if (appendMode) {
-            // Add delay for smooth animation
             messageElement.style.animationDelay = `${index * 0.05}s`;
         }
         container.appendChild(messageElement);
-
-        // 元素添加到DOM後，加載縮圖
-        if (messageElement.dataset.needsThumbnail === 'true') {
-            const messageData = JSON.parse(messageElement.dataset.messageData);
-            console.log(`Scheduling thumbnail load for message ${messageData.message_id} after DOM addition`);
-            // 使用 setTimeout 確保DOM完全更新
-            setTimeout(() => {
-                console.log(`DOM update timeout reached, attempting to load thumbnail for message ${messageData.message_id}`);
-                const thumbContainer = document.getElementById(`thumb-${messageData.message_id}`);
-                console.log(`Thumbnail container check:`, thumbContainer);
-                if (thumbContainer) {
-                    loadThumbnailFromMessage(messageData);
-                } else {
-                    console.warn(`Still no thumbnail container found for message ${messageData.message_id} even after timeout`);
-                }
-            }, 50); // 增加延遲到50ms
-        }
     });
 
     // 如果沒有更多訊息，添加結束提示
@@ -368,6 +374,227 @@ function renderMessages(messages, appendMode = false) {
         `;
         container.appendChild(endMessage);
     }
+}
+
+/**
+ * 將訊息按媒體組分組
+ * @param {Array} messages - 訊息列表
+ * @returns {Array} 分組後的訊息結構
+ */
+function groupMessagesByMediaGroup(messages) {
+    const grouped = [];
+    const mediaGroups = new Map();
+
+    messages.forEach(message => {
+        if (message.media_group_id && (message.media_type === 'photo' || message.media_type === 'video')) {
+            // 有 media_group_id 的圖片/影片訊息
+            if (!mediaGroups.has(message.media_group_id)) {
+                mediaGroups.set(message.media_group_id, []);
+            }
+            mediaGroups.get(message.media_group_id).push(message);
+        } else {
+            // 沒有 media_group_id 或非圖片/影片的訊息
+            grouped.push({ isGroup: false, message });
+        }
+    });
+
+    // 將媒體組插入到正確的位置
+    const result = [];
+    const processedGroups = new Set();
+
+    messages.forEach(message => {
+        if (message.media_group_id && (message.media_type === 'photo' || message.media_type === 'video')) {
+            if (!processedGroups.has(message.media_group_id)) {
+                const groupMessages = mediaGroups.get(message.media_group_id);
+                result.push({ isGroup: true, messages: groupMessages });
+                processedGroups.add(message.media_group_id);
+            }
+        } else {
+            result.push({ isGroup: false, message });
+        }
+    });
+
+    return result;
+}
+
+/**
+ * 創建媒體組元素
+ * @param {Array} messages - 媒體組中的訊息列表
+ * @returns {HTMLElement} 媒體組DOM元素
+ */
+function createMediaGroupElement(messages) {
+    const div = document.createElement('div');
+    div.className = 'chat-bubble media-group-bubble';
+
+    // 使用第一個訊息的資訊作為代表
+    const firstMessage = messages[0];
+    const mediaGroupId = firstMessage.media_group_id;
+
+    // 決定網格佈局類型 - 根據圖片比例智能調整（仿 Telegram）
+    const count = messages.length;
+    let gridClass = 'grid-1';
+
+    // 檢測圖片方向和比例
+    const analyzeOrientation = (msg) => {
+        if (!msg.width || !msg.height) return null;
+        const ratio = msg.height / msg.width;
+        if (ratio > 1.2) return 'portrait';  // 豎圖 (如 9:16)
+        if (ratio < 0.8) return 'landscape'; // 橫圖 (如 16:9)
+        return 'square';  // 方圖
+    };
+
+    // 針對 2 張圖片的智能排列（仿 Telegram）
+    if (count === 2) {
+        const orientations = messages.map(analyzeOrientation);
+
+        // 如果兩張都是豎圖 (height > width)，使用左右排列
+        if (orientations.every(o => o === 'portrait')) {
+            gridClass = 'grid-2';
+        }
+        // 如果兩張都是橫圖 (width > height)，使用上下排列
+        else if (orientations.every(o => o === 'landscape')) {
+            gridClass = 'grid-2-vertical';
+        }
+        // 混合比例，使用左右排列
+        else {
+            gridClass = 'grid-2';
+        }
+    }
+    else if (count === 1) gridClass = 'grid-1';
+    else if (count === 3) gridClass = 'grid-3';
+    else if (count === 4) gridClass = 'grid-4';
+    else if (count === 5) gridClass = 'grid-5';
+    else if (count === 6) gridClass = 'grid-6';
+    else if (count === 7) gridClass = 'grid-7';
+    else if (count === 8) gridClass = 'grid-8';
+    else if (count === 9) gridClass = 'grid-9';
+    else if (count >= 10) gridClass = 'grid-many';
+
+    // Telegram 最多支援 10 張圖片的 album
+    const maxDisplay = 10;
+    const displayMessages = messages.slice(0, maxDisplay);
+    const remainingCount = Math.max(0, count - maxDisplay);
+
+    div.innerHTML = `
+        <div class="message-header">
+            <div class="message-checkbox">
+                <input type="checkbox" class="media-group-select"
+                       onchange="updateMediaGroupSelection(this, '${mediaGroupId}')"
+                       onclick="event.stopPropagation()">
+            </div>
+            <div class="message-info">
+                <span class="message-id">#${firstMessage.message_id}</span>
+                <span class="message-date">${formatDate(firstMessage.date)}</span>
+                <span class="media-badge album" style="background: rgba(147, 51, 234, 0.9); color: white;">
+                    <i class="fas fa-images"></i> ALBUM
+                </span>
+                <span class="media-group-count">${count} ${count === 1 ? 'item' : 'items'}</span>
+            </div>
+        </div>
+
+        <div class="message-content">
+            ${(() => {
+                // 收集所有有 caption 的訊息
+                const captionMessages = messages.filter(msg => msg.caption);
+                if (captionMessages.length === 0) return '';
+
+                // 如果只有一個 caption，直接顯示
+                if (captionMessages.length === 1) {
+                    return `<div class="message-text">${escapeHtml(captionMessages[0].caption)}</div>`;
+                }
+
+                // 如果多個圖片有不同的 caption，顯示第一個並標註還有其他
+                const firstCaption = captionMessages[0].caption;
+                const allSame = captionMessages.every(msg => msg.caption === firstCaption);
+
+                if (allSame) {
+                    return `<div class="message-text">${escapeHtml(firstCaption)}</div>`;
+                } else {
+                    return `<div class="message-text">${escapeHtml(firstCaption)} <span style="opacity: 0.6; font-size: 0.9em;">(+${captionMessages.length - 1} more captions)</span></div>`;
+                }
+            })()}
+
+            <div class="media-group-grid ${gridClass}">
+                ${displayMessages.map((msg, idx) => {
+                    const mediaIcon = msg.media_type === 'video' ? '<i class="fas fa-video"></i>' : '<i class="fas fa-image"></i>';
+                    return `
+                    <div class="media-group-item"
+                         data-message-id="${msg.message_id}"
+                         data-media-group-id="${mediaGroupId}">
+                        <div class="media-group-item-checkbox">
+                            <input type="checkbox" class="media-item-select"
+                                   data-message-id="${msg.message_id}"
+                                   data-media-group-id="${mediaGroupId}"
+                                   onchange="updateMediaItemSelection(this, ${msg.message_id}, '${mediaGroupId}')"
+                                   onclick="event.stopPropagation()">
+                        </div>
+                        <div class="media-group-item-type ${msg.media_type}">
+                            ${mediaIcon} ${msg.media_type.toUpperCase()}
+                        </div>
+                        <div class="loading-placeholder" id="thumb-${msg.message_id}">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        ${idx === maxDisplay - 1 && remainingCount > 0 ? `
+                            <div class="media-group-more">+${remainingCount}</div>
+                        ` : ''}
+                    </div>
+                `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+
+    // 標記需要載入縮圖
+    div.dataset.needsGroupThumbnails = 'true';
+    div.dataset.mediaGroupId = mediaGroupId;
+    div.dataset.groupMessages = JSON.stringify(messages);
+
+    // 載入所有縮圖並添加點擊事件
+    setTimeout(() => {
+        displayMessages.forEach(msg => {
+            loadThumbnailFromMessage(msg);
+
+            // 為每個媒體項目添加點擊事件（打開 Lightbox）
+            const mediaItem = div.querySelector(`.media-group-item[data-message-id="${msg.message_id}"]`);
+            if (mediaItem) {
+                // 為整個媒體項目添加點擊事件
+                mediaItem.style.cursor = 'pointer';
+
+                mediaItem.addEventListener('click', function(e) {
+                    // 如果點擊的是選擇框或其容器，不打開 Lightbox
+                    if (e.target.type === 'checkbox' ||
+                        e.target.closest('.media-group-item-checkbox') ||
+                        e.target.classList.contains('media-group-item-checkbox')) {
+                        e.stopPropagation();
+                        return;
+                    }
+
+                    // 其他區域點擊打開 Lightbox
+                    e.stopPropagation();
+                    openLightbox(msg.message_id);
+                });
+
+                // 確保選擇框區域的點擊不會冒泡
+                const checkbox = mediaItem.querySelector('.media-group-item-checkbox');
+                if (checkbox) {
+                    checkbox.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                    });
+                }
+            }
+        });
+    }, 50);
+
+    // 點擊卡片選擇整組
+    div.onclick = function(event) {
+        if (event.target.type !== 'checkbox' && !event.target.closest('.media-group-item')) {
+            const checkbox = div.querySelector('.media-group-select');
+            checkbox.checked = !checkbox.checked;
+            updateMediaGroupSelection(checkbox, mediaGroupId);
+        }
+    };
+
+    return div;
 }
 
 /**
@@ -397,12 +624,11 @@ function createMessageElement(message) {
                 <span class="media-badge ${mediaInfo.type}">
                     ${mediaIcon} ${mediaInfo.type.toUpperCase()}
                 </span>
+                ${message.media_group_id ? '<span class="media-badge album" style="background: rgba(147, 51, 234, 0.9); color: white;" title="媒體組 ID: ' + message.media_group_id + '"><i class="fas fa-images"></i> ALBUM</span>' : ''}
             </div>
         </div>
 
         <div class="message-content">
-            ${message.caption ? `<div class="message-text">${escapeHtml(message.caption)}</div>` : ''}
-
             <div class="media-placeholder ${mediaInfo.type} ${mediaInfo.type === 'photo' || mediaInfo.type === 'video' ? 'with-thumbnail' : ''}" id="media-${message.message_id}">
                 ${mediaInfo.type === 'photo' || mediaInfo.type === 'video' ? `
                     <div class="media-thumbnail" id="thumb-${message.message_id}">
@@ -416,6 +642,7 @@ function createMessageElement(message) {
                     </div>
                 `}
                 <div class="media-content">
+                    ${message.caption ? `<div class="message-caption">${escapeHtml(message.caption)}</div>` : ''}
                     <div class="media-info">
                         <div class="media-filename">${mediaInfo.filename || 'Unknown file'}</div>
                         <div class="media-size">${mediaInfo.size || 'Unknown size'}</div>
@@ -497,7 +724,24 @@ async function loadThumbnailFromMessage(message) {
 
                     if (data.success && data.message.thumbnail) {
                         console.log(`Thumbnail loaded successfully for message ${message.message_id}`);
-                        thumbnailContainer.innerHTML = `<img src="${data.message.thumbnail}" alt="Thumbnail" />`;
+
+                        // 檢查是否在媒體組網格中
+                        const isInMediaGroup = thumbnailContainer.closest('.media-group-item');
+
+                        if (isInMediaGroup) {
+                            // 媒體組網格項目 - 只替換 loading-placeholder 內容
+                            thumbnailContainer.innerHTML = `<img src="${data.message.thumbnail}" alt="Thumbnail" style="width: 100%; height: 100%; object-fit: cover;" />`;
+                        } else {
+                            // 單一訊息縮圖
+                            thumbnailContainer.innerHTML = `<img src="${data.message.thumbnail}" alt="Thumbnail" />`;
+
+                            // 添加點擊事件打開 Lightbox
+                            thumbnailContainer.style.cursor = 'pointer';
+                            thumbnailContainer.addEventListener('click', function(e) {
+                                e.stopPropagation(); // 防止觸發訊息氣泡的點擊事件
+                                openLightbox(message.message_id);
+                            });
+                        }
                     } else {
                         throw new Error(data.error || 'API returned no thumbnail data');
                     }
@@ -653,3 +897,235 @@ function hideMessages() {
         item.classList.remove('active');
     });
 }
+
+// ==================== Lightbox 圖片放大預覽功能 ====================
+
+// Lightbox 狀態管理
+let lightboxImages = [];
+let currentLightboxIndex = 0;
+
+/**
+ * 初始化 Lightbox 事件監聽器
+ */
+function initLightbox() {
+    // 關閉按鈕
+    const closeBtn = document.getElementById('lightbox-close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeLightbox);
+    }
+
+    // 上一張按鈕
+    const prevBtn = document.getElementById('lightbox-prev-btn');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', showPrevLightbox);
+    }
+
+    // 下一張按鈕
+    const nextBtn = document.getElementById('lightbox-next-btn');
+    if (nextBtn) {
+        nextBtn.addEventListener('click', showNextLightbox);
+    }
+
+    // 點擊背景關閉
+    const lightboxOverlay = document.getElementById('lightbox-modal');
+    if (lightboxOverlay) {
+        lightboxOverlay.addEventListener('click', function(e) {
+            if (e.target === lightboxOverlay) {
+                closeLightbox();
+            }
+        });
+    }
+
+    // 鍵盤導航
+    document.addEventListener('keydown', handleLightboxKeyboard);
+
+    console.log('✅ Lightbox 初始化完成');
+}
+
+/**
+ * 處理鍵盤事件
+ */
+function handleLightboxKeyboard(e) {
+    const modal = document.getElementById('lightbox-modal');
+    if (!modal || modal.style.display === 'none') return;
+
+    switch(e.key) {
+        case 'Escape':
+            closeLightbox();
+            break;
+        case 'ArrowLeft':
+            showPrevLightbox();
+            break;
+        case 'ArrowRight':
+            showNextLightbox();
+            break;
+    }
+}
+
+/**
+ * 打開 Lightbox 預覽
+ * @param {number} messageId - 訊息 ID
+ */
+function openLightbox(messageId) {
+    console.log(`🖼️ 打開 Lightbox，訊息 ID: ${messageId}`);
+
+    // 收集當前顯示的所有圖片和影片訊息
+    lightboxImages = allMessages.filter(m =>
+        (m.media_type === 'photo' || m.media_type === 'video') &&
+        document.querySelector(`[data-message-id="${m.message_id}"]`)
+    );
+
+    console.log(`📸 找到 ${lightboxImages.length} 個媒體項目`);
+
+    if (lightboxImages.length === 0) {
+        console.warn('❌ 沒有找到可預覽的媒體');
+        return;
+    }
+
+    // 找到當前訊息的索引
+    currentLightboxIndex = lightboxImages.findIndex(m => m.message_id === messageId);
+
+    if (currentLightboxIndex === -1) {
+        console.warn(`❌ 找不到訊息 ${messageId} 在 lightboxImages 中`);
+        currentLightboxIndex = 0;
+    }
+
+    // 顯示圖片
+    showLightboxImage(currentLightboxIndex);
+
+    // 顯示 Lightbox
+    const modal = document.getElementById('lightbox-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        // 防止背景滾動
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+/**
+ * 顯示 Lightbox 中的圖片
+ * @param {number} index - 圖片索引
+ */
+async function showLightboxImage(index) {
+    if (index < 0 || index >= lightboxImages.length) {
+        console.warn(`⚠️ 索引 ${index} 超出範圍 (0-${lightboxImages.length - 1})`);
+        return;
+    }
+
+    const message = lightboxImages[index];
+    console.log(`🔄 顯示 Lightbox 圖片 ${index + 1}/${lightboxImages.length}`, message);
+
+    // 更新計數器
+    document.getElementById('lightbox-current').textContent = index + 1;
+    document.getElementById('lightbox-total').textContent = lightboxImages.length;
+
+    // 更新檔案資訊
+    document.getElementById('lightbox-filename').textContent = message.file_name || 'Image';
+    document.getElementById('lightbox-message-id').textContent = `#${message.message_id}`;
+
+    // 更新 caption（如果有的話）
+    const captionElement = document.getElementById('lightbox-caption');
+    if (message.caption) {
+        captionElement.textContent = message.caption;
+        captionElement.style.display = 'block';
+    } else {
+        captionElement.style.display = 'none';
+    }
+
+    // 更新導航按鈕狀態
+    const prevBtn = document.getElementById('lightbox-prev-btn');
+    const nextBtn = document.getElementById('lightbox-next-btn');
+    if (prevBtn) prevBtn.disabled = (index === 0);
+    if (nextBtn) nextBtn.disabled = (index === lightboxImages.length - 1);
+
+    // 顯示載入指示器
+    const loading = document.getElementById('lightbox-loading');
+    const img = document.getElementById('lightbox-image');
+    if (loading) loading.style.display = 'flex';
+    if (img) img.style.display = 'none';
+
+    try {
+        // 使用現有的縮圖 API 載入完整圖片
+        const response = await fetch(`/api/message_downloader_thumbnail/${currentChatId}/${message.message_id}`);
+
+        if (!response.ok) {
+            throw new Error(`API 返回錯誤: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.message.thumbnail) {
+            // 載入圖片
+            img.src = data.message.thumbnail;
+
+            // 圖片載入完成後隱藏載入指示器
+            img.onload = function() {
+                if (loading) loading.style.display = 'none';
+                if (img) img.style.display = 'block';
+                console.log('✅ Lightbox 圖片載入完成');
+            };
+
+            img.onerror = function() {
+                console.error('❌ Lightbox 圖片載入失敗');
+                if (loading) {
+                    loading.innerHTML = `
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>圖片載入失敗</span>
+                    `;
+                }
+            };
+        } else {
+            throw new Error(data.error || '無法取得圖片');
+        }
+    } catch (error) {
+        console.error('❌ 載入 Lightbox 圖片失敗:', error);
+        if (loading) {
+            loading.innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>載入失敗</span>
+            `;
+        }
+    }
+}
+
+/**
+ * 顯示上一張圖片
+ */
+function showPrevLightbox() {
+    if (currentLightboxIndex > 0) {
+        currentLightboxIndex--;
+        showLightboxImage(currentLightboxIndex);
+        console.log(`⬅️ 上一張: ${currentLightboxIndex + 1}/${lightboxImages.length}`);
+    }
+}
+
+/**
+ * 顯示下一張圖片
+ */
+function showNextLightbox() {
+    if (currentLightboxIndex < lightboxImages.length - 1) {
+        currentLightboxIndex++;
+        showLightboxImage(currentLightboxIndex);
+        console.log(`➡️ 下一張: ${currentLightboxIndex + 1}/${lightboxImages.length}`);
+    }
+}
+
+/**
+ * 關閉 Lightbox
+ */
+function closeLightbox() {
+    const modal = document.getElementById('lightbox-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        // 恢復背景滾動
+        document.body.style.overflow = '';
+    }
+    console.log('❌ 關閉 Lightbox');
+}
+
+// ==================== 修改 createMessageElement 添加縮圖點擊事件 ====================
+
+// 保存原始的 createMessageElement 引用（將在 main.js 初始化時重新賦值）
+const originalCreateMessageElement = createMessageElement;
+
+// 修改後的版本會在縮圖載入後添加點擊事件
