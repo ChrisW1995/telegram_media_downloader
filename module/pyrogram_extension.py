@@ -839,10 +839,15 @@ async def _report_bot_status(
     Returns:
         None
     """
+    # Debug: 檢查必要條件
+    logger.debug(f"_report_bot_status check: reply_message_id={node.reply_message_id}, bot={node.bot}, from_user_id={node.from_user_id}")
+
     if not node.reply_message_id or not node.bot:
+        logger.debug(f"_report_bot_status skipped: missing reply_message_id or bot")
         return
 
     if immediate_reply or node.can_reply():
+        logger.debug(f"_report_bot_status: updating message (immediate={immediate_reply})")
         if node.upload_telegram_chat_id:
             node.forward_msg_detail_str = (
                 f"\n🔄 {_t('Forward')}\n"
@@ -881,7 +886,7 @@ async def _report_bot_status(
             messages = download_result[node.chat_id]
             for idx, value in messages.items():
                 task_id = value["task_id"]
-                if task_id != node.task_id or value["down_byte"] == value["total_size"]:
+                if (task_id is None or node.task_id is None or task_id != node.task_id) or value["down_byte"] == value["total_size"]:
                     continue
 
                 temp_file_name = truncate_filename(
@@ -937,7 +942,7 @@ async def _report_bot_status(
 
         if new_msg_str != node.last_edit_msg:
             node.last_edit_msg = new_msg_str
-            await client.edit_message_text(
+            await node.bot.bot.edit_message_text(
                 node.from_user_id,
                 node.reply_message_id,
                 new_msg_str,

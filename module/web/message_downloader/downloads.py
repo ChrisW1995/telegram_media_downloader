@@ -113,7 +113,7 @@ def add_download_tasks():
 
             if client and hasattr(_app, 'loop') and _app.loop:
                 try:
-                    from module.custom_download import run_custom_download
+                    from module.custom_download import run_custom_download_for_selected
                     from module.download_stat import set_download_state, DownloadState
 
                     # 設置下載狀態為下載中
@@ -124,11 +124,16 @@ def add_download_tasks():
 
                     # 為 message_downloader 創建 TaskNode，支援 bot 通知
                     user_id = session.get('message_downloader_user_id')
+                    logger.info(f"Debug - user_id: {user_id}, has_download_bot: {hasattr(_app, 'download_bot') and _app.download_bot}")
 
-                    # 創建 TaskNode 來支持進度通知
+                    # 創建 TaskNode 來支持進度通知（關鍵修復：使用 async 任務避免競態條件）
                     if user_id and hasattr(_app, 'download_bot') and _app.download_bot:
                             try:
                                 import time
+                                import pyrogram
+                                from module.download_stat import TaskNode
+                                from module.app import TaskType
+                                from module.web import _queue
 
                                 # 構建初始通知訊息
                                 chat_id_str = str(chat_id)
@@ -140,54 +145,65 @@ def add_download_tasks():
 
 ⏳ 正在準備下載..."""
 
-                                # 創建 TaskNode with bot notification support (先創建，後發送訊息)
-                                from module.download_stat import TaskNode
-                                task_node = TaskNode(
-                                    chat_id=chat_id_str,
-                                    bot=_app.download_bot,
-                                    reply_message_id=None  # 暫時設為 None，稍後更新
-                                )
-                                task_node.is_running = True
+                                # 修復 1: 將 chat_id 轉換為整數
+                                chat_id_int = int(chat_id) if isinstance(chat_id, str) else chat_id
 
-                                logger.info(f"Created TaskNode with task_id: {task_node.task_id}")
-
-                                # 異步函數來處理訊息發送和下載
-                                async def send_notification_and_download():
+                                # 異步函數：發送訊息並啟動下載（模仿 bot.py 流程）
+                                async def setup_and_start_download():
                                     try:
-                                        # 發送初始通知給用戶
-                                        reply_message_obj = await _app.download_bot.send_message(
-                                            user_id, start_message, parse_mode='markdown'
+                                        # 1. 先發送訊息（模仿 bot.py:1186-1188）
+                                        reply_message_obj = await _app.download_bot.bot.send_message(
+                                            user_id, start_message, parse_mode=pyrogram.enums.ParseMode.MARKDOWN
                                         )
                                         reply_message_id = reply_message_obj.id
-
-                                        # 更新 TaskNode 的 reply_message_id
-                                        task_node.reply_message_id = reply_message_id
-
                                         logger.info(f"Sent start notification to user {user_id}, reply_message_id: {reply_message_id}")
 
-                                        # 觸發下載
-                                        await run_custom_download(_app, client, task_node=task_node)
+                                        # 2. 創建 TaskNode（模仿 bot.py:1189-1199）
+                                        task_node = TaskNode(
+                                            chat_id=chat_id_int,
+                                            from_user_id=user_id,
+                                            bot=_app.download_bot,
+                                            reply_message_id=reply_message_id,  # 關鍵：已有 reply_message_id
+                                            task_id=_app.download_bot.gen_task_id()
+                                        )
+                                        task_node.is_running = True
+                                        task_node.is_custom_download = True
+                                        task_node.task_type = TaskType.Download
+                                        task_node.client = client
+                                        task_node.total_task = len(new_ids)
+
+                                        # 3. 添加到追蹤列表（模仿 bot.py:1201）
+                                        _app.download_bot.add_task_node(task_node)
+                                        logger.info(f"TaskNode {task_node.task_id} added with reply_message_id={reply_message_id}")
+
+                                        # 4. 開始下載（模仿 bot.py:1202-1204）
+                                        selected_target_ids = {chat_id: new_ids}
+                                        await run_custom_download_for_selected(_app, client, queue_ref=_queue, selected_target_ids=selected_target_ids, task_node=task_node)
 
                                     except Exception as e:
-                                        logger.error(f"Error in notification and download: {e}")
+                                        logger.error(f"Error in setup_and_start_download: {e}")
 
                                 # 創建異步任務
-                                download_task = _app.loop.create_task(send_notification_and_download())
+                                download_task = _app.loop.create_task(setup_and_start_download())
                                 download_triggered = True
                                 logger.info("Download task triggered with bot notification support")
 
                             except Exception as task_error:
                                 logger.error(f"Failed to create TaskNode with bot support: {task_error}")
                                 # 回退到無 bot 通知的下載
+                                selected_target_ids = {chat_id: new_ids}
+                                from module.web import _queue
                                 download_task = _app.loop.create_task(
-                                    run_custom_download(_app, client)
+                                    run_custom_download_for_selected(_app, client, queue_ref=_queue, selected_target_ids=selected_target_ids)
                                 )
                                 download_triggered = True
                                 logger.info("Download task triggered without bot notification")
                     else:
                         # 普通下載（無 bot 通知）
+                        selected_target_ids = {chat_id: new_ids}
+                        from module.web import _queue
                         download_task = _app.loop.create_task(
-                            run_custom_download(_app, client)
+                            run_custom_download_for_selected(_app, client, queue_ref=_queue, selected_target_ids=selected_target_ids)
                         )
                         download_triggered = True
                         logger.info("Download task triggered (normal mode)")

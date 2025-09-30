@@ -537,10 +537,12 @@ async def download_media(
                 ui_file_name = f"****{os.path.splitext(file_name)[-1]}"
 
             if _can_download(_type, file_formats, file_format):
-                # 檢查是否是 ZIP 下載，如果是則強制重新下載
+                # 檢查是否需要強制重新下載（ZIP 下載或 Message Downloader）
                 is_zip_download = hasattr(node, 'zip_download_manager') and node.zip_download_manager
+                is_message_downloader = hasattr(node, 'is_custom_download') and node.is_custom_download
+                force_redownload = is_zip_download or is_message_downloader
 
-                if _is_exist(file_name) and not is_zip_download:
+                if _is_exist(file_name) and not force_redownload:
                     file_size = os.path.getsize(file_name)
                     if file_size or file_size == media_size:
                         logger.info(
@@ -550,12 +552,16 @@ async def download_media(
                         )
 
                         return DownloadStatus.SkipDownload, file_name
-                elif is_zip_download and _is_exist(file_name):
-                    logger.info(f"id={message.id} ZIP 下載模式 - 強制重新下載已存在檔案: {ui_file_name}")
-                    # 為 ZIP 下載產生臨時檔案名，避免覆蓋原檔案
-                    import tempfile
-                    temp_dir = tempfile.mkdtemp(prefix='zip_download_')
-                    file_name = os.path.join(temp_dir, os.path.basename(file_name))
+                elif force_redownload and _is_exist(file_name):
+                    if is_zip_download:
+                        logger.info(f"id={message.id} ZIP 下載模式 - 強制重新下載已存在檔案: {ui_file_name}")
+                        # 為 ZIP 下載產生臨時檔案名，避免覆蓋原檔案
+                        import tempfile
+                        temp_dir = tempfile.mkdtemp(prefix='zip_download_')
+                        file_name = os.path.join(temp_dir, os.path.basename(file_name))
+                    elif is_message_downloader:
+                        logger.info(f"id={message.id} Message Downloader - 強制重新下載已存在檔案: {ui_file_name}")
+                        # Message Downloader 直接覆蓋原檔案
             else:
                 return DownloadStatus.SkipDownload, None
 

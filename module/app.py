@@ -186,9 +186,22 @@ class TaskNode:
 
     def is_finish(self):
         """If is finish"""
+        # 對於 custom download，需要確保所有統計都已更新
+        # 檢查條件：success + failed + skip 的總和應該等於 total_task
+        if self.is_running and hasattr(self, 'is_custom_download') and self.is_custom_download:
+            stats_sum = self.success_download_task + self.failed_download_task + self.skip_download_task
+            is_stats_complete = self.total_task > 0 and stats_sum == self.total_task
+            from loguru import logger
+            logger.debug(f"is_finish check: total_task={self.total_task}, total_download_task={self.total_download_task}, "
+                        f"success={self.success_download_task}, failed={self.failed_download_task}, skip={self.skip_download_task}, "
+                        f"stats_sum={stats_sum}, is_complete={is_stats_complete}")
+            return self.is_stop_transmission or (is_stats_complete and self.is_running)
+
+        # 原有邏輯
         return self.is_stop_transmission or (
             self.is_running
             and self.task_type != TaskType.ListenForward
+            and self.total_task > 0
             and self.total_task == self.total_download_task
         )
 

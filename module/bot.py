@@ -72,9 +72,9 @@ class DownloadBot:
         self.reply_task = None
 
     def gen_task_id(self) -> int:
-        """Gen task id"""
-        self.task_id += 1
-        return self.task_id
+        """Gen task id - uses timestamp in milliseconds to ensure uniqueness"""
+        import time
+        return int(time.time() * 1000)
 
     def add_task_node(self, node: TaskNode):
         """Add task node"""
@@ -1197,6 +1197,7 @@ async def download_from_bot(client: pyrogram.Client, message: pyrogram.types.Mes
                 bot=_bot.bot,
                 task_id=_bot.gen_task_id(),
             )
+            node.is_running = True
             _bot.add_task_node(node)
             _bot.app.loop.create_task(
                 _bot.download_chat_task(_bot.client, chat_download_config, node)
