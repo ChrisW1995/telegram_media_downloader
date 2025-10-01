@@ -92,3 +92,19 @@ test_download.zip
 
 # PID files
 .tgdl_pid
+.tgdl_dev_pid
+.cloudflare_tunnel_pid
+
+# Cloudflare Tunnel
+cloudflare_tunnel_config.yml
+.cloudflare_tunnel_url
+cloudflare_tunnel.log
+
+# Environment specific
+.cloudflare_tunnel_url
+TGDL_DEV/
+
+# User sessions (multi-user support)
+user_sessions.json
+.telegram_sessions/
+.telegram_sessions_dev/

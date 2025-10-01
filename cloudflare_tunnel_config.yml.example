@@ -1,0 +1,26 @@
+# Cloudflare Tunnel 配置範例
+# 用途：將本地 TGDL 產品版本暴露到公網
+# 使用前請先完成 Cloudflare Tunnel 設置（參考 CLOUDFLARE_TUNNEL_SETUP.md）
+
+# 使用方式：
+# 1. 複製此檔案為 cloudflare_tunnel_config.yml
+# 2. 替換 YOUR_TUNNEL_ID 為實際的 Tunnel ID
+# 3. 替換 your-domain.com 為您的網域
+# 4. 執行 ./start_cloudflare_tunnel.sh
+
+tunnel: YOUR_TUNNEL_ID
+credentials-file: /Users/chriswang/.cloudflared/YOUR_TUNNEL_ID.json
+
+ingress:
+  # 將您的網域映射到本地 5001 port
+  - hostname: tgdl.your-domain.com
+    service: http://localhost:5001
+
+  # 必須的 catch-all 規則
+  - service: http_status:404
+
+# 可選：日誌設定
+# loglevel: info
+
+# 可選：協議設定
+# protocol: quic
