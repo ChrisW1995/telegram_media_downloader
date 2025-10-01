@@ -83,16 +83,16 @@
     }
 
     .chat-menu-toggle.active ~ .chat-menu {
-        width: 280px;
-        height: 80px;
-        transform: translate(-50%, calc(-50% - 95px));
+        width: 420px;
+        height: 100px;
+        transform: translate(-50%, calc(-50% - 115px));
         border-radius: 25px;
     }
 
     .chat-menu ul {
-        height: 80px;
-        gap: 15px;
-        padding: 8px 12px;
+        height: 100px;
+        gap: 12px;
+        padding: 8px 15px;
     }
 
     .chat-menu ul li button {

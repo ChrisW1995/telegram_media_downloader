@@ -52,6 +52,21 @@ function initializeEventListeners() {
         downloadBtn.addEventListener('click', startDownload);
     }
 
+    // Jump to oldest message button
+    const jumpToOldestBtn = document.getElementById('jump-to-oldest-btn');
+    if (jumpToOldestBtn) {
+        jumpToOldestBtn.addEventListener('click', jumpToOldestMessage);
+    }
+
+    // Jump to specific ID button
+    const jumpToIdBtn = document.getElementById('jump-to-id-btn');
+    if (jumpToIdBtn) {
+        jumpToIdBtn.addEventListener('click', showJumpToIdModal);
+    }
+
+    // Jump to ID modal event listeners
+    initializeJumpToIdModal();
+
     // Download choice modal event listeners
     initializeDownloadModal();
 
@@ -301,4 +316,141 @@ function hideDownloadChoiceModal() {
 function isDownloadModalVisible() {
     const modal = document.getElementById('download-choice-modal');
     return modal && modal.style.display !== 'none';
+}
+
+// ==================== 跳轉到指定 ID 對話框 ====================
+
+/**
+ * 初始化跳轉到 ID 對話框
+ */
+function initializeJumpToIdModal() {
+    const modal = document.getElementById('jump-to-id-modal');
+    const closeBtn = document.getElementById('jump-modal-close');
+    const cancelBtn = document.getElementById('jump-modal-cancel');
+    const confirmBtn = document.getElementById('jump-modal-confirm');
+    const input = document.getElementById('jump-message-id-input');
+
+    if (!modal) {
+        console.error('找不到跳轉對話框元素');
+        return;
+    }
+
+    // 關閉按鈕
+    if (closeBtn) {
+        closeBtn.addEventListener('click', hideJumpToIdModal);
+    }
+
+    // 取消按鈕
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', hideJumpToIdModal);
+    }
+
+    // 確認按鈕
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', handleJumpToId);
+    }
+
+    // Enter 鍵確認
+    if (input) {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleJumpToId();
+            }
+        });
+
+        // 輸入時清除錯誤提示
+        input.addEventListener('input', function() {
+            const errorDiv = document.getElementById('jump-id-error');
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+            }
+        });
+    }
+
+    // 點擊背景關閉
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            hideJumpToIdModal();
+        }
+    });
+
+    // ESC 鍵關閉
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (modal && modal.style.display !== 'none') {
+                hideJumpToIdModal();
+            }
+        }
+    });
+}
+
+/**
+ * 顯示跳轉到 ID 對話框
+ */
+function showJumpToIdModal() {
+    if (!currentChatId) {
+        showNotification('請先選擇一個群組', 'warning');
+        return;
+    }
+
+    const modal = document.getElementById('jump-to-id-modal');
+    const input = document.getElementById('jump-message-id-input');
+    const errorDiv = document.getElementById('jump-id-error');
+
+    if (!modal) {
+        console.error('找不到跳轉對話框元素');
+        return;
+    }
+
+    // 清空輸入和錯誤提示
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+    }
+
+    // 顯示對話框
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+/**
+ * 隱藏跳轉到 ID 對話框
+ */
+function hideJumpToIdModal() {
+    const modal = document.getElementById('jump-to-id-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    document.body.style.overflow = '';
+}
+
+/**
+ * 處理跳轉到指定 ID
+ */
+function handleJumpToId() {
+    const input = document.getElementById('jump-message-id-input');
+    const errorDiv = document.getElementById('jump-id-error');
+    const errorText = document.getElementById('jump-id-error-text');
+
+    if (!input) return;
+
+    const messageId = parseInt(input.value);
+
+    // 驗證輸入
+    if (!messageId || messageId < 1) {
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            if (errorText) {
+                errorText.textContent = '請輸入有效的訊息 ID（大於 0 的整數）';
+            }
+        }
+        return;
+    }
+
+    // 隱藏對話框並執行跳轉
+    hideJumpToIdModal();
+    jumpToMessageId(messageId);
 }

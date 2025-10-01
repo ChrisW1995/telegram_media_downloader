@@ -267,6 +267,22 @@
                 </li>
                 <li style="--i:0.4s;">
                     <div class="menu-item">
+                        <button id="jump-to-oldest-btn" title="跳到最舊訊息">
+                            <i class="fas fa-fast-backward"></i>
+                        </button>
+                        <span class="menu-label">最舊</span>
+                    </div>
+                </li>
+                <li style="--i:0.5s;">
+                    <div class="menu-item">
+                        <button id="jump-to-id-btn" title="跳到指定 ID">
+                            <i class="fas fa-hashtag"></i>
+                        </button>
+                        <span class="menu-label">跳至</span>
+                    </div>
+                </li>
+                <li style="--i:0.6s;">
+                    <div class="menu-item">
                         <button id="fast-test-download-btn" title="開始下載" disabled>
                             <i class="fas fa-download"></i>
                         </button>
@@ -384,6 +400,52 @@
                     <div id="minimized-progress-fill" class="minimized-bar-fill"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 跳轉到指定 ID 對話框 -->
+    <div id="jump-to-id-modal" class="download-modal-overlay" style="display: none;">
+        <div class="download-modal" style="max-width: 400px;">
+            <div class="download-modal-header">
+                <h5 class="download-modal-title">
+                    <i class="fas fa-hashtag"></i>
+                    跳到指定訊息 ID
+                </h5>
+                <button class="download-modal-close" id="jump-modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="download-modal-body">
+                <p class="download-modal-description">
+                    請輸入想要跳轉的訊息 ID：
+                </p>
+                <input type="number" id="jump-message-id-input" class="form-control jump-input"
+                       placeholder="例如：12345" min="1">
+                <div id="jump-id-error" class="jump-error-message" style="display: none;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="jump-id-error-text">請輸入有效的訊息 ID</span>
+                </div>
+            </div>
+
+            <div class="download-modal-footer jump-modal-footer">
+                <button class="jump-btn jump-btn-secondary" id="jump-modal-cancel">取消</button>
+                <button class="jump-btn jump-btn-primary" id="jump-modal-confirm">
+                    <i class="fas fa-arrow-right"></i>
+                    跳轉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入進度指示器 -->
+    <div id="jump-loading-indicator" class="jump-loading-overlay" style="display: none;">
+        <div class="jump-loading-content">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">載入中...</span>
+            </div>
+            <p class="mt-3" style="font-size: 1.1em; font-weight: 500;">正在載入訊息...</p>
+            <p id="jump-loading-status" class="text-muted" style="font-size: 0.9em;">準備中...</p>
         </div>
     </div>
 

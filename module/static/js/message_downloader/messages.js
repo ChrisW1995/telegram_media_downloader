@@ -1123,6 +1123,200 @@ function closeLightbox() {
     console.log('❌ 關閉 Lightbox');
 }
 
+// ==================== 訊息快速跳轉功能 ====================
+
+/**
+ * 跳轉到最舊訊息
+ * 載入群組中的最舊訊息並滾動到該位置
+ */
+async function jumpToOldestMessage() {
+    if (!currentChatId) {
+        showNotification('請先選擇一個群組', 'warning');
+        return;
+    }
+
+    console.log('🚀 開始跳轉到最舊訊息');
+
+    // 顯示載入指示器
+    showJumpLoadingIndicator('正在載入最舊訊息...');
+
+    try {
+        // 策略：從 ID 1 開始載入，Telegram API 會自動找到最舊的訊息
+        // 重置載入狀態
+        previousLastMessageId = 0;
+        noProgressCount = 0;
+        hasMoreMessages = true;
+        allMessages = [];
+
+        // 清空現有訊息
+        const container = document.getElementById('messages-list');
+        if (container) container.innerHTML = '';
+
+        // 載入最舊的訊息（使用 offset_id = 1）
+        const response = await fetch('/api/groups/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                chat_id: currentChatId,
+                limit: MESSAGES_PER_PAGE,
+                offset_id: 1, // Telegram 會從最接近的訊息開始
+                media_only: false
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.messages && data.messages.length > 0) {
+            // Telegram API 會返回最舊的訊息
+            allMessages = data.messages;
+
+            // 找到最舊的訊息 ID（數字最小的）
+            const oldestId = Math.min(...data.messages.map(m => m.message_id));
+
+            renderMessages(data.messages, false);
+            showMessages();
+
+            // 更新 lastMessageId 為最舊的那個（用於繼續載入更新的訊息）
+            lastMessageId = oldestId;
+
+            // 滾動到頂部（最舊訊息）
+            const messagesContainer = document.getElementById('messages-container');
+            if (messagesContainer) {
+                messagesContainer.scrollTop = 0;
+            }
+
+            hideJumpLoadingIndicator();
+            showNotification(`已跳轉到最舊訊息 (ID: ${oldestId})`, 'success');
+            console.log('✅ 跳轉到最舊訊息成功, 最舊 ID:', oldestId);
+        } else {
+            hideJumpLoadingIndicator();
+            showNotification('無法載入最舊訊息', 'error');
+            console.error('❌ 跳轉失敗:', data);
+        }
+    } catch (error) {
+        hideJumpLoadingIndicator();
+        showNotification('載入失敗: ' + error.message, 'error');
+        console.error('❌ 跳轉錯誤:', error);
+    }
+}
+
+/**
+ * 跳轉到指定訊息 ID
+ * @param {number} targetMessageId - 目標訊息 ID
+ */
+async function jumpToMessageId(targetMessageId) {
+    if (!currentChatId) {
+        showNotification('請先選擇一個群組', 'warning');
+        return;
+    }
+
+    if (!targetMessageId || targetMessageId < 1) {
+        showNotification('請輸入有效的訊息 ID', 'warning');
+        return;
+    }
+
+    console.log('🚀 開始跳轉到訊息 ID:', targetMessageId);
+
+    // 顯示載入指示器
+    showJumpLoadingIndicator(`正在載入訊息 #${targetMessageId}...`);
+
+    try {
+        // 重置載入狀態
+        previousLastMessageId = 0;
+        noProgressCount = 0;
+        hasMoreMessages = true;
+        allMessages = [];
+
+        // 清空現有訊息
+        const container = document.getElementById('messages-list');
+        if (container) container.innerHTML = '';
+
+        // 從目標 ID 開始載入訊息
+        const response = await fetch('/api/groups/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                chat_id: currentChatId,
+                limit: MESSAGES_PER_PAGE,
+                offset_id: targetMessageId,
+                media_only: false
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.messages && data.messages.length > 0) {
+            allMessages = data.messages;
+            renderMessages(data.messages, false);
+            showMessages();
+
+            // 更新 lastMessageId
+            lastMessageId = Math.min(...data.messages.map(m => m.message_id));
+
+            // 檢查目標訊息是否在載入的訊息中
+            const targetMessage = data.messages.find(m => m.message_id === targetMessageId);
+
+            if (targetMessage) {
+                // 滾動到目標訊息
+                setTimeout(() => {
+                    const targetElement = document.querySelector(`[data-message-id="${targetMessageId}"]`);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // 高亮顯示目標訊息
+                        targetElement.style.animation = 'highlight-pulse 2s ease-in-out';
+                    }
+                }, 300);
+
+                hideJumpLoadingIndicator();
+                showNotification(`已跳轉到訊息 #${targetMessageId}`, 'success');
+                console.log('✅ 跳轉到訊息成功');
+            } else {
+                // 目標訊息不在返回結果中，可能不存在
+                hideJumpLoadingIndicator();
+                showNotification(`訊息 #${targetMessageId} 可能不存在或已被刪除`, 'warning');
+                console.warn('⚠️ 目標訊息不在返回結果中');
+            }
+        } else {
+            hideJumpLoadingIndicator();
+            showNotification('無法載入指定訊息', 'error');
+            console.error('❌ 跳轉失敗:', data);
+        }
+    } catch (error) {
+        hideJumpLoadingIndicator();
+        showNotification('載入失敗: ' + error.message, 'error');
+        console.error('❌ 跳轉錯誤:', error);
+    }
+}
+
+/**
+ * 顯示跳轉載入指示器
+ * @param {string} statusText - 狀態文字
+ */
+function showJumpLoadingIndicator(statusText = '載入中...') {
+    const indicator = document.getElementById('jump-loading-indicator');
+    const statusElement = document.getElementById('jump-loading-status');
+    if (indicator) {
+        indicator.style.display = 'flex';
+        if (statusElement) {
+            statusElement.textContent = statusText;
+        }
+    }
+}
+
+/**
+ * 隱藏跳轉載入指示器
+ */
+function hideJumpLoadingIndicator() {
+    const indicator = document.getElementById('jump-loading-indicator');
+    if (indicator) {
+        indicator.style.display = 'none';
+    }
+}
+
 // ==================== 修改 createMessageElement 添加縮圖點擊事件 ====================
 
 // 保存原始的 createMessageElement 引用（將在 main.js 初始化時重新賦值）
