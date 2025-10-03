@@ -627,18 +627,33 @@ def check_zip_download_status(manager_id):
         if is_completed:
             # 檢查 ZIP 檔案是否存在
             if os.path.exists(zip_manager.zip_path) and os.path.getsize(zip_manager.zip_path) > 0:
-                # 準備檔案傳送
-                zip_filename = f"{zip_manager.safe_chat_title}_{zip_manager.timestamp}.zip"
+                # 檢查是否是下載請求（帶 download 參數）
+                from flask import request
+                if request.args.get('download') == 'true':
+                    # 這是實際下載請求，回傳檔案
+                    zip_filename = f"{zip_manager.safe_chat_title}_{zip_manager.timestamp}.zip"
 
-                # 清理管理器
-                del active_zip_managers[manager_id]
+                    # 清理管理器
+                    del active_zip_managers[manager_id]
 
-                return send_file(
-                    zip_manager.zip_path,
-                    as_attachment=True,
-                    download_name=zip_filename,
-                    mimetype='application/zip'
-                )
+                    return send_file(
+                        zip_manager.zip_path,
+                        as_attachment=True,
+                        download_name=zip_filename,
+                        mimetype='application/zip'
+                    )
+                else:
+                    # 這是狀態檢查請求，回傳完成狀態（不刪除 manager）
+                    return success_response("ZIP 檔案已準備完成", {
+                        'completed': True,
+                        'ready': True,
+                        'progress': {
+                            'total_files': total_files,
+                            'downloaded_files': downloaded_files,
+                            'failed_files': failed_files,
+                            'percentage': 100
+                        }
+                    })
             else:
                 return error_response('ZIP 檔案不存在或為空', 500)
         else:

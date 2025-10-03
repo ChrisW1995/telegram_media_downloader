@@ -403,30 +403,45 @@ async function startLocalDownload() {
             });
 
             // 開始輪詢檢查下載狀態
+            let zipReadyDetected = false;
             const pollStatus = async () => {
                 try {
+                    // 如果已經檢測到 ZIP 完成，不再輪詢
+                    if (zipReadyDetected) {
+                        return;
+                    }
+
                     const statusResponse = await fetch(`/api/download/zip/status/${managerId}`);
 
                     if (statusResponse.ok) {
-                        // 檢查回應的 Content-Type
+                        // 檢查回應的 Content-Type - 這應該總是 JSON
                         const contentType = statusResponse.headers.get('Content-Type');
 
-                        if (contentType && contentType.includes('application/zip')) {
-                            // 這是 ZIP 檔案回應，下載完成
-                            const blob = await statusResponse.blob();
-                            const url = window.URL.createObjectURL(blob);
+                        // 解析 JSON 狀態
+                        const statusData = await statusResponse.json();
+
+                        if (statusData.success && statusData.message.completed && statusData.message.ready) {
+                            // ZIP 已完成，標記為已檢測並停止輪詢
+                            zipReadyDetected = true;
+
+                            // 使用帶 download=true 參數的 URL 觸發下載，避免 blob 記憶體問題
+                            const downloadUrl = `/api/download/zip/status/${managerId}?download=true`;
                             const a = document.createElement('a');
-                            a.href = url;
+                            a.href = downloadUrl;
                             a.download = expectedFilename;
+                            a.style.display = 'none';
                             document.body.appendChild(a);
                             a.click();
-                            document.body.removeChild(a);
-                            window.URL.revokeObjectURL(url);
+
+                            // 延遲移除，確保下載開始
+                            setTimeout(() => {
+                                document.body.removeChild(a);
+                            }, 1000);
 
                             // 更新為完成狀態
                             updateNotification(zipNotificationId, {
                                 title: '下載完成',
-                                message: `✅ ${expectedFilename} 已下載到您的電腦`,
+                                message: `✅ ${expectedFilename} 已開始下載到您的電腦`,
                                 progress: 100
                             });
 
@@ -441,26 +456,21 @@ async function startLocalDownload() {
 
                             clearSelection();
                             return;
-                        } else {
-                            // 這是狀態回應，檢查進度
-                            const statusData = await statusResponse.json();
+                        } else if (statusData.success && !statusData.message.completed) {
+                            // 更新進度
+                            const progress = statusData.message.progress;
+                            const percentage = Math.max(30, Math.min(90, 30 + (progress.percentage * 0.6)));
 
-                            if (statusData.success && !statusData.message.completed) {
-                                // 更新進度
-                                const progress = statusData.message.progress;
-                                const percentage = Math.max(30, Math.min(90, 30 + (progress.percentage * 0.6)));
+                            updateNotification(zipNotificationId, {
+                                title: 'ZIP 下載',
+                                message: `下載進度：${progress.downloaded_files}/${progress.total_files} 檔案完成 (${progress.percentage}%)`,
+                                progress: percentage
+                            });
 
-                                updateNotification(zipNotificationId, {
-                                    title: 'ZIP 下載',
-                                    message: `下載進度：${progress.downloaded_files}/${progress.total_files} 檔案完成 (${progress.percentage}%)`,
-                                    progress: percentage
-                                });
-
-                                // 繼續輪詢
-                                setTimeout(pollStatus, 2000);
-                            } else if (statusData.error) {
-                                throw new Error(statusData.error);
-                            }
+                            // 繼續輪詢
+                            setTimeout(pollStatus, 2000);
+                        } else if (statusData.error) {
+                            throw new Error(statusData.error);
                         }
                     } else {
                         throw new Error('無法檢查下載狀態');
