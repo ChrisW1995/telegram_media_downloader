@@ -25,6 +25,12 @@ function resetAuthStatus() {
  * 在頁面載入時檢查用戶是否已認證
  */
 async function checkAuthStatus() {
+    // 如果在登入頁面,不要檢查認證狀態(避免無限跳轉)
+    if (window.location.pathname.includes('/login')) {
+        console.log('⏭️  在登入頁面,跳過認證檢查');
+        return;
+    }
+
     // 防止重複調用認證檢查
     if (isCheckingAuth) {
         console.log('🔄 認證檢查已在進行中，跳過重複調用');
