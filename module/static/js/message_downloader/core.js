@@ -256,3 +256,26 @@ function testFloatingProgress() {
         console.error('❌ showFloatingProgress 函數不存在');
     }
 }
+
+/**
+ * 統一的 API Fetch 函數，自動處理 401 跳轉
+ * @param {string} url - API URL
+ * @param {object} options - fetch 選項
+ * @returns {Promise<Response>} fetch 回應
+ */
+async function apiFetch(url, options = {}) {
+    const response = await fetch(url, options);
+
+    // 自動處理 401 未授權錯誤
+    if (response.status === 401) {
+        console.log('API 回應 401，跳轉到登入頁面');
+        // 避免在登入頁面再次跳轉(造成無限循環)
+        if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/message_downloader/login';
+        }
+        // 拋出錯誤以中斷後續處理
+        throw new Error('Unauthorized - Redirecting to login');
+    }
+
+    return response;
+}

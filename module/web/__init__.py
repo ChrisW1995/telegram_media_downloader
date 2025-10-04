@@ -17,6 +17,19 @@ web_login_users = {}
 # For backward compatibility, export necessary variables and functions
 message_downloader_auth_sessions = {}
 
+# Telegram authentication state (for pyrogram_extension.py compatibility)
+telegram_auth_state = {
+    "needs_auth": False,
+    "waiting_for_phone": False,
+    "waiting_for_code": False,
+    "waiting_for_password": False,
+    "phone_number": None,
+    "verification_code": None,
+    "password": None,
+    "auth_complete": False,
+    "error_message": None
+}
+
 
 def init_web(app, client=None, queue=None):
     """Initialize web module (backward compatible interface)"""

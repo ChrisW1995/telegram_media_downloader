@@ -9,6 +9,12 @@
  * 載入群組列表
  */
 async function loadGroups() {
+    // 如果在登入頁面,不要載入群組(避免無限跳轉)
+    if (window.location.pathname.includes('/login')) {
+        console.log('⏭️  在登入頁面,跳過載入群組');
+        return;
+    }
+
     try {
         console.log('🔍 開始載入群組...');
 

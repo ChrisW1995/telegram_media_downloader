@@ -43,7 +43,7 @@ logging.basicConfig(
     handlers=[RichHandler()],
 )
 
-CONFIG_NAME = "config.yaml"
+CONFIG_NAME = os.environ.get("CONFIG_FILE", "config.yaml")
 DATA_FILE_NAME = "data.yaml"
 APPLICATION_NAME = "media_downloader"
 app = Application(CONFIG_NAME, DATA_FILE_NAME, APPLICATION_NAME)
@@ -886,10 +886,11 @@ def main():
     
     
     # 使用用戶主目錄下的 session 存儲，避免權限問題
-    session_dir = os.path.join(os.path.expanduser("~"), ".telegram_sessions")
+    # 支援環境變數 SESSION_DIR 用於開發環境隔離
+    session_dir = os.environ.get("SESSION_DIR", os.path.join(os.path.expanduser("~"), ".telegram_sessions"))
     if not os.path.exists(session_dir):
         os.makedirs(session_dir, exist_ok=True)
-    
+
     # 設置完全權限
     os.chmod(session_dir, 0o755)
     print(f"Using session directory: {session_dir}")
