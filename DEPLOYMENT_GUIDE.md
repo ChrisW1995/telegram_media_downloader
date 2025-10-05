@@ -149,12 +149,41 @@ tail -f output.log
    cloudflared tunnel route dns tgdl cw1005host.com
    ```
 
-6. **啟動 Tunnel**
+6. **驗證 Tunnel 設置**
+   ```bash
+   # 確認 Tunnel 資訊
+   cloudflared tunnel info tgdl
+
+   # 確認 DNS 解析
+   nslookup cw1005host.com
+
+   # 應該看到 Cloudflare 的 IP (104.21.x.x 或 172.67.x.x)
+   ```
+
+7. **Cloudflare Dashboard 設置** ⚠️ 重要
+
+   登入 Cloudflare Dashboard (https://dash.cloudflare.com):
+
+   a. **SSL/TLS 設置**
+   - 進入域名 → SSL/TLS
+   - 加密模式選擇: **"Flexible"** (本地用 HTTP)
+   - 或選擇 **"Full"** (如果本地有 SSL 證書)
+
+   b. **DNS 設置檢查**
+   - 進入域名 → DNS → Records
+   - 確認有 CNAME 記錄: `cw1005host.com` → `14a68aa7-97b1-4bc2-bf66-48961589b1c7.cfargotunnel.com`
+   - 確保 **Proxy status 為橘色雲朵** (Proxied)
+
+   c. **Zero Trust 設置** (可選,增強安全性)
+   - 進入 Zero Trust → Access → Applications
+   - 為你的應用設置訪問策略 (IP 白名單、Email 驗證等)
+
+8. **啟動 Tunnel**
    ```bash
    ./start_cloudflare_tunnel.sh
    ```
 
-7. **測試訪問**
+9. **測試訪問**
    ```bash
    # 測試 HTTP 連線
    curl -I http://cw1005host.com/message_downloader
@@ -173,6 +202,61 @@ tail -f output.log
 - 第一次訪問可能需要 1-2 分鐘等待 DNS 傳播
 - 如遇到 SSL 錯誤,請檢查 Cloudflare Dashboard 的 SSL/TLS 設置
 - 建議使用 HTTPS 以確保安全性
+
+### 安全性建議
+
+1. **啟用 Cloudflare Access** (Zero Trust)
+   ```bash
+   # 在 Cloudflare Dashboard 設置訪問策略
+   # 限制只有特定 IP 或通過 Email 驗證才能訪問
+   ```
+
+2. **啟用 Web Application Firewall (WAF)**
+   - Cloudflare Dashboard → Security → WAF
+   - 啟用 Managed Rules 防護常見攻擊
+
+3. **設置 Rate Limiting**
+   - 防止暴力破解和 DDoS 攻擊
+   - Security → Rate Limiting
+
+4. **監控 Tunnel 健康狀態**
+   ```bash
+   # 查看 Tunnel 連線狀態
+   cloudflared tunnel info tgdl
+
+   # 查看即時日誌
+   tail -f cloudflare_tunnel.log
+
+   # 檢查錯誤
+   grep -i error cloudflare_tunnel.log
+   ```
+
+5. **自動重啟 Tunnel** (使用 launchd 或 systemd)
+   - macOS: 建立 launchd plist
+   - Linux: 建立 systemd service
+
+### Tunnel 維護
+
+**定期檢查:**
+```bash
+# 檢查 Tunnel 版本
+cloudflared version
+
+# 更新 cloudflared
+brew upgrade cloudflared  # macOS
+
+# 查看 Tunnel 統計
+cloudflared tunnel info tgdl
+```
+
+**清理舊連線:**
+```bash
+# 列出所有 Tunnel
+cloudflared tunnel list
+
+# 刪除未使用的 Tunnel
+cloudflared tunnel delete <tunnel-name>
+```
 
 ## 🔄 開發到產品部署流程
 
