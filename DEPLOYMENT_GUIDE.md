@@ -39,9 +39,20 @@ open http://localhost:5001/message_downloader
 ### 2. 開發環境設置（2 分鐘）
 
 ```bash
-# 1. 複製專案到開發目錄
+# 1. 複製專案到開發目錄（使用 rsync 排除大檔案）
 cd /Users/chriswang/Documents/Py
-cp -r TGDL TGDL-dev
+rsync -av --progress \
+  --exclude='TGDL/' \
+  --exclude='log/' \
+  --exclude='sessions/' \
+  --exclude='temp/' \
+  --exclude='.telegram_sessions/' \
+  --exclude='*.db' \
+  --exclude='*.db-wal' \
+  --exclude='*.db-shm' \
+  --exclude='__pycache__/' \
+  --exclude='*.pyc' \
+  TGDL/ TGDL-dev/
 
 # 2. 進入開發目錄
 cd TGDL-dev
@@ -49,21 +60,11 @@ cd TGDL-dev
 # 3. 切換到 develop 分支
 git checkout develop
 
-# 4. 複製開發配置
-cp config.develop.yaml config.yaml
-vi config.yaml  # 填入 API 資訊（可與產品版本相同）
+# 4. 複製並編輯開發配置
+cp config_develop.yaml config.yaml
+vi config.yaml  # 檢查配置（Port 應為 5002）
 
-# 5. 複製開發腳本（從產品版本）
-cp ../TGDL/start_product.sh start_develop.sh
-cp ../TGDL/stop_product.sh stop_develop.sh
-
-# 6. 修改開發腳本的變數
-sed -i '' 's/PORT=5001/PORT=5002/g' start_develop.sh
-sed -i '' 's/PORT=5001/PORT=5002/g' stop_develop.sh
-sed -i '' 's/.tgdl_pid/.tgdl_dev_pid/g' start_develop.sh
-sed -i '' 's/.tgdl_pid/.tgdl_dev_pid/g' stop_develop.sh
-
-# 7. 啟動開發版本
+# 5. 啟動開發版本（腳本已包含在 develop 分支）
 ./start_develop.sh
 ```
 
@@ -145,7 +146,7 @@ tail -f output.log
 
 5. **配置 DNS**
    ```bash
-   cloudflared tunnel route dns tgdl tgdl.your-domain.com
+   cloudflared tunnel route dns tgdl cw1005host.com
    ```
 
 6. **啟動 Tunnel**
@@ -155,10 +156,23 @@ tail -f output.log
 
 7. **測試訪問**
    ```bash
-   open https://tgdl.your-domain.com/message_downloader
+   # 測試 HTTP 連線
+   curl -I http://cw1005host.com/message_downloader
+
+   # 測試 HTTPS 連線
+   curl -I https://cw1005host.com/message_downloader
+
+   # 瀏覽器訪問
+   open https://cw1005host.com/message_downloader
    ```
 
 ✅ **公網訪問已啟用！**
+
+**注意事項:**
+- HTTP 和 HTTPS 都應該正常工作
+- 第一次訪問可能需要 1-2 分鐘等待 DNS 傳播
+- 如遇到 SSL 錯誤,請檢查 Cloudflare Dashboard 的 SSL/TLS 設置
+- 建議使用 HTTPS 以確保安全性
 
 ## 🔄 開發到產品部署流程
 
@@ -221,7 +235,41 @@ lsof -i :5001
 
 # 查看日誌
 tail -f cloudflare_tunnel.log
+
+# 檢查 Tunnel 狀態
+cloudflared tunnel info tgdl
+
+# 檢查連線數
+ps aux | grep cloudflared
 ```
+
+### Q: Cloudflare Tunnel 無法訪問？
+
+```bash
+# 1. 檢查本地服務是否運行
+curl -I http://localhost:5001/message_downloader
+
+# 2. 檢查 Tunnel 是否運行
+ps aux | grep cloudflared
+
+# 3. 檢查 DNS 解析
+nslookup cw1005host.com
+
+# 4. 測試 HTTP 訪問
+curl -I http://cw1005host.com/message_downloader
+
+# 5. 測試 HTTPS 訪問
+curl -I https://cw1005host.com/message_downloader
+
+# 6. 檢查 Tunnel 日誌
+tail -50 cloudflare_tunnel.log
+```
+
+**常見原因:**
+- 本地服務未啟動 (Port 5001)
+- Cloudflare Tunnel 未運行
+- DNS 記錄未正確設置
+- 瀏覽器快取需要清除
 
 ### Q: 如何清除所有資料重新開始？
 
