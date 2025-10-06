@@ -180,7 +180,7 @@ function showLoginStatusSuccess(userInfo) {
     const userName = userInfo.first_name || userInfo.phone_number || 'User';
     const userInfoElement = document.getElementById('login-user-info');
     if (userInfoElement) {
-        userInfoElement.textContent = `已登入為: ${userName}`;
+        userInfoElement.textContent = `: ${userName}`;
     }
 }
 
