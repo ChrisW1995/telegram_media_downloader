@@ -280,11 +280,36 @@ def cleanup_stale_session():
                         else:
                             logger.info(f"ℹ️ Background task already completed for manager {manager_id}")
 
-                    # 2. 設置取消標記
+                    # 2. 清除下載緩存狀態和註冊表（將 Downloading 改為 FailedDownload）
+                    if hasattr(zip_manager, 'message_ids') and hasattr(zip_manager, 'chat_id'):
+                        try:
+                            from module.pyrogram_extension import _download_cache, _active_message_downloads
+                            from module.app import DownloadStatus
+
+                            for message_id in zip_manager.message_ids:
+                                # 清除普通緩存鍵
+                                cache_key_normal = (zip_manager.chat_id, message_id)
+                                # 清除專屬緩存鍵
+                                cache_key_custom = (zip_manager.chat_id, message_id, f"md_{manager_id}")
+
+                                _download_cache[cache_key_normal] = DownloadStatus.FailedDownload
+                                _download_cache[cache_key_custom] = DownloadStatus.FailedDownload
+
+                                # ⚠️ 清除全域下載任務註冊表
+                                message_key = (zip_manager.chat_id, message_id)
+                                registered_manager = _active_message_downloads.get(message_key)
+                                if registered_manager == manager_id:
+                                    _active_message_downloads.pop(message_key, None)
+
+                            logger.info(f"🧹 Cleared download cache and registry for {len(zip_manager.message_ids)} messages")
+                        except Exception as cache_error:
+                            logger.warning(f"Failed to clear download cache: {cache_error}")
+
+                    # 3. 設置取消標記
                     if hasattr(zip_manager, 'is_cancelled'):
                         zip_manager.is_cancelled = True
 
-                    # 3. 刪除 ZIP 檔案(如果已創建)
+                    # 4. 刪除 ZIP 檔案(如果已創建)
                     if hasattr(zip_manager, 'zip_path') and os.path.exists(zip_manager.zip_path):
                         try:
                             os.remove(zip_manager.zip_path)
@@ -482,21 +507,25 @@ class ZipDownloadManager:
                 try:
                     message = await client.get_messages(self.chat_id, message_id)
                     if message and message.media:
-                        # 為每個訊息創建TaskNode並設置ZIP管理器引用
+                        # 為每個訊息創建全新的 TaskNode 並設置ZIP管理器引用
                         node = TaskNode(chat_id=self.chat_id)
                         node.is_custom_download = True
                         node.zip_download_manager = self
                         node.zip_message_id = message_id  # 用於ZIP管理器回調
-                        node.download_status[message.id] = DownloadStatus.Downloading
-                        node.total_task += 1
 
-                        # 直接將任務加入隊列
-                        await _queue.put((message, node))
-                        success = True
-                        if success:
+                        # ⚠️ 關鍵修復：強制重置下載狀態，避免頁面刷新後狀態殘留
+                        # 每次創建新的 TaskNode 時確保狀態字典是全新的
+                        node.download_status = {}
+                        node.total_task = 0
+
+                        # 手動設置下載狀態並加入隊列（模擬 add_download_task 的行為）
+                        if not message.empty:
+                            node.download_status[message.id] = DownloadStatus.Downloading
+                            await _queue.put((message, node))
+                            node.total_task += 1
                             logger.info(f"訊息 {message_id} 已加入Worker Pool隊列")
                         else:
-                            self.failed_downloads.append(f"訊息 {message_id} 無法加入下載隊列")
+                            self.failed_downloads.append(f"訊息 {message_id} 是空訊息")
                     else:
                         self.failed_downloads.append(f"訊息 {message_id} 沒有媒體檔案或不存在")
                         logger.warning(f"訊息 {message_id} 沒有媒體檔案")
@@ -549,6 +578,17 @@ class ZipDownloadManager:
 
     async def create_zip_file(self):
         """創建 ZIP 檔案"""
+        # ⚠️ 檢查任務是否已被取消（例如被新任務取代或用戶刷新頁面）
+        if hasattr(self, 'is_cancelled') and self.is_cancelled:
+            logger.info(f"任務已被取消，跳過 ZIP 創建: {self.zip_path}")
+            return
+
+        # 檢查臨時目錄是否仍然存在
+        temp_dir = os.path.dirname(self.zip_path)
+        if not os.path.exists(temp_dir):
+            logger.warning(f"臨時目錄已被清理，跳過 ZIP 創建: {temp_dir}")
+            return
+
         logger.info(f"開始創建 ZIP 檔案: {self.zip_path}")
 
         try:
@@ -607,6 +647,33 @@ def download_messages_as_zip():
         if not chat_id or not message_ids:
             return error_response('請提供群組 ID 和訊息 ID 列表')
 
+        # ⚠️ 防止重複下載：檢查是否有相同訊息的下載正在進行
+        # 使用排序後的 message_ids 作為唯一標識
+        sorted_message_ids = tuple(sorted(message_ids))
+        duplicate_check_key = f"{chat_id}_{sorted_message_ids}"
+
+        if active_zip_managers:
+            for existing_manager_id, existing_manager in list(active_zip_managers.items()):
+                # 跳過佔位符（placeholder）
+                if existing_manager is None:
+                    continue
+
+                # 檢查是否有相同的 chat_id 和 message_ids
+                if (hasattr(existing_manager, 'chat_id') and existing_manager.chat_id == chat_id and
+                    hasattr(existing_manager, 'message_ids') and
+                    set(existing_manager.message_ids) == set(message_ids)):
+                    # 檢查背景任務是否還在運行
+                    if (hasattr(existing_manager, 'background_task') and
+                        existing_manager.background_task and
+                        not existing_manager.background_task.done()):
+                        logger.warning(f"ZIP 下載請求被拒絕：相同訊息的下載任務正在進行中 (manager: {existing_manager_id})")
+                        return error_response('相同訊息的下載任務正在進行中，請等待完成後再試', 409)
+
+        # 立即加入一個佔位符，防止後續的並發請求通過檢查
+        temp_manager_id = f"{chat_id}_{int(time.time() * 1000000)}"  # 使用微秒確保唯一性
+        active_zip_managers[temp_manager_id] = None  # 佔位符
+        logger.info(f"加入下載佔位符: {temp_manager_id}")
+
         # 檢查認證狀態 - 使用舊架構的認證管理器
         try:
             from module.multiuser_auth import get_auth_manager
@@ -625,19 +692,29 @@ def download_messages_as_zip():
         # 創建 ZIP 下載管理器
         zip_manager = ZipDownloadManager(chat_id, message_ids, temp_dir)
 
+        # 移除佔位符
+        if temp_manager_id in active_zip_managers:
+            del active_zip_managers[temp_manager_id]
+            logger.info(f"移除下載佔位符: {temp_manager_id}")
+
         # 使用唯一ID儲存管理器
         manager_id = f"{chat_id}_{int(time.time() * 1000)}"
         zip_manager.manager_id = manager_id  # 設置 manager_id 屬性供 TaskNode 使用
+        zip_manager.chat_id = chat_id  # 確保 chat_id 被設置
+        zip_manager.message_ids = message_ids  # 確保 message_ids 被設置
         active_zip_managers[manager_id] = zip_manager
+        logger.info(f"加入實際下載管理器: {manager_id}")
 
         try:
             # 異步準備和啟動下載 - 完全非阻塞模式
             async def prepare_and_start_download():
                 try:
+                    logger.info("開始執行 prepare_download()")
                     await zip_manager.prepare_download()
                     logger.info(f"ZIP 管理器準備完成: {zip_manager.safe_chat_title}")
 
                     # 在後台啟動下載任務，並追蹤 task
+                    logger.info("開始創建背景下載任務")
                     zip_manager.background_task = asyncio.create_task(
                         zip_manager.start_downloads_via_worker_pool()
                     )
@@ -656,12 +733,19 @@ def download_messages_as_zip():
             # 檢查是否有可用的事件循環
             if hasattr(_app, 'loop') and _app.loop and not _app.loop.is_closed():
                 # 在主事件循環中執行準備工作，但不等待下載完成
-                future = asyncio.run_coroutine_threadsafe(
+                # 使用 asyncio.create_task 而不是 run_coroutine_threadsafe，避免跨線程問題
+                asyncio.run_coroutine_threadsafe(
                     prepare_and_start_download(),
                     _app.loop
                 )
-                # 只等待準備工作完成，不等待實際下載 - 5秒足夠準備工作
-                result = future.result(timeout=5)
+                # 不等待結果，立即返回，讓下載在後台進行
+                # 使用預設值作為 result
+                result = {
+                    'manager_id': manager_id,
+                    'zip_path': zip_manager.zip_path if hasattr(zip_manager, 'zip_path') else f"{chat_id}_download.zip",
+                    'safe_chat_title': f"Chat_{chat_id}",
+                    'timestamp': datetime.now().strftime("%Y%m%d_%H%M%S")
+                }
             else:
                 # 如果沒有主循環，創建新的事件循環進行準備工作
                 try:
@@ -676,7 +760,7 @@ def download_messages_as_zip():
 
                         with concurrent.futures.ThreadPoolExecutor() as executor:
                             future = executor.submit(run_preparation_in_thread)
-                            result = future.result(timeout=5)  # 只需等待準備工作
+                            result = future.result(timeout=15)  # 增加到 15 秒
                     else:
                         result = loop.run_until_complete(prepare_and_start_download())
                 except RuntimeError:
@@ -696,9 +780,12 @@ def download_messages_as_zip():
             logger.error(f"ZIP 下載啟動過程錯誤: {process_error}")
             import traceback
             logger.error(f"ZIP 下載錯誤堆疊: {traceback.format_exc()}")
-            # 清理失敗的管理器
-            if manager_id in active_zip_managers:
+            # 清理失敗的管理器和佔位符
+            if 'manager_id' in locals() and manager_id in active_zip_managers:
                 del active_zip_managers[manager_id]
+            if 'temp_manager_id' in locals() and temp_manager_id in active_zip_managers:
+                del active_zip_managers[temp_manager_id]
+                logger.info(f"清理失敗的佔位符: {temp_manager_id}")
 
             # 清理臨時目錄
             try:

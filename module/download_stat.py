@@ -3,6 +3,7 @@ import asyncio
 import time
 from enum import Enum
 
+from loguru import logger
 from pyrogram import Client
 
 from module.app import TaskNode
@@ -67,6 +68,24 @@ async def update_download_status(
         client.stop_transmission()
 
     chat_id = node.chat_id
+
+    # ⚠️ 檢查此下載是否已被新的下載任務取代（針對 Message Downloader）
+    is_message_downloader = (hasattr(node, 'is_custom_download') and node.is_custom_download) or \
+                           (hasattr(node, 'zip_download_manager') and node.zip_download_manager)
+
+    if is_message_downloader and hasattr(node, 'zip_download_manager') and node.zip_download_manager:
+        from module.pyrogram_extension import _active_message_downloads
+        manager_id = getattr(node.zip_download_manager, 'manager_id', None)
+        message_key = (chat_id, message_id)
+
+        # 如果註冊表中的 manager_id 與當前任務不同，表示已被新任務取代
+        current_manager = _active_message_downloads.get(message_key)
+        if current_manager is not None and current_manager != manager_id:
+            logger.warning(f"下載任務已被取代 - 停止舊任務: chat_id={chat_id}, message_id={message_id}, "
+                         f"舊 manager={manager_id}, 新 manager={current_manager}")
+            node.is_stop_transmission = True
+            client.stop_transmission()
+            return
 
     # Check for cancelled state first
     if get_download_state() == DownloadState.Cancelled:

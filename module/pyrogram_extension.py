@@ -49,6 +49,10 @@ _mimetypes = MimeTypes()
 _mimetypes.readfp(StringIO(mime_types))
 _download_cache = Cache(1024 * 1024 * 1024)
 
+# 全域下載任務註冊表：追蹤每個 (chat_id, message_id) 對應的最新 manager_id
+# 當新下載開始時，舊下載會檢查這個註冊表，如果發現自己已被取代就會自動停止
+_active_message_downloads = {}  # {(chat_id, message_id): manager_id}
+
 
 def reset_download_cache():
     """Reset download cache"""
@@ -753,14 +757,51 @@ def record_download_status(func):
         file_formats: dict,
         node: TaskNode,
     ):
-        if _download_cache[(node.chat_id, message.id)] is DownloadStatus.Downloading:
+        # ⚠️ 關鍵修復：為 Message Downloader 使用專屬緩存鍵
+        # 每個 ZIP 下載管理器有唯一的 manager_id，避免與舊下載狀態衝突
+        is_message_downloader = (hasattr(node, 'is_custom_download') and node.is_custom_download) or \
+                               (hasattr(node, 'zip_download_manager') and node.zip_download_manager)
+
+        # 為 Message Downloader 使用包含 manager_id 的專屬緩存鍵
+        if is_message_downloader and hasattr(node, 'zip_download_manager') and node.zip_download_manager:
+            import time
+            manager_id = getattr(node.zip_download_manager, 'manager_id', int(time.time() * 1000))
+            cache_key = (node.chat_id, message.id, f"md_{manager_id}")
+
+            # ⚠️ 註冊當前下載任務為最新任務
+            # 如果有舊任務正在下載相同訊息，它會在下次檢查時發現自己已被取代而停止
+            message_key = (node.chat_id, message.id)
+            _active_message_downloads[message_key] = manager_id
+
+            # 清除舊的普通緩存狀態
+            normal_cache_key = (node.chat_id, message.id)
+            normal_cache_status = _download_cache[normal_cache_key]
+            if normal_cache_status is DownloadStatus.Downloading:
+                _download_cache[normal_cache_key] = DownloadStatus.FailedDownload
+        else:
+            # 普通下載使用原有的緩存鍵
+            cache_key = (node.chat_id, message.id)
+            manager_id = None
+
+        cache_status = _download_cache[cache_key]
+
+        # 如果當前正在下載中，阻止重複下載
+        if cache_status is DownloadStatus.Downloading:
             return DownloadStatus.Downloading, None
 
-        _download_cache[(node.chat_id, message.id)] = DownloadStatus.Downloading
+        _download_cache[cache_key] = DownloadStatus.Downloading
 
         status, file_name = await func(client, message, media_types, file_formats, node)
 
-        _download_cache[(node.chat_id, message.id)] = status
+        _download_cache[cache_key] = status
+
+        # ⚠️ 下載完成後，清理註冊表中的記錄（僅在自己還是最新任務時）
+        if is_message_downloader and manager_id is not None:
+            message_key = (node.chat_id, message.id)
+            current_manager = _active_message_downloads.get(message_key)
+            # 只有在自己還是最新任務時才清理，否則可能是被新任務取代
+            if current_manager == manager_id:
+                _active_message_downloads.pop(message_key, None)
 
         return status, file_name
 
