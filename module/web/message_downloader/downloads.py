@@ -433,6 +433,7 @@ class ZipDownloadManager:
         self.safe_chat_title = None
         self.timestamp = None
         self.zip_ready = False
+        self.message_original_filenames = {}  # 儲存每個訊息的原始檔案名稱
 
         # 初始化進度系統
         initialize_download_session(len(message_ids))
@@ -507,6 +508,30 @@ class ZipDownloadManager:
                 try:
                     message = await client.get_messages(self.chat_id, message_id)
                     if message and message.media:
+                        # 提取並保存原始檔案名稱
+                        original_filename = None
+                        if message.video and message.video.file_name:
+                            original_filename = message.video.file_name
+                        elif message.audio and message.audio.file_name:
+                            original_filename = message.audio.file_name
+                        elif message.document and message.document.file_name:
+                            original_filename = message.document.file_name
+                        elif message.animation and message.animation.file_name:
+                            original_filename = message.animation.file_name
+                        elif message.photo:
+                            # 照片通常沒有檔案名稱，使用 message_id
+                            original_filename = f"photo_{message_id}.jpg"
+                        elif message.voice:
+                            original_filename = f"voice_{message_id}.ogg"
+                        elif message.sticker:
+                            original_filename = f"sticker_{message_id}.webp"
+                        else:
+                            original_filename = f"file_{message_id}"
+
+                        # 保存原始檔案名稱
+                        self.message_original_filenames[message_id] = original_filename
+                        logger.info(f"訊息 {message_id} 原始檔案名稱: {original_filename}")
+
                         # 為每個訊息創建全新的 TaskNode 並設置ZIP管理器引用
                         node = TaskNode(chat_id=self.chat_id)
                         node.is_custom_download = True
@@ -595,9 +620,17 @@ class ZipDownloadManager:
             with zipfile.ZipFile(self.zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for file_info in self.downloaded_files:
                     try:
-                        # 生成 ZIP 內的檔案名稱
-                        original_filename = os.path.basename(file_info['file_path'])
-                        zip_filename_in_archive = f"msg_{file_info['message_id']}_{original_filename}"
+                        # 使用保存的原始檔案名稱（從 API 獲取的）
+                        message_id = file_info['message_id']
+                        original_filename = self.message_original_filenames.get(message_id)
+
+                        # 如果沒有保存的原始檔案名稱，從下載路徑提取作為備用
+                        if not original_filename:
+                            original_filename = os.path.basename(file_info['file_path'])
+                            logger.warning(f"訊息 {message_id} 沒有保存原始檔案名稱，使用下載路徑提取: {original_filename}")
+
+                        # ZIP 內直接使用原始檔案名稱，不加任何前綴
+                        zip_filename_in_archive = original_filename
 
                         # 加入到 ZIP 檔案
                         zipf.write(file_info['file_path'], zip_filename_in_archive)
