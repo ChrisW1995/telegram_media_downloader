@@ -4,9 +4,14 @@ import time
 from enum import Enum
 
 from loguru import logger
-from pyrogram import Client
+from pyrogram import Client, StopTransmission
 
 from module.app import TaskNode
+
+
+class TaskReplacedException(StopTransmission):
+    """任務被新任務取代的異常 - 繼承自 StopTransmission 讓 Pyrogram 正確處理"""
+    pass
 
 
 class DownloadState(Enum):
@@ -81,11 +86,11 @@ async def update_download_status(
         # 如果註冊表中的 manager_id 與當前任務不同，表示已被新任務取代
         current_manager = _active_message_downloads.get(message_key)
         if current_manager is not None and current_manager != manager_id:
-            logger.warning(f"下載任務已被取代 - 停止舊任務: chat_id={chat_id}, message_id={message_id}, "
+            logger.warning(f"下載任務已被取代 - 拋出異常停止: chat_id={chat_id}, message_id={message_id}, "
                          f"舊 manager={manager_id}, 新 manager={current_manager}")
-            node.is_stop_transmission = True
-            client.stop_transmission()
-            return
+            # ⚠️ 拋出特殊異常來停止下載，Pyrogram 會捕獲並停止當前下載
+            # 這樣可以避免使用 client.stop_transmission() 影響其他任務
+            raise TaskReplacedException(f"Task {manager_id} replaced by {current_manager}")
 
     # Check for cancelled state first
     if get_download_state() == DownloadState.Cancelled:

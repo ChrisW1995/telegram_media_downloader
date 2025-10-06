@@ -765,7 +765,7 @@ def record_download_status(func):
         # 為 Message Downloader 使用包含 manager_id 的專屬緩存鍵
         if is_message_downloader and hasattr(node, 'zip_download_manager') and node.zip_download_manager:
             import time
-            manager_id = getattr(node.zip_download_manager, 'manager_id', int(time.time() * 1000))
+            manager_id = getattr(node.zip_download_manager, 'manager_id', int(time.time() * 1000000))
             cache_key = (node.chat_id, message.id, f"md_{manager_id}")
 
             # ⚠️ 註冊當前下載任務為最新任務
@@ -787,8 +787,12 @@ def record_download_status(func):
 
         # 如果當前正在下載中，阻止重複下載
         if cache_status is DownloadStatus.Downloading:
+            logger.warning(f"快取檢測到重複下載 - chat_id={node.chat_id}, message_id={message.id}, "
+                         f"cache_key={cache_key}, manager_id={manager_id}, cache_status={cache_status}")
             return DownloadStatus.Downloading, None
 
+        logger.debug(f"下載開始 - chat_id={node.chat_id}, message_id={message.id}, "
+                    f"cache_key={cache_key}, manager_id={manager_id}")
         _download_cache[cache_key] = DownloadStatus.Downloading
 
         status, file_name = await func(client, message, media_types, file_formats, node)

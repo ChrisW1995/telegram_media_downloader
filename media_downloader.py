@@ -516,6 +516,21 @@ async def download_media(
 
     # pylint: disable = R0912
 
+    # ⚠️ Message Downloader 專屬檢查：在開始下載前檢查是否已被新任務取代
+    is_message_downloader = (hasattr(node, 'is_custom_download') and node.is_custom_download) or \
+                           (hasattr(node, 'zip_download_manager') and node.zip_download_manager)
+
+    if is_message_downloader and hasattr(node, 'zip_download_manager') and node.zip_download_manager:
+        from module.pyrogram_extension import _active_message_downloads
+        manager_id = getattr(node.zip_download_manager, 'manager_id', None)
+        message_key = (node.chat_id, message.id)
+        current_manager = _active_message_downloads.get(message_key)
+
+        if current_manager is not None and current_manager != manager_id:
+            logger.warning(f"下載任務在開始前已被取代 - 立即退出: chat_id={node.chat_id}, message_id={message.id}, "
+                         f"舊 manager={manager_id}, 新 manager={current_manager}")
+            return DownloadStatus.SkipDownload, None
+
     file_name: str = ""
     ui_file_name: str = ""
     task_start_time: float = time.time()
@@ -622,6 +637,21 @@ async def download_media(
                 # TODO: if not exist file size or media
                 return DownloadStatus.SuccessDownload, file_name
             else:
+                # ⚠️ 檢查是否是因為任務被取代導致返回 None
+                is_message_downloader = (hasattr(node, 'is_custom_download') and node.is_custom_download) or \
+                                       (hasattr(node, 'zip_download_manager') and node.zip_download_manager)
+
+                if is_message_downloader and hasattr(node, 'zip_download_manager') and node.zip_download_manager:
+                    from module.pyrogram_extension import _active_message_downloads
+                    manager_id = getattr(node.zip_download_manager, 'manager_id', None)
+                    message_key = (node.chat_id, message.id)
+                    current_manager = _active_message_downloads.get(message_key)
+
+                    # 如果註冊表顯示已被取代，這是正常的停止，不是錯誤
+                    if current_manager is not None and current_manager != manager_id:
+                        logger.info(f"id={message.id} 下載返回 None - 任務已被取代，靜默退出")
+                        return DownloadStatus.SkipDownload, None
+
                 # 檢查是否是 custom download
                 is_custom_download = hasattr(node, 'is_custom_download') and node.is_custom_download
                 logger.error(
@@ -631,19 +661,30 @@ async def download_media(
                 if temp_download_path is None:
                     logger.error(f"id={message.id} Pyrogram download_media returned None - possible authentication or permission issue")
                 break
-        except pyrogram.errors.exceptions.bad_request_400.BadRequest:
-            logger.warning(
-                f"Message[{message.id}]: {_t('file reference expired, refetching')}..."
-            )
-            await asyncio.sleep(RETRY_TIME_OUT)
-            message = await fetch_message(client, message)
-            if _check_timeout(retry, message.id):
-                # pylint: disable = C0301
-                logger.error(
-                    f"Message[{message.id}]: "
-                    f"{_t('file reference expired for 3 retries, download skipped.')}"
+        except Exception as e:
+            # ⚠️ 檢查是否是任務被取代的異常
+            from module.download_stat import TaskReplacedException
+            if isinstance(e, TaskReplacedException):
+                logger.info(f"id={message.id} 任務被取代異常捕獲，返回 SkipDownload")
+                return DownloadStatus.SkipDownload, None
+
+            # 處理 Pyrogram 特定異常
+            if isinstance(e, pyrogram.errors.exceptions.bad_request_400.BadRequest):
+                logger.warning(
+                    f"Message[{message.id}]: {_t('file reference expired, refetching')}..."
                 )
-        except pyrogram.errors.exceptions.flood_420.FloodWait as wait_err:
+                await asyncio.sleep(RETRY_TIME_OUT)
+                message = await fetch_message(client, message)
+                if _check_timeout(retry, message.id):
+                    # pylint: disable = C0301
+                    logger.error(
+                        f"Message[{message.id}]: "
+                        f"{_t('file reference expired for 3 retries, download skipped.')}"
+                    )
+                continue
+
+            if isinstance(e, pyrogram.errors.exceptions.flood_420.FloodWait):
+                wait_err = e
             await asyncio.sleep(wait_err.value)
             logger.warning("Message[{}]: FlowWait {}", message.id, wait_err.value)
             _check_timeout(retry, message.id)
@@ -734,6 +775,9 @@ async def worker(client: pyrogram.client.Client):
                     except Exception as zip_error:
                         logger.error(f"ZIP 管理器通知下載完成失敗: {zip_error}")
                         node.zip_download_manager.on_file_failed(message_id, str(zip_error))
+                elif download_status == DownloadStatus.SkipDownload and not file_path:
+                    # ⚠️ 被取代的任務：不通知失敗，靜默跳過
+                    logger.info(f"訊息 {message_id} 被取代，靜默跳過通知 ZIP 管理器")
                 else:
                     # 真正的下載失敗
                     error_msg = f"下載狀態: {download_status}"

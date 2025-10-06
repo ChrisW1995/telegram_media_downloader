@@ -689,19 +689,20 @@ def download_messages_as_zip():
         # 建立臨時目錄
         temp_dir = tempfile.mkdtemp(prefix='tgdl_zip_')
 
-        # 創建 ZIP 下載管理器
+        # ⚠️ 先生成唯一ID，使用微秒確保唯一性
+        manager_id = f"{chat_id}_{int(time.time() * 1000000)}"
+
+        # 創建 ZIP 下載管理器並立即設置 manager_id
         zip_manager = ZipDownloadManager(chat_id, message_ids, temp_dir)
+        zip_manager.manager_id = manager_id  # ⚠️ 在創建後立即設置，確保 TaskNode 能正確獲取
+        zip_manager.chat_id = chat_id  # 確保 chat_id 被設置
+        zip_manager.message_ids = message_ids  # 確保 message_ids 被設置
 
         # 移除佔位符
         if temp_manager_id in active_zip_managers:
             del active_zip_managers[temp_manager_id]
             logger.info(f"移除下載佔位符: {temp_manager_id}")
 
-        # 使用唯一ID儲存管理器
-        manager_id = f"{chat_id}_{int(time.time() * 1000)}"
-        zip_manager.manager_id = manager_id  # 設置 manager_id 屬性供 TaskNode 使用
-        zip_manager.chat_id = chat_id  # 確保 chat_id 被設置
-        zip_manager.message_ids = message_ids  # 確保 message_ids 被設置
         active_zip_managers[manager_id] = zip_manager
         logger.info(f"加入實際下載管理器: {manager_id}")
 
