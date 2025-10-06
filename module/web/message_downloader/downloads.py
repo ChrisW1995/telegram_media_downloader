@@ -46,12 +46,18 @@ def add_download_tasks():
         data = request.get_json()
         chat_id = data.get('chat_id')
         message_ids = data.get('message_ids', [])
+        force_restart = data.get('force_restart', False)  # 允許強制重啟
 
-        logger.info(f"Fast Test API called with chat_id: {chat_id}, message_ids: {message_ids}")
+        logger.info(f"Fast Test API called with chat_id: {chat_id}, message_ids: {message_ids}, force_restart: {force_restart}")
 
         if not chat_id or not message_ids:
             logger.error(f"Missing data - chat_id: {chat_id}, message_ids: {message_ids}")
             return error_response('請提供群組 ID 和訊息 ID 列表')
+
+        # 檢查是否有活躍的下載會話
+        if not force_restart and is_download_active():
+            logger.warning("下載任務已在進行中,拒絕添加新任務")
+            return error_response('已有下載任務進行中,請等待完成或取消後再試', 409)
 
         # Add to existing custom download system
         from collections import OrderedDict
@@ -233,6 +239,38 @@ def add_download_tasks():
     except Exception as e:
         logger.error(f"Error adding download tasks: {e}")
         return error_response(f"添加下載任務失敗: {str(e)}")
+
+
+@bp.route("/cleanup", methods=["POST"])
+@require_message_downloader_auth
+@handle_api_exception
+def cleanup_stale_session():
+    """清理殘留的下載會話狀態 - 用於頁面刷新後的狀態恢復"""
+    try:
+        from module.download_stat import get_download_state, set_download_state, DownloadState
+
+        # 檢查當前下載狀態
+        current_state = get_download_state()
+        logger.info(f"Cleanup requested, current state: {current_state.name}")
+
+        # 如果沒有實際的下載任務在進行,清理殘留狀態
+        if current_state != DownloadState.Downloading:
+            # 重置進度系統
+            reset_download_progress()
+            # 設置狀態為 IDLE
+            set_download_state(DownloadState.Idle)
+            logger.info("Stale session cleaned up successfully")
+            return success_response("已清理殘留狀態")
+        else:
+            logger.info("Download is active, skipping cleanup")
+            return success_response("下載進行中,無需清理", {
+                'active': True,
+                'state': current_state.name
+            })
+
+    except Exception as e:
+        logger.error(f"Error cleaning up stale session: {e}")
+        return error_response(f"清理失敗: {str(e)}")
 
 
 @bp.route("/status", methods=["GET"])

@@ -154,20 +154,8 @@ async def update_download_status(
             message_id=message_id
         )
         
-        # Check if download is complete and clear specific file progress after a delay
-        if down_byte >= total_size and total_size > 0:
-            import threading
-            def clear_specific_progress():
-                try:
-                    import time
-                    time.sleep(5)  # Wait 5 seconds before clearing
-                    # Only clear this specific file, not all files
-                    from module.web import clear_specific_file_progress
-                    clear_specific_file_progress(message_id, os.path.basename(file_name))
-                except:
-                    pass
-            
-            threading.Thread(target=clear_specific_progress, daemon=True).start()
+        # Mark file as completed (但不立即清除,保留供進度統計使用)
+        # 檔案會在所有下載完成或新會話開始時統一清除
     except Exception as e:
         # Don't let web update errors break downloads
         pass

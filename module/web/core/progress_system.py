@@ -58,15 +58,14 @@ def get_download_progress_data():
         main_file = max(all_files, key=lambda x: x['downloaded_bytes'] / max(x['total_bytes'], 1))
         download_progress['current_file'] = main_file
 
-    # 計算已完成檔案數（進度達到100%或已標記為完成）
-    completed_files = len([f for f in download_progress['current_files'].values()
-                          if f.get('completed', False) or
-                          (f.get('total_bytes', 0) > 0 and f.get('downloaded_bytes', 0) >= f.get('total_bytes', 0))])
+    # 使用靜態的 completed_count,而不是動態計算
+    # 動態計算在並發下載時會不準確
+    completed_count = download_progress['completed_count']
 
     progress_data = {
         'progress': {
-            'total_task': download_progress['total_count'],  # 使用設定的總檔案數，而非動態計算
-            'completed_task': completed_files,  # 使用動態計算的已完成檔案數，而非靜態計數器
+            'total_task': download_progress['total_count'],
+            'completed_task': completed_count,  # 使用靜態計數器,由 update_download_progress() 更新
             'status_text': download_progress['status_text'],
             'active': download_progress['active'],
             'current_file': download_progress['current_file'],
@@ -172,6 +171,16 @@ def _update_download_session_status(completed, total):
         active_download_session['target_ids'] = {}
         active_download_session['total_tasks'] = 0
 
+        # 清除所有檔案進度 - 會話結束時統一清理
+        import threading
+        import time
+        def delayed_clear():
+            time.sleep(10)  # 10秒後清除,讓前端有時間顯示完成狀態
+            download_progress['current_files'].clear()
+            print("All file progress cleared after session completion")
+
+        threading.Thread(target=delayed_clear, daemon=True).start()
+
     print(f"Task session status updated: {completed}/{total} - Active: {download_progress['active']}")
 
 
@@ -246,12 +255,14 @@ def initialize_download_session(total_tasks):
     global download_progress, active_download_session
     import time
 
+    # 清除舊的檔案進度
+    download_progress['current_files'].clear()
+
     # 設置進度狀態
     download_progress['total_count'] = total_tasks
     download_progress['completed_count'] = 0
     download_progress['active'] = True
     download_progress['status_text'] = f"準備下載 {total_tasks} 個檔案..."
-    download_progress['current_files'] = {}
 
     # 設置會話狀態
     active_download_session['active'] = True

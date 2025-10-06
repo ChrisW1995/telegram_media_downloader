@@ -1,0 +1,3 @@
+2025-09-24 02:23:20.563 | INFO     | module.web_zip_api:download_messages_as_zip:146 - ZIP 下載請求 - chat_id: -1002468596496, message_ids: [920, 918, 916]
+2025-09-24 02:23:20.563 | INFO     | module.web_zip_api:download_messages_as_zip:202 - 使用 session_key: 493539630
+2025-09-24 02:23:20.564 | INFO     | module.web_zip_api:download_messages_as_zip:203 - 使用客戶端: <pyrogram.client.Client object at 0x104a2e810>

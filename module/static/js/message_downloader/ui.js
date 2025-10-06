@@ -94,8 +94,45 @@ function initializePage() {
     // 初始化事件監聽器
     initializeEventListeners();
 
+    // 清理殘留的下載會話狀態
+    cleanupStaleSession();
+
     // 檢查用戶認證狀態
     checkAuthStatus();
+}
+
+/**
+ * 清理殘留的下載會話狀態
+ * 用於頁面刷新後恢復正常狀態
+ */
+function cleanupStaleSession() {
+    console.log('🧹 檢查並清理殘留的下載會話...');
+
+    fetch('/api/fast_download/cleanup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('✅ 會話清理完成:', data.message);
+            if (data.data && data.data.active) {
+                console.log('📥 檢測到活躍下載,繼續監控');
+                // 如果有活躍下載,啟動進度監控
+                if (typeof startProgressMonitoring === 'function') {
+                    startProgressMonitoring();
+                }
+            }
+        } else {
+            console.warn('⚠️ 會話清理回應異常:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('❌ 清理會話時發生錯誤:', error);
+        // 即使清理失敗也繼續初始化,不影響用戶使用
+    });
 }
 
 // ==================== DOM 工具函數 ====================
