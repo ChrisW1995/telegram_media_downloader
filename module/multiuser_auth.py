@@ -309,25 +309,134 @@ class TelegramAuthManager:
                 logger.error("No client available for groups fetching")
                 return []
             
+
             logger.info("Fetching dialogs from Telegram...")
+
             groups = []
-            async for dialog in client.get_dialogs():
-                chat = dialog.chat
-                if chat.type.name in ['GROUP', 'SUPERGROUP', 'CHANNEL']:
-                    groups.append({
-                        'id': str(chat.id),
-                        'title': chat.title,
-                        'type': chat.type.name.lower(),
-                        'username': chat.username,
-                        'members_count': getattr(chat, 'members_count', 0),
-                        'has_media': True  # Assume all groups can have media
-                    })
-            
+
+            # 使用 Telegram 原生 API 獲取對話列表
+            from pyrogram.raw.functions.messages import GetDialogs
+            from pyrogram.raw.types import InputPeerEmpty
+
+            offset_date = 0
+            offset_id = 0
+            offset_peer = InputPeerEmpty()
+            limit = 100
+
+            while True:
+                try:
+                    # 使用原生 API 呼叫
+                    dialogs = await client.invoke(
+                        GetDialogs(
+                            offset_date=offset_date,
+                            offset_id=offset_id,
+                            offset_peer=offset_peer,
+                            limit=limit,
+                            hash=0
+                        )
+                    )
+
+                    if not dialogs.dialogs:
+                        break
+
+                    # 建立 chat 字典以便快速查找
+                    chats_dict = {}
+                    for chat in dialogs.chats:
+                        chats_dict[chat.id] = chat
+
+                    # 處理每個對話
+                    for dialog in dialogs.dialogs:
+                        try:
+                            peer = dialog.peer
+                            chat_id = None
+
+                            # 根據 peer 類型獲取 chat_id
+                            if hasattr(peer, 'channel_id'):
+                                chat_id = peer.channel_id
+                            elif hasattr(peer, 'chat_id'):
+                                chat_id = peer.chat_id
+                            else:
+                                continue  # 跳過私人對話
+
+                            # 從字典中獲取 chat 對象
+                            chat = chats_dict.get(chat_id)
+                            if not chat:
+                                continue
+
+                            # 檢查 chat 類型,跳過 forbidden 和私人對話
+                            chat_type_name = type(chat).__name__
+
+                            if 'Forbidden' in chat_type_name or 'User' in chat_type_name:
+                                logger.debug(f"Skipping {chat_type_name}: {chat_id}")
+                                continue
+
+                            # 判斷是否為群組/頻道
+                            if chat_type_name in ['Channel', 'Chat']:
+                                # 獲取標題
+                                title = getattr(chat, 'title', 'Unknown')
+
+                                # 判斷類型
+                                if chat_type_name == 'Channel':
+                                    if getattr(chat, 'broadcast', False):
+                                        type_str = 'channel'
+                                    else:
+                                        type_str = 'supergroup'
+                                else:
+                                    type_str = 'group'
+
+                                # 轉換 ID (頻道需要加上 -100 前綴)
+                                if chat_type_name == 'Channel':
+                                    display_id = str(-1000000000000 - chat_id)
+                                else:
+                                    display_id = str(-chat_id)
+
+                                logger.info(f"Adding {type_str}: {title} ({display_id})")
+                                groups.append({
+                                    'id': display_id,
+                                    'title': title,
+                                    'type': type_str,
+                                    'username': getattr(chat, 'username', None),
+                                    'members_count': getattr(chat, 'participants_count', 0),
+                                    'has_media': True
+                                })
+
+                        except Exception as dialog_error:
+                            logger.warning(f"Error processing dialog: {dialog_error}")
+                            continue
+
+                    # 準備下一次請求的 offset
+                    if dialogs.dialogs:
+                        last_dialog = dialogs.dialogs[-1]
+                        last_message = None
+                        for msg in dialogs.messages:
+                            if msg.id == last_dialog.top_message:
+                                last_message = msg
+                                break
+
+                        if last_message:
+                            offset_date = last_message.date
+                            offset_id = last_message.id
+                            offset_peer = last_dialog.peer
+                        else:
+                            break
+                    else:
+                        break
+
+                    # 如果返回的對話數少於 limit,說明已經沒有更多了
+                    if len(dialogs.dialogs) < limit:
+                        break
+
+                except Exception as e:
+                    logger.error(f"Error fetching dialogs batch: {e}")
+                    break
+
             logger.info(f"Found {len(groups)} groups")
             # Log first few groups for debugging
             for i, group in enumerate(groups[:3]):
                 logger.info(f"Group {i+1}: {group['title']} ({group['id']})")
             return groups
+
+            
             
         except Exception as e:
             logger.error(f"Failed to get user groups: {e}")
