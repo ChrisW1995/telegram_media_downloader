@@ -18,6 +18,7 @@ from ..core.session_manager import get_session_manager
 from ..core.progress_system import (
     get_download_progress_data, calculate_detailed_progress,
     update_download_progress, initialize_download_session,
+    reset_download_progress,
     download_progress, active_download_session
 )
 # update_download_status 和 TaskNode 現在在函數內部動態導入
@@ -251,25 +252,85 @@ def cleanup_stale_session():
 
         # 檢查當前下載狀態
         current_state = get_download_state()
-        logger.info(f"Cleanup requested, current state: {current_state.name}")
+        logger.info(f"🧹 Cleanup requested, current state: {current_state.name}")
 
-        # 如果沒有實際的下載任務在進行,清理殘留狀態
-        if current_state != DownloadState.Downloading:
-            # 重置進度系統
-            reset_download_progress()
-            # 設置狀態為 IDLE
-            set_download_state(DownloadState.Idle)
-            logger.info("Stale session cleaned up successfully")
-            return success_response("已清理殘留狀態")
+        # 頁面刷新時,無條件清理所有狀態
+        # 因為刷新表示用戶想要重新開始,不管之前的下載狀態如何
+
+        # 重置進度系統
+        reset_download_progress()
+        # 強制設置狀態為 IDLE
+        set_download_state(DownloadState.Idle)
+        logger.info("✅ Reset download state to Idle")
+
+        # 清除 active_zip_managers 中的殘留 manager
+        global active_zip_managers
+        if active_zip_managers:
+            manager_count = len(active_zip_managers)
+            logger.info(f"🧹 Found {manager_count} active ZIP managers to clean up")
+
+            # 清理臨時檔案和目錄
+            for manager_id, zip_manager in list(active_zip_managers.items()):
+                try:
+                    # 1. 取消背景任務
+                    if hasattr(zip_manager, 'background_task') and zip_manager.background_task:
+                        if not zip_manager.background_task.done():
+                            zip_manager.background_task.cancel()
+                            logger.info(f"🛑 Cancelled background task for manager {manager_id}")
+                        else:
+                            logger.info(f"ℹ️ Background task already completed for manager {manager_id}")
+
+                    # 2. 設置取消標記
+                    if hasattr(zip_manager, 'is_cancelled'):
+                        zip_manager.is_cancelled = True
+
+                    # 3. 刪除 ZIP 檔案(如果已創建)
+                    if hasattr(zip_manager, 'zip_path') and os.path.exists(zip_manager.zip_path):
+                        try:
+                            os.remove(zip_manager.zip_path)
+                            logger.info(f"🗑️ Deleted ZIP file: {zip_manager.zip_path}")
+                        except Exception as zip_error:
+                            logger.warning(f"Failed to delete ZIP file {zip_manager.zip_path}: {zip_error}")
+
+                    # 4. 清理臨時目錄(包含所有下載的檔案)
+                    if hasattr(zip_manager, 'temp_dir') and os.path.exists(zip_manager.temp_dir):
+                        import shutil
+                        shutil.rmtree(zip_manager.temp_dir)
+                        logger.info(f"🗑️ Deleted temp dir: {zip_manager.temp_dir}")
+                except Exception as cleanup_error:
+                    logger.warning(f"❌ Failed to cleanup manager {manager_id}: {cleanup_error}")
+
+            active_zip_managers.clear()
+            logger.info(f"✅ Cleared {manager_count} active ZIP managers")
         else:
-            logger.info("Download is active, skipping cleanup")
-            return success_response("下載進行中,無需清理", {
-                'active': True,
-                'state': current_state.name
-            })
+            logger.info("ℹ️ No active ZIP managers to clean up")
+
+        # 清理所有 tgdl_zip_ 開頭的臨時目錄 (以防有遺漏)
+        import tempfile
+        import shutil
+        temp_base_dir = tempfile.gettempdir()
+        cleaned_count = 0
+        try:
+            for item in os.listdir(temp_base_dir):
+                if item.startswith('tgdl_zip_'):
+                    temp_path = os.path.join(temp_base_dir, item)
+                    if os.path.isdir(temp_path):
+                        try:
+                            shutil.rmtree(temp_path)
+                            cleaned_count += 1
+                            logger.info(f"🗑️ Cleaned up orphaned temp dir: {temp_path}")
+                        except Exception as e:
+                            logger.warning(f"Failed to cleanup orphaned temp dir {temp_path}: {e}")
+            if cleaned_count > 0:
+                logger.info(f"✅ Cleaned up {cleaned_count} orphaned temp directories")
+        except Exception as e:
+            logger.warning(f"Failed to scan temp directory: {e}")
+
+        logger.info("✅ Stale session cleaned up successfully")
+        return success_response("已清理殘留狀態")
 
     except Exception as e:
-        logger.error(f"Error cleaning up stale session: {e}")
+        logger.error(f"❌ Error cleaning up stale session: {e}")
         return error_response(f"清理失敗: {str(e)}")
 
 
@@ -341,6 +402,8 @@ class ZipDownloadManager:
         self.downloaded_files = []
         self.failed_downloads = []
         self.task_node = None
+        self.background_task = None  # 追蹤背景任務
+        self.is_cancelled = False  # 取消標記
         self.zip_path = None
         self.safe_chat_title = None
         self.timestamp = None
@@ -377,6 +440,11 @@ class ZipDownloadManager:
     async def start_downloads_via_worker_pool(self):
         """使用現有的asyncio Queue + Worker Pool系統開始下載"""
         logger.info(f"開始使用Worker Pool下載 {len(self.message_ids)} 個檔案")
+
+        # 檢查是否已被取消
+        if self.is_cancelled:
+            logger.warning("下載任務已被取消,中止執行")
+            return
 
         try:
             from module.multiuser_auth import get_auth_manager
@@ -569,8 +637,11 @@ def download_messages_as_zip():
                     await zip_manager.prepare_download()
                     logger.info(f"ZIP 管理器準備完成: {zip_manager.safe_chat_title}")
 
-                    # 在後台啟動下載任務，不等待完成
-                    asyncio.create_task(zip_manager.start_downloads_via_worker_pool())
+                    # 在後台啟動下載任務，並追蹤 task
+                    zip_manager.background_task = asyncio.create_task(
+                        zip_manager.start_downloads_via_worker_pool()
+                    )
+                    logger.info(f"背景下載任務已啟動: {zip_manager.background_task}")
 
                     return {
                         'manager_id': manager_id,
@@ -650,8 +721,12 @@ def download_messages_as_zip():
 def check_zip_download_status(manager_id):
     """檢查 ZIP 下載狀態"""
     try:
+        global active_zip_managers
+
         if manager_id not in active_zip_managers:
-            return error_response('下載任務不存在或已過期', 404)
+            logger.warning(f"❌ Manager {manager_id} not found in active_zip_managers (可能已被清理)")
+            logger.info(f"Current active managers: {list(active_zip_managers.keys())}")
+            return error_response('下載任務不存在或已被清理,請重新開始下載', 410)  # 410 Gone
 
         zip_manager = active_zip_managers[manager_id]
 
@@ -668,12 +743,24 @@ def check_zip_download_status(manager_id):
                 # 檢查是否是下載請求（帶 download 參數）
                 from flask import request
                 if request.args.get('download') == 'true':
-                    # 這是實際下載請求，回傳檔案
+                    # 這是實際下載請求
+
+                    # 雙重檢查: 確認 manager 還在 active 列表中 (防止在請求途中被清理)
+                    if manager_id not in active_zip_managers:
+                        logger.warning(f"❌ Manager {manager_id} was removed during download request")
+                        return error_response('下載任務已被取消', 410)
+
+                    # 再次檢查是否被標記為取消
+                    if hasattr(zip_manager, 'is_cancelled') and zip_manager.is_cancelled:
+                        logger.warning(f"❌ Manager {manager_id} is marked as cancelled")
+                        return error_response('下載任務已被取消', 410)
+
                     zip_filename = f"{zip_manager.safe_chat_title}_{zip_manager.timestamp}.zip"
 
                     # 清理管理器
                     del active_zip_managers[manager_id]
 
+                    logger.info(f"📥 Sending ZIP file: {zip_filename}")
                     return send_file(
                         zip_manager.zip_path,
                         as_attachment=True,
