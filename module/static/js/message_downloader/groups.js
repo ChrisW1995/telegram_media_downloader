@@ -270,17 +270,24 @@ async function selectGroup(groupId, groupTitle) {
         console.log('✅ 更新選擇UI');
     }
 
-    // 載入訊息
-    console.log('📨 準備載入訊息...');
-    if (typeof loadMessages === 'function') {
-        try {
-            await loadMessages(true);
-            console.log('✅ 訊息載入完成');
-        } catch (error) {
-            console.error('❌ 訊息載入失敗:', error);
-        }
+    // 顯示相簿選擇器（新的混合方案入口）
+    console.log('📋 顯示相簿選擇器...');
+    if (typeof showAlbumSelector === 'function') {
+        await showAlbumSelector(groupId);
+        console.log('✅ 相簿選擇器已顯示');
     } else {
-        console.error('❌ loadMessages 函數不存在');
+        // 降級方案：直接載入訊息（舊行為）
+        console.log('📨 相簿選擇器不可用，使用舊方式載入訊息...');
+        if (typeof loadMessages === 'function') {
+            try {
+                await loadMessages(true);
+                console.log('✅ 訊息載入完成');
+            } catch (error) {
+                console.error('❌ 訊息載入失敗:', error);
+            }
+        } else {
+            console.error('❌ loadMessages 函數不存在');
+        }
     }
 
     // 顯示聊天控制

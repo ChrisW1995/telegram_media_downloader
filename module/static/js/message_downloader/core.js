@@ -33,6 +33,13 @@ let activeNotifications = new Map();
 let downloadNotificationId = null;
 let progressCheckInterval = null;
 
+// 媒體篩選器和相簿相關變數
+let activeMediaFilters = ['all'];
+let filteredMessages = [];
+let currentAlbumType = null;
+let albumSelectedMessages = [];
+let currentViewMode = 'messages'; // 'messages', 'album-selector', 'album-grid'
+
 // ==================== 常數設置 ====================
 
 const MESSAGES_PER_PAGE = 20;

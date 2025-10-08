@@ -228,3 +228,39 @@ def load_more_messages():
     except Exception as e:
         logger.error(f"Failed to load more messages: {e}")
         return error_response(f'載入更多訊息失敗: {str(e)}')
+
+
+@bp.route("/<chat_id>/media_stats", methods=["GET"])
+@require_message_downloader_auth
+@handle_api_exception
+def get_media_stats(chat_id):
+    """獲取群組的媒體類型統計"""
+    try:
+        # 轉換 chat_id 為整數（支援負數）
+        try:
+            chat_id = int(chat_id)
+        except ValueError:
+            return error_response('無效的 chat_id')
+        # Get authenticated user's session
+        session_key = session.get('message_downloader_session_key')
+
+        if not session_key:
+            return error_response('會話已過期，請重新登入', 401)
+
+        # Restore session if needed
+        if not restore_session_if_needed(session_key):
+            return error_response('會話已過期，請重新登入', 401)
+
+        session_info = message_downloader_auth_sessions[session_key]
+        auth_manager = session_info['auth_manager']
+
+        # Get media stats using our async helper
+        result = run_async_in_thread(
+            auth_manager.get_media_statistics(session_key, chat_id)
+        )
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Failed to get media stats: {e}")
+        return error_response(f'獲取媒體統計失敗: {str(e)}')

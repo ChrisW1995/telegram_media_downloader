@@ -83,6 +83,51 @@ function initializeEventListeners() {
             chatMenuToggle.classList.toggle('active');
         });
     }
+
+    // 初始化媒體篩選器
+    if (typeof initMediaFilter === 'function') {
+        initMediaFilter();
+    }
+
+    // 全部訊息選項
+    const albumAllOption = document.querySelector('.album-option.album-all');
+    if (albumAllOption) {
+        albumAllOption.addEventListener('click', function() {
+            showAllMessagesMode();
+        });
+    }
+
+    // 媒體相簿卡片
+    document.querySelectorAll('.album-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const mediaType = this.dataset.mediaType;
+            if (mediaType && currentChatId) {
+                showMediaAlbum(currentChatId, mediaType);
+            }
+        });
+    });
+
+    // 相簿視圖返回按鈕
+    const backToSelectorBtn = document.getElementById('back-to-selector');
+    if (backToSelectorBtn) {
+        backToSelectorBtn.addEventListener('click', backToSelector);
+    }
+
+    // 相簿視圖操作按鈕
+    const albumSelectAllBtn = document.getElementById('album-select-all');
+    if (albumSelectAllBtn) {
+        albumSelectAllBtn.addEventListener('click', selectAllAlbumItems);
+    }
+
+    const albumClearSelectionBtn = document.getElementById('album-clear-selection');
+    if (albumClearSelectionBtn) {
+        albumClearSelectionBtn.addEventListener('click', clearAlbumSelection);
+    }
+
+    const albumDownloadBtn = document.getElementById('album-download-selected');
+    if (albumDownloadBtn) {
+        albumDownloadBtn.addEventListener('click', downloadSelectedAlbumItems);
+    }
 }
 
 // ==================== 頁面初始化 ====================
