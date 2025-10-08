@@ -94,8 +94,9 @@ def get_thumbnail(chat_id, message_id):
         async def get_thumbnail():
             try:
                 logger.info(f"開始獲取訊息 {message_id} from chat {chat_id}")
-                # 獲取訊息
-                message = await client.get_messages(chat_id, message_id)
+                # 獲取訊息 (使用命名參數，message_ids 可以是單個 ID)
+                messages = await client.get_messages(chat_id=chat_id, message_ids=message_id)
+                message = messages if not isinstance(messages, list) else (messages[0] if messages else None)
                 if not message:
                     logger.warning(f"找不到訊息 {message_id}")
                     return None
@@ -168,10 +169,13 @@ def get_thumbnail(chat_id, message_id):
             data_url = f"data:image/jpeg;base64,{base64_data}"
 
             logger.info(f"縮圖處理完成，返回 data URL (length: {len(data_url)})")
-            return success_response("縮圖獲取成功", {
-                'thumbnail': data_url,
-                'size': len(thumbnail_data)
-            })
+            return success_response(
+                data={
+                    'thumbnail': data_url,
+                    'size': len(thumbnail_data)
+                },
+                message="縮圖獲取成功"
+            )
         else:
             logger.warning("無法獲取縮圖")
             return error_response('無法獲取該訊息的縮圖')

@@ -213,7 +213,15 @@ async function loadMessages(resetOffset = true) {
 
             if (newMessages.length > 0) {
                 allMessages = [...allMessages, ...newMessages];
-                renderMessages(newMessages, !resetOffset); // append mode
+
+                // 套用篩選器（如果有活躍的篩選）
+                if (typeof applyMessageFilter === 'function' && typeof activeMediaFilters !== 'undefined' && !activeMediaFilters.includes('all')) {
+                    // 有篩選器活躍時，使用篩選函數重新渲染所有訊息
+                    applyMessageFilter();
+                } else {
+                    // 沒有篩選器時，正常渲染新訊息
+                    renderMessages(newMessages, !resetOffset); // append mode
+                }
 
                 // Update lastMessageId for next pagination
                 const newLastMessageId = Math.min(...newMessages.map(m => m.message_id));
@@ -710,7 +718,8 @@ async function loadThumbnailFromMessage(message) {
         `;
 
         // 使用 Message Downloader 專用的縮圖API
-        if (message.media_type === 'photo' || message.media_type === 'video') {
+        // 只為有縮圖數據的照片或影片載入縮圖
+        if ((message.media_type === 'photo' || message.media_type === 'video') && message.thumbnail && message.thumbnail_url) {
             console.log(`Loading thumbnail for ${message.media_type} message ${message.message_id}`);
             console.log(`Thumbnail API URL: /api/message_downloader_thumbnail/${currentChatId}/${message.message_id}`);
 
@@ -721,8 +730,11 @@ async function loadThumbnailFromMessage(message) {
                 if (response.ok) {
                     const data = await response.json();
                     console.log('Thumbnail API response data:', data);
+                    console.log('  - success:', data.success);
+                    console.log('  - data:', data.data);
+                    console.log('  - has thumbnail:', data.data && data.data.thumbnail ? 'YES' : 'NO');
 
-                    if (data.success && data.message.thumbnail) {
+                    if (data.success && data.data && data.data.thumbnail) {
                         console.log(`Thumbnail loaded successfully for message ${message.message_id}`);
 
                         // 檢查是否在媒體組網格中
@@ -730,10 +742,10 @@ async function loadThumbnailFromMessage(message) {
 
                         if (isInMediaGroup) {
                             // 媒體組網格項目 - 只替換 loading-placeholder 內容
-                            thumbnailContainer.innerHTML = `<img src="${data.message.thumbnail}" alt="Thumbnail" style="width: 100%; height: 100%; object-fit: cover;" />`;
+                            thumbnailContainer.innerHTML = `<img src="${data.data.thumbnail}" alt="Thumbnail" style="width: 100%; height: 100%; object-fit: cover;" />`;
                         } else {
                             // 單一訊息縮圖
-                            thumbnailContainer.innerHTML = `<img src="${data.message.thumbnail}" alt="Thumbnail" />`;
+                            thumbnailContainer.innerHTML = `<img src="${data.data.thumbnail}" alt="Thumbnail" />`;
 
                             // 添加點擊事件打開 Lightbox
                             thumbnailContainer.style.cursor = 'pointer';

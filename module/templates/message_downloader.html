@@ -72,6 +72,67 @@
             <!-- 右側主內容區 -->
             <div class="main-content">
                 <div class="messages-content">
+                    <!-- 媒體篩選器 -->
+                    <div class="media-filter-bar" id="media-filter-bar" style="display: none;">
+                        <button class="filter-back-btn" id="filter-back-btn" onclick="backToAlbumSelector()">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M12 4 L6 10 L12 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+
+                        <!-- iOS 風格媒體類型選擇器 -->
+                        <div class="media-type-tabs">
+                            <button class="media-tab active" data-filter="all">
+                                <div class="media-tab-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                        <line x1="7" y1="8" x2="17" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                        <line x1="7" y1="12" x2="17" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                        <line x1="7" y1="16" x2="14" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                </div>
+                                <div class="media-tab-label">全部</div>
+                                <div class="media-tab-count" id="filter-count-all">21</div>
+                            </button>
+
+                            <button class="media-tab" data-filter="photo">
+                                <div class="media-tab-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                        <circle cx="8" cy="10" r="2" fill="currentColor"/>
+                                        <path d="M2 16 L8 10 L12 14 L16 10 L22 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="media-tab-label">照片</div>
+                                <div class="media-tab-count" id="filter-count-photo">9</div>
+                            </button>
+
+                            <button class="media-tab" data-filter="video">
+                                <div class="media-tab-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <rect x="2" y="5" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M16 9 L22 5 L22 19 L16 15 Z" fill="currentColor"/>
+                                    </svg>
+                                </div>
+                                <div class="media-tab-label">影片</div>
+                                <div class="media-tab-count" id="filter-count-video">12</div>
+                            </button>
+
+                            <button class="media-tab" data-filter="document">
+                                <div class="media-tab-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <path d="M7 2 L14 2 L19 7 L19 22 C19 23 18 24 17 24 L7 24 C6 24 5 23 5 22 L5 4 C5 3 6 2 7 2 Z" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M14 2 L14 7 L19 7" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                                        <line x1="9" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                        <line x1="9" y1="17" x2="16" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                </div>
+                                <div class="media-tab-label">文件</div>
+                                <div class="media-tab-count" id="filter-count-document">0</div>
+                            </button>
+                        </div>
+                    </div>
+
                     <div id="messages-container" class="messages-container">
                         <div id="messages-list">
                             <!-- 動態訊息氣泡會出現在這裡 -->
@@ -82,6 +143,113 @@
                                 <h5>選擇群組</h5>
                                 <p class="text-muted">從左側選擇一個群組來查看訊息</p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- 相簿入口頁面 -->
+                    <div id="album-selector" class="album-selector" style="display: none;">
+                        <div class="album-selector-header">
+                            <h3 id="album-selector-title">選擇瀏覽模式</h3>
+                        </div>
+
+                        <div class="album-selector-content">
+                            <!-- 全部訊息選項 -->
+                            <div class="album-option album-all" data-mode="all">
+                                <div class="album-icon">
+                                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                                        <rect x="10" y="8" width="28" height="32" rx="3" stroke="currentColor" stroke-width="2"/>
+                                        <line x1="14" y1="16" x2="34" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        <line x1="14" y1="22" x2="34" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        <line x1="14" y1="28" x2="28" y2="28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                </div>
+                                <div class="album-info">
+                                    <h4>瀏覽全部訊息</h4>
+                                    <p>查看完整的訊息時間軸</p>
+                                    <span class="album-count" id="album-count-all">載入中...</span>
+                                </div>
+                            </div>
+
+                            <!-- 媒體相簿選項 -->
+                            <div class="album-grid">
+                                <div class="album-card" data-media-type="photo">
+                                    <div class="album-card-icon">
+                                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                            <rect x="6" y="8" width="28" height="24" rx="3" stroke="currentColor" stroke-width="2"/>
+                                            <circle cx="14" cy="16" r="3" fill="currentColor"/>
+                                            <path d="M6 26 L14 18 L20 24 L26 18 L34 26" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </div>
+                                    <div class="album-card-title">照片</div>
+                                    <div class="album-card-count" id="album-count-photo">0</div>
+                                </div>
+
+                                <div class="album-card" data-media-type="video">
+                                    <div class="album-card-icon">
+                                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                            <rect x="6" y="10" width="20" height="20" rx="3" stroke="currentColor" stroke-width="2"/>
+                                            <path d="M26 14 L34 10 L34 30 L26 26 Z" fill="currentColor"/>
+                                        </svg>
+                                    </div>
+                                    <div class="album-card-title">影片</div>
+                                    <div class="album-card-count" id="album-count-video">0</div>
+                                </div>
+
+                                <div class="album-card" data-media-type="audio">
+                                    <div class="album-card-icon">
+                                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                            <rect x="11" y="16" width="3" height="8" rx="1.5" fill="currentColor"/>
+                                            <rect x="16" y="12" width="3" height="16" rx="1.5" fill="currentColor"/>
+                                            <rect x="21" y="8" width="3" height="24" rx="1.5" fill="currentColor"/>
+                                            <rect x="26" y="14" width="3" height="12" rx="1.5" fill="currentColor"/>
+                                        </svg>
+                                    </div>
+                                    <div class="album-card-title">音訊</div>
+                                    <div class="album-card-count" id="album-count-audio">0</div>
+                                </div>
+
+                                <div class="album-card" data-media-type="document">
+                                    <div class="album-card-icon">
+                                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                            <path d="M12 6 L24 6 L32 14 L32 34 C32 35.1 31.1 36 30 36 L12 36 C10.9 36 10 35.1 10 34 L10 8 C10 6.9 10.9 6 12 6 Z" stroke="currentColor" stroke-width="2"/>
+                                            <path d="M24 6 L24 14 L32 14" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                            <line x1="16" y1="22" x2="26" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                            <line x1="16" y1="27" x2="26" y2="27" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        </svg>
+                                    </div>
+                                    <div class="album-card-title">文件</div>
+                                    <div class="album-card-count" id="album-count-document">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 媒體相簿網格視圖 -->
+                    <div id="media-album-view" class="media-album-view" style="display: none;">
+                        <div class="album-view-header">
+                            <button id="back-to-selector" class="back-button">
+                                <i class="fas fa-chevron-left"></i>
+                                返回相簿選擇
+                            </button>
+                            <h3 id="album-view-title" style="color: #ffffff !important;">📷 照片相簿</h3>
+                            <div class="album-view-actions">
+                                <button id="album-select-all" class="album-action-btn">
+                                    <i class="fas fa-check-double"></i>
+                                    全選
+                                </button>
+                                <button id="album-clear-selection" class="album-action-btn">
+                                    <i class="fas fa-times"></i>
+                                    清除
+                                </button>
+                                <button id="album-download-selected" class="album-action-btn primary" disabled>
+                                    <i class="fas fa-download"></i>
+                                    下載選中項目 (<span id="album-selected-count">0</span>)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="album-grid-container" id="album-grid-container">
+                            <!-- 網格項目將動態加載 -->
                         </div>
                     </div>
                 </div>
@@ -222,15 +390,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 
     <!-- Message Downloader JavaScript Modules -->
-    <script src="{{ url_for('static', filename='js/message_downloader/core.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/core.js') }}?v=2.1"></script>
     <script src="{{ url_for('static', filename='js/message_downloader/theme.js') }}?v=2.0"></script>
     <script src="{{ url_for('static', filename='js/message_downloader/auth.js') }}?v=2.0"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/groups.js') }}?v=2.0"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/messages.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/groups.js') }}?v=2.1"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/messages.js') }}?v=2.5"></script>
     <script src="{{ url_for('static', filename='js/message_downloader/selection.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/album.js') }}?v=3.0"></script>
     <script src="{{ url_for('static', filename='js/message_downloader/notifications.js') }}?v=2.0"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/ui.js') }}?v=2.0"></script>
-    <script src="{{ url_for('static', filename='js/message_downloader/main.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/ui.js') }}?v=2.1"></script>
+    <script src="{{ url_for('static', filename='js/message_downloader/main.js') }}?v=4.2"></script>
 
 
     <!-- Fixed Animated Chat Controls - Bottom Right Corner -->

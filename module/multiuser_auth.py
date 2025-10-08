@@ -467,20 +467,38 @@ class TelegramAuthManager:
                     return {'success': False, 'error': '無法獲取用戶的Telegram連接'}
             
             messages = []
+            seen_group_ids = set()  # 記錄已經見過的 media_group_id
+            group_count = 0  # 記錄群組數量
+
             try:
                 async for message in client.get_chat_history(
-                    int(chat_id), 
-                    limit=limit, 
+                    int(chat_id),
+                    limit=limit * 3,  # 載入更多訊息以確保能獲得足夠的群組
                     offset_id=offset_id
                 ):
                     # Skip messages without media or text
                     if not (message.media or message.text):
                         continue
-                    
+
                     # Apply media_only filter
                     if media_only and not message.media:
                         continue
-                    
+
+                    # 檢查是否達到群組數量限制
+                    media_group_id = message.media_group_id
+                    if media_group_id:
+                        # 有 media_group_id 的訊息
+                        if media_group_id not in seen_group_ids:
+                            seen_group_ids.add(media_group_id)
+                            group_count += 1
+                    else:
+                        # 沒有 media_group_id 的訊息，每則算一個群組
+                        group_count += 1
+
+                    # 如果已經達到指定的群組數量，記錄訊息後停止
+                    if group_count > limit:
+                        break
+
                     msg_data = {
                         'message_id': message.id,
                         'text': message.text[:500] if message.text else '',  # Limit text length
@@ -494,7 +512,7 @@ class TelegramAuthManager:
                         'duration': None,
                         'width': None,
                         'height': None,
-                        'media_group_id': message.media_group_id  # 添加媒體組 ID
+                        'media_group_id': media_group_id  # 添加媒體組 ID
                     }
                     
                     # Extract media information
@@ -579,107 +597,78 @@ class TelegramAuthManager:
                 logger.error(f"Failed to get messages from chat {chat_id}: {e}")
                 return {'success': False, 'error': f'獲取訊息失敗: {str(e)}'}
 
-            # 檢查最後一則訊息是否屬於 media group，如果是則載入完整的 group
-            if messages and messages[-1].get('media_group_id'):
-                last_media_group_id = messages[-1]['media_group_id']
-                last_message_id = messages[-1]['message_id']
+            # 判斷是否還有更多訊息
+            has_more = group_count > limit
 
-                logger.info(f"最後一則訊息屬於 media group {last_media_group_id}，繼續載入完整 group")
+            logger.info(f"載入完成: {len(messages)} 則訊息，{group_count} 個群組")
 
-                # 繼續載入直到找到不同的 media_group_id 或沒有更多訊息
-                try:
-                    async for message in client.get_chat_history(
-                        int(chat_id),
-                        limit=20,  # 最多再載入 20 則（一個 group 最多 10 則）
-                        offset_id=last_message_id
-                    ):
-                        # 如果遇到不同的 media_group_id 或沒有 media_group_id，停止
-                        if not message.media_group_id or message.media_group_id != last_media_group_id:
-                            break
-
-                        # 跳過沒有媒體或文字的訊息
-                        if not (message.media or message.text):
-                            continue
-
-                        # 應用 media_only 過濾
-                        if media_only and not message.media:
-                            continue
-
-                        # 構建訊息數據（與上面相同的邏輯）
-                        msg_data = {
-                            'message_id': message.id,
-                            'text': message.text[:500] if message.text else '',
-                            'date': message.date.isoformat() if message.date else None,
-                            'media_type': None,
-                            'file_name': None,
-                            'file_size': None,
-                            'file_unique_id': None,
-                            'caption': message.caption[:300] if message.caption else '',
-                            'thumbnail_url': None,
-                            'duration': None,
-                            'width': None,
-                            'height': None,
-                            'media_group_id': message.media_group_id
-                        }
-
-                        # 提取媒體資訊（簡化版，只處理 photo 和 video）
-                        if message.media:
-                            if message.photo:
-                                msg_data['media_type'] = 'photo'
-                                msg_data['file_unique_id'] = message.photo.file_unique_id
-                                msg_data['width'] = message.photo.width
-                                msg_data['height'] = message.photo.height
-                                if message.photo.thumbs:
-                                    smallest_thumb = min(message.photo.thumbs, key=lambda x: x.file_size)
-                                    msg_data['thumbnail_url'] = f'/api/message_downloader_thumbnail/{chat_id}/{message.id}'
-                                    msg_data['thumbnail'] = {
-                                        'file_id': smallest_thumb.file_id,
-                                        'file_unique_id': smallest_thumb.file_unique_id,
-                                        'width': smallest_thumb.width,
-                                        'height': smallest_thumb.height,
-                                        'file_size': smallest_thumb.file_size
-                                    }
-                            elif message.video:
-                                msg_data['media_type'] = 'video'
-                                msg_data['file_name'] = message.video.file_name or f"video_{message.id}.mp4"
-                                msg_data['file_size'] = message.video.file_size
-                                msg_data['file_unique_id'] = message.video.file_unique_id
-                                msg_data['duration'] = message.video.duration
-                                msg_data['width'] = message.video.width
-                                msg_data['height'] = message.video.height
-                                if message.video.thumbs:
-                                    smallest_thumb = min(message.video.thumbs, key=lambda x: x.file_size)
-                                    msg_data['thumbnail_url'] = f'/api/message_downloader_thumbnail/{chat_id}/{message.id}'
-                                    msg_data['thumbnail'] = {
-                                        'file_id': smallest_thumb.file_id,
-                                        'file_unique_id': smallest_thumb.file_unique_id,
-                                        'width': smallest_thumb.width,
-                                        'height': smallest_thumb.height,
-                                        'file_size': smallest_thumb.file_size
-                                    }
-
-                        messages.append(msg_data)
-                        logger.debug(f"Added message {message.id} to complete media group {last_media_group_id}")
-
-                except Exception as e:
-                    logger.warning(f"Failed to load complete media group: {e}")
-                    # 即使失敗也繼續，因為已經有部分訊息了
-
-            # Note: Cache messages functionality requires user_id, so we skip it for now
-            # message_repo = self.db_manager.group_message_repo
-            # if messages:
-            #     message_repo.cache_messages(user_id, chat_id, messages)
-            
             return {
                 'success': True,
                 'messages': messages,
-                'count': len(messages)
+                'count': len(messages),
+                'group_count': group_count,
+                'has_more': has_more
             }
             
         except Exception as e:
             logger.error(f"Failed to get group messages: {e}")
             return {'success': False, 'error': str(e)}
-    
+
+    async def get_media_statistics(self, session_key: str, chat_id: str) -> Dict[str, Any]:
+        """獲取群組的媒體類型統計"""
+        try:
+            logger.info(f"Getting media statistics for chat_id: {chat_id}")
+
+            # Get client from session key
+            client = self.active_clients.get(session_key)
+            if not client:
+                # Try to find user client
+                for uid in self.active_clients.keys():
+                    if uid.isdigit():
+                        client = self.active_clients[uid]
+                        break
+
+                if not client:
+                    return {'success': False, 'error': '無法獲取用戶的Telegram連接'}
+
+            # Initialize statistics
+            stats = {
+                'photo': 0,
+                'video': 0,
+                'audio': 0,
+                'document': 0,
+                'voice': 0,
+                'animation': 0,
+                'total': 0
+            }
+
+            # Scan recent messages (limit to 1000 for performance)
+            async for message in client.get_chat_history(int(chat_id), limit=1000):
+                stats['total'] += 1
+
+                if message.media:
+                    if message.photo:
+                        stats['photo'] += 1
+                    elif message.video:
+                        stats['video'] += 1
+                    elif message.audio:
+                        stats['audio'] += 1
+                    elif message.voice:
+                        stats['voice'] += 1
+                    elif message.animation:
+                        stats['animation'] += 1
+                    elif message.document:
+                        stats['document'] += 1
+
+            return {
+                'success': True,
+                'stats': stats
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to get media statistics: {e}")
+            return {'success': False, 'error': str(e)}
+
     async def disconnect_session(self, session_key: str):
         """Disconnect and clean up a specific session."""
         try:
