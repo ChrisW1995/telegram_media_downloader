@@ -590,59 +590,46 @@ async def stream_video_native_api(chat_id: str, message_id: int):
                 if end_byte is None:
                     end_byte = file_size - 1
 
-                # 對於 hover 預覽，直接串流原始檔案以獲得最快的響應速度
-                # 跳過 moov atom 搜尋（可能花費 20+ 秒），直接開始發送數據
-                logger.info(f"📺 使用快速串流模式（Range: {start_byte}-{end_byte}）")
+                # 智能模式選擇：
+                # 1. 小 Range Request (bytes=0-1)：快速返回，用於檢測
+                # 2. 完整請求或大 Range：使用 moov重組，確保瀏覽器可以解析 metadata
 
-                current_offset = start_byte
-                end_offset = end_byte + 1  # +1 因為 end_byte 是 inclusive
-                chunk_size = 512 * 1024  # 512KB chunks
-                chunks_sent = 0
+                request_size = end_byte - start_byte + 1
+                is_small_request = request_size <= 4096  # 小於 4KB 視為探測請求
 
-                while current_offset < end_offset:
-                    try:
-                        remaining = end_offset - current_offset
-                        this_chunk_size = min(chunk_size, remaining)
+                if is_small_request:
+                    # 快速模式：直接返回原始數據（用於瀏覽器探測）
+                    logger.info(f"📺 快速探測模式（Range: {start_byte}-{end_byte}，{request_size} bytes）")
+                    chunk = await get_file_range(start_byte, request_size)
+                    actual_send_size = min(len(chunk), request_size)
+                    yield chunk[:actual_send_size]
+                    logger.success(f"✅ 探測完成: {actual_send_size} bytes")
+                    return
 
-                        chunk = await get_file_range(current_offset, this_chunk_size)
+                # 以下是完整播放模式 - 需要 moov atom 重組
+                logger.info(f"🎬 完整播放模式（Range: {start_byte}-{end_byte}），啟動 moov 重組...")
 
-                        # 關鍵修復：由於 Telegram API 的 4KB 對齊要求，
-                        # get_file_range 可能返回比請求更多的數據
-                        # 我們只發送實際需要的部分以匹配 Content-Length
-                        actual_send_size = min(len(chunk), remaining)
-                        yield chunk[:actual_send_size]
-
-                        current_offset += actual_send_size
-                        chunks_sent += 1
-
-                        # 每 10 個 chunks 記錄一次進度
-                        if chunks_sent % 10 == 0:
-                            range_size = end_byte - start_byte + 1
-                            sent_size = current_offset - start_byte
-                            progress = (sent_size / range_size) * 100
-                            logger.info(f"📤 已串流: {progress:.1f}% ({sent_size}/{range_size} bytes)")
-                    except Exception as e:
-                        logger.error(f"❌ 串流時發生錯誤 at offset {current_offset}: {e}")
-                        break
-
-                total_sent = current_offset - start_byte
-                logger.success(f"✅ 串流完成: {chunks_sent} chunks, {total_sent} bytes")
-                return
-
-                # 以下是 moov atom 重組邏輯（暫時停用以獲得更快的響應速度）
-                # 如果需要啟用 moov 重組，取消下面的註釋
-                """
                 # 導入 MP4 工具
-                from module.mp4_utils import extract_moov_atom, find_atom
+                from module.mp4_utils import extract_moov_atom
 
                 # 1. 提取 moov atom
                 logger.info("📦 提取 moov atom...")
                 moov_data = await extract_moov_atom(file_size, get_file_range)
 
                 if not moov_data:
-                    logger.warning("⚠️ 無法提取 moov atom")
+                    logger.warning("⚠️ 無法提取 moov atom，使用快速串流模式")
+                    # Fallback: 直接串流原始檔案
+                    current_offset = start_byte
+                    end_offset = end_byte + 1
+                    chunk_size = 512 * 1024
+                    while current_offset < end_offset:
+                        remaining = end_offset - current_offset
+                        this_chunk_size = min(chunk_size, remaining)
+                        chunk = await get_file_range(current_offset, this_chunk_size)
+                        actual_send_size = min(len(chunk), remaining)
+                        yield chunk[:actual_send_size]
+                        current_offset += actual_send_size
                     return
-                """
 
                 moov_size = len(moov_data)
                 logger.success(f"✅ moov atom 提取完成: {moov_size} bytes")
