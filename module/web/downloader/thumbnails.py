@@ -49,7 +49,7 @@ async def get_thumbnail(chat_id, message_id):
             return error_response('會話已過期，請重新登入', 401)
 
         # 使用與 groups API 相同的認證邏輯
-        from ..message_downloader.groups import restore_session_if_needed
+        from ..downloader.groups import restore_session_if_needed
         from module.multiuser_auth import get_auth_manager
 
         # 嘗試恢復會話（如果需要）

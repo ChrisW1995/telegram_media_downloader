@@ -527,7 +527,7 @@ class TelegramAuthManager:
                                 # 獲取最小的縮圖作為預覽
                                 smallest_thumb = min(message.photo.thumbs, key=lambda x: x.file_size)
                                 # 創建縮圖 URL，指向我們的縮圖 API
-                                msg_data['thumbnail_url'] = f'/api/message_downloader_thumbnail/{chat_id}/{message.id}'
+                                msg_data['thumbnail_url'] = f'/api/thumbnails/{chat_id}/{message.id}'
                                 msg_data['thumbnail'] = {
                                     'file_id': smallest_thumb.file_id,
                                     'file_unique_id': smallest_thumb.file_unique_id,
@@ -548,7 +548,7 @@ class TelegramAuthManager:
                                 # 獲取最小的縮圖作為預覽
                                 smallest_thumb = min(message.video.thumbs, key=lambda x: x.file_size)
                                 # 創建縮圖 URL，指向我們的縮圖 API
-                                msg_data['thumbnail_url'] = f'/api/message_downloader_thumbnail/{chat_id}/{message.id}'
+                                msg_data['thumbnail_url'] = f'/api/thumbnails/{chat_id}/{message.id}'
                                 msg_data['thumbnail'] = {
                                     'file_id': smallest_thumb.file_id,
                                     'file_unique_id': smallest_thumb.file_unique_id,

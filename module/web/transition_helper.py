@@ -41,7 +41,7 @@ def check_migration_status():
     # 檢查新模組
     try:
         from module.web.core import app_factory
-        from module.web.message_downloader import register_blueprints
+        from module.web.downloader import register_blueprints
         status['new_module_ready'] = True
     except ImportError:
         pass
