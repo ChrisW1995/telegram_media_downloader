@@ -103,10 +103,16 @@ async def get_video_stream(chat_id: str, message_id: int):
             file_size_mb = message.video.file_size / 1024 / 1024
             logger.info(f"📏 影片大小: {file_size_mb:.2f} MB")
 
-            # 不限制檔案大小 - 所有影片都可以嘗試播放
-            # 注意：超大檔案可能會下載較慢，但 Range Request 支援可以緩解這個問題
+            # 策略：大檔案使用 native streaming（邊下載邊播放）
+            # 標準端點需要先完全下載再播放，不適合大檔案
+            if file_size_mb > 200:  # 大於 200 MB
+                logger.info(f"📌 大檔案 ({file_size_mb:.2f} MB)，返回 413 讓前端使用 native streaming（邊下載邊播放）")
+                return error_response(
+                    f"大檔案 ({file_size_mb:.1f} MB) 將使用 streaming 模式（邊下載邊播放）",
+                    413
+                )
 
-            # 檔案大小可接受，返回成功（包括 500MB-2GB 的影片）
+            # 小檔案可接受，使用快取模式（先下載再播放）
             logger.info(f"✅ HEAD 請求：影片大小可接受 ({file_size_mb:.2f} MB)，返回 200")
             response = Response('', status=200)
             response.headers['Accept-Ranges'] = 'bytes'
@@ -152,10 +158,11 @@ async def get_video_stream(chat_id: str, message_id: int):
             file_size_mb = message.video.file_size / 1024 / 1024
             logger.info(f"影片大小: {file_size_mb:.2f} MB")
 
-            # 不限制檔案大小 - 使用記憶體快取模式
-            # 警告：對於超大檔案（1GB+），下載可能需要較長時間
-            if file_size_mb > 500:
-                logger.warning(f"⚠️ 警告：大檔案 ({file_size_mb:.2f} MB)，下載可能需要較長時間")
+            # 這個端點需要先完全下載，不應該處理大檔案
+            # 大檔案應該被 HEAD 檢查擋下，但為了安全再檢查一次
+            if file_size_mb > 200:
+                logger.error(f"❌ 錯誤：大檔案 ({file_size_mb:.2f} MB) 不應該到達這裡！")
+                return {'error': 'file_too_large', 'message': '請使用 native streaming 端點'}
 
             # 下載影片到臨時檔案（會話結束後自動刪除）
             temp_file = tempfile.NamedTemporaryFile(
