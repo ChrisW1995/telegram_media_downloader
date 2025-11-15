@@ -1,6 +1,6 @@
 """Message Downloader 縮圖 API 模組 (Quart async)
 
-處理 /api/message_downloader_thumbnail/* 相關的縮圖生成功能
+處理 /api/thumbnails/* 相關的縮圖生成功能
 """
 
 from quart import Blueprint, jsonify, session, Response

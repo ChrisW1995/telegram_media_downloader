@@ -1,6 +1,6 @@
 """Message Downloader 影片關鍵幀提取 API 模組 (Sprite Sheet 版本) - Quart async
 
-處理 /api/message_downloader_video_frames/* 相關的影片幀提取功能
+處理 /api/video/frames/* 相關的影片幀提取功能
 使用 Sprite Sheet 技術：只生成一張包含所有縮圖的大圖，節省帶寬和處理時間
 """
 
@@ -176,7 +176,7 @@ async def get_video_frames(chat_id, message_id):
             return error_response('會話已過期，請重新登入', 401)
 
         # 使用與 thumbnails API 相同的認證邏輯
-        from ..message_downloader.groups import restore_session_if_needed
+        from ..downloader.groups import restore_session_if_needed
         from module.multiuser_auth import get_auth_manager
 
         if not restore_session_if_needed(session_key):
