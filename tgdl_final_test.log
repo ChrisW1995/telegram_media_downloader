@@ -1,0 +1,34 @@
+2025-11-03 21:51:51.747 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-03 21:51:51.748 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-03 21:51:51.748 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-03 21:51:51.748 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-03 21:51:51.748 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-03 21:51:51.748 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-03 21:51:51.748 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-03 21:51:51.748 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-03 21:51:51.748 | INFO     | database.database_manager:initialize_database:143 - Database initialized successfully: /Users/chriswang/Documents/Py/TGDL-dev/tgdl.db
+[21:51:51] Telegram Media Downloader v2.2.5,                          meta.py:18
+           Copyright (C) 2025 tangyoha <https://github.com/tangyoha>            
+           Licensed under the terms of the MIT License                meta.py:21
+                                                                                
+2025-11-03 21:51:51.750 | INFO     | utils.meta:print_meta:22 - Device: CPython 3.11.5 - Telegram Media Downloader 2.2.5
+2025-11-03 21:51:51.750 | INFO     | utils.meta:print_meta:23 - System: Darwin 25.0.0 (EN)
+2025-11-03 21:51:51.751 | INFO     | module.app_db:load_config_from_database:225 - Configuration loaded from database
+2025-11-03 21:51:51.754 | DEBUG    | module.app_db:_cleanup_session_files:611 - No stale session temporary files found
+2025-11-03 21:51:51.755 | INFO     | module.web.core.app_factory:create_quart_app:64 - Quart application created successfully (native async support)
+2025-11-03 21:51:51.756 | INFO     | module.web:init_web:53 - Quart application initialized with native async support
+2025-11-03 21:51:51.774 | INFO     | module.web.message_downloader:register_blueprints:74 - Message Downloader blueprints registered successfully
+2025-11-03 21:51:51.775 | INFO     | module.web:init_web:83 - Web module initialized with Quart (async support)
+2025-11-03 21:51:51.775 | INFO     | module.web:init_web:84 - Quart server starting on 0.0.0.0:5002
+2025-11-03 21:51:51.775 | ERROR    | module.web:run_quart_dev_server:79 - Quart server error: set_wakeup_fd only works in main thread of the main interpreter
+2025-11-03 21:51:52.485 | SUCCESS  | __main__:main:957 - Successfully started (Press Ctrl+C to stop)
+2025-11-03 21:51:52.485 | INFO     | __main__:download_all_chat:871 - Custom download is enabled, skipping regular chat download
+2025-11-03 21:51:53.401 | INFO     | module.bot:start:343 - Added allowed user ID: 7588743028
+2025-11-03 21:51:53.511 | INFO     | module.bot:start:357 - Bot initialized with admin ID: 493539630
+2025-11-03 21:51:53.511 | INFO     | module.bot:start:358 - Allowed user IDs: [7588743028]
+2025-11-03 21:51:53.511 | INFO     | module.bot:start:359 - All authorized users (admin + allowed): [493539630, 7588743028]
+2025-11-03 21:51:53.511 | INFO     | module.bot:start:360 - Pending user IDs: []
+2025-11-03 21:51:53.608 | INFO     | module.bot:start:483 - Download bot instance assigned to app
+2025-11-03 21:51:53.781 | INFO     | module.bot:start:489 - Sent initialization message to admin ID: 493539630
+2025-11-03 21:53:00.119 | INFO     | __main__:signal_handler:62 - Received signal 15, initiating graceful shutdown...
+2025-11-03 21:53:00.120 | INFO     | __main__:_graceful_shutdown:80 - Graceful shutdown initiated

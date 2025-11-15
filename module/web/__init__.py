@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Web module main entry point
+"""Web module main entry point (Quart async)
 
-This is the refactored web module, maintaining backward compatibility with the original web.py
+This is the refactored web module, migrated to Quart for native async support
 """
 
-from flask import Flask
+from quart import Quart
 from loguru import logger
 
 # Global variables (for backward compatibility)
-_flask_app = None
+_quart_app = None
+_flask_app = None  # Alias for backward compatibility
 _app = None
 _client = None
 _queue = None
@@ -32,71 +33,51 @@ telegram_auth_state = {
 
 
 def init_web(app, client=None, queue=None):
-    """Initialize web module (backward compatible interface)"""
-    global _flask_app, _app, _client, _queue, message_downloader_auth_sessions
+    """Initialize web module (Quart async - backward compatible interface)"""
+    global _quart_app, _flask_app, _app, _client, _queue, message_downloader_auth_sessions
 
     # Save application instance
     _app = app
     _client = client
     _queue = queue
 
-    # For now, use new modular structure directly to fix UI issues
-    # TODO: Re-enable backward compatibility after fixing path issues
-    # try:
-    #     import module.web_original as old_web
-    #     if hasattr(old_web, 'init_web'):
-    #         logger.info("Using existing web_original.py for backward compatibility")
-    #         return old_web.init_web(app, client, queue)
-    # except ImportError:
-    #     pass
-
-    # If original web.py doesn't exist, use new modular structure
-    from .core.app_factory import create_flask_app
+    # Create Quart application
+    from .core.app_factory import create_quart_app
     from .core.error_handlers import register_error_handlers
 
-    # Create Flask application
-    _flask_app = create_flask_app()
+    _quart_app = create_quart_app()
+    _flask_app = _quart_app  # Backward compatibility alias
 
-    # 現在設置 event loop，使用主應用程式的 loop
-    if hasattr(app, 'loop') and app.loop:
-        # 主應用已經有 loop，使用它
-        _flask_app.loop = app.loop
-        logger.info("Using main application's event loop for Flask app")
-    else:
-        # 主應用沒有 loop，創建我們自己的
-        from .core.app_factory import ensure_event_loop
-        app_loop = ensure_event_loop()
-        _flask_app.loop = app_loop
-        app.loop = app_loop
-        logger.info("Created and assigned new event loop to both Flask and main app")
+    # Quart 使用原生 asyncio，不需要自定義 event loop 屬性
+    # 主應用的 loop 會在 asyncio.run() 中統一管理
+    logger.info("Quart application initialized with native async support")
 
     # Register error handlers
     register_error_handlers(_flask_app)
 
-    # Register Message Downloader modules
-    from .message_downloader import register_blueprints
+    # Register downloader modules
+    from .downloader import register_blueprints
     register_blueprints(_flask_app, app)
 
     # Register global progress API for backward compatibility
     register_global_apis(_flask_app)
 
-    # Start web server in a thread (like the original)
-    import threading
+    # Configure login
     if app.web_login_secret:
         web_login_users["root"] = app.web_login_secret
     else:
-        _flask_app.config["LOGIN_DISABLED"] = True
+        _quart_app.config["LOGIN_DISABLED"] = True
 
-    if app.debug_web:
-        threading.Thread(target=run_web_server, args=(app,)).start()
-    else:
-        threading.Thread(
-            target=_flask_app.run, daemon=True, args=(app.web_host, app.web_port)
-        ).start()
+    # Store web config for later use in main loop
+    _quart_app.web_host = app.web_host
+    _quart_app.web_port = app.web_port
+    _quart_app.debug_web = app.debug_web
 
-    logger.info("Web module initialized with new modular structure")
-    logger.info(f"Web server started on {app.web_host}:{app.web_port}")
-    return _flask_app
+    logger.info("Web module initialized with Quart (async support)")
+    logger.info(f"Quart will start on {app.web_host}:{app.web_port}")
+
+    # Return Quart app without starting server (will be started in main event loop)
+    return _quart_app
 
 
 def run_web_server(app):

@@ -1,687 +1,654 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Telegram Media Downloader - 現代化媒體下載管理工具">
-  <title>Telegram Media Downloader</title>
-  
-  <!-- Modern CSS Framework -->
-  <link href="{{ url_for('static', filename='css/modern.css') }}?v=2.7.0" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/progress.css') }}?v=2.2.5" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/mobile.css') }}?v=2.2.5" rel="stylesheet">
-  
-  <!-- Icons -->
-  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
-  
-  <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📥</text></svg>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message Downloader - 訊息下載器</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/modern.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/downloader/main.css') }}" rel="stylesheet">
 </head>
-
 <body>
-  <div class="app-container">
-    <!-- Compact Navigation Header -->
-    <nav class="compact-header">
-      <div class="compact-header-left">
-        <h1 class="compact-title">📡 TGDL</h1>
-        <div class="compact-tabs" data-active-tab="download-manager">
-          <button class="compact-tab active" data-tab="download-manager">下載管理</button>
-          <button class="compact-tab" data-tab="group-manager">群組管理</button>
-          <button class="compact-tab" data-tab="fast-test">快速測試</button>
-        </div>
-      </div>
-      
-      <div class="compact-header-right">
-        <!-- Session Status -->
-        <div id="session-status-indicator" class="compact-status">
-          <span class="compact-status-icon" id="session-status-icon">🔄</span>
-          <span class="compact-status-text" id="session-status-text">檢查中</span>
-        </div>
-        
-        <!-- Action Buttons -->
-        <div class="compact-actions">
-          <button id="reconnect-btn" class="compact-btn compact-btn-warning" style="display: none;" onclick="forceReconnect()" title="重新連接">
-            🔄
-          </button>
-          <button id="global-download-control" class="compact-btn compact-btn-secondary" style="display: none;" onclick="toggleGlobalDownloadState()" title="暫停下載">
-            ⏸️
-          </button>
-        </div>
-        
-        <!-- Version -->
-        <div class="compact-version">v<span id="app-version">2.2.5</span></div>
-      </div>
-    </nav>
+    <div class="container-fluid">
+        <!-- 緊湊頂部工具列 -->
+        <div class="compact-toolbar">
+            <div class="toolbar-left">
+                <div class="app-title" id="app-title">
+                    <i class="fas fa-comments"></i>
+                    <span>TGDL</span>
+                </div>
+            </div>
+            <div class="toolbar-center">
+                <div class="current-group-indicator" id="current-group-indicator" style="display: none;">
+                    <span id="current-group-name">選擇群組</span>
+                </div>
+            </div>
+            <div class="toolbar-right">
+                <!-- Theme Toggle Button -->
+                <button class="theme-toggle" id="theme-toggle" title="切換主題">
+                    <i class="theme-icon fas fa-sun" id="theme-icon"></i>
+                    <span id="theme-text">Light</span>
+                </button>
 
-    <!-- Legacy tabs structure (hidden, for compatibility) -->
-    <div class="modern-tabs" style="display: none;">
-      <ul class="modern-tabs-nav">
-        <li class="modern-tabs-item">
-          <a href="#download-manager" class="modern-tabs-link active" data-tab="download-manager">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7,10 12,15 17,10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            下載管理
-          </a>
-        </li>
-        <li class="modern-tabs-item">
-          <a href="#group-manager" class="modern-tabs-link" data-tab="group-manager">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-            群組管理
-          </a>
-        </li>
-      </ul>
+                <!-- Login Status Indicator -->
+                <div id="login-status" style="display: none;">
+                    <div id="login-status-success" class="status-success" style="display: none;">
+                        <i class="fas fa-user-check"></i>
+                        <span id="login-user-info">已登入</span>
+                        <button id="header-logout-btn" class="btn-logout">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                    <div id="login-status-loading" class="status-loading" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>檢查中...</span>
+                    </div>
+                    <div id="login-status-error" class="status-error" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>需要認證</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主要應用佈局 -->
+        <div class="main-app-layout">
+            <!-- 左側群組邊欄 -->
+            <div class="group-sidebar">
+                <div id="groups-container">
+                    <!-- 群組列表將在這裡動態載入 -->
+                    <div class="content-overlay">
+                        <div class="overlay-content">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">載入中...</span>
+                            </div>
+                            <p class="text-muted mt-2">載入群組中...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側主內容區 -->
+            <div class="main-content">
+                <div class="messages-content">
+                    <!-- 媒體篩選器 -->
+                    <div class="media-filter-bar" id="media-filter-bar" style="display: none;">
+                        <button class="filter-back-btn" id="filter-back-btn" onclick="backToAlbumSelector()">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M12 4 L6 10 L12 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+
+                        <!-- iOS 風格媒體類型選擇器 -->
+                        <div class="media-type-tabs">
+                            <button class="media-tab active" data-filter="all">
+                                <div class="media-tab-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                        <line x1="7" y1="8" x2="17" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                        <line x1="7" y1="12" x2="17" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                        <line x1="7" y1="16" x2="14" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                </div>
+                                <div class="media-tab-label">全部</div>
+                                <div class="media-tab-count" id="filter-count-all">21</div>
+                            </button>
+
+                            <button class="media-tab" data-filter="photo">
+                                <div class="media-tab-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                        <circle cx="8" cy="10" r="2" fill="currentColor"/>
+                                        <path d="M2 16 L8 10 L12 14 L16 10 L22 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="media-tab-label">照片</div>
+                                <div class="media-tab-count" id="filter-count-photo">9</div>
+                            </button>
+
+                            <button class="media-tab" data-filter="video">
+                                <div class="media-tab-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <rect x="2" y="5" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M16 9 L22 5 L22 19 L16 15 Z" fill="currentColor"/>
+                                    </svg>
+                                </div>
+                                <div class="media-tab-label">影片</div>
+                                <div class="media-tab-count" id="filter-count-video">12</div>
+                            </button>
+
+                            <button class="media-tab" data-filter="document">
+                                <div class="media-tab-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <path d="M7 2 L14 2 L19 7 L19 22 C19 23 18 24 17 24 L7 24 C6 24 5 23 5 22 L5 4 C5 3 6 2 7 2 Z" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M14 2 L14 7 L19 7" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                                        <line x1="9" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                        <line x1="9" y1="17" x2="16" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                </div>
+                                <div class="media-tab-label">文件</div>
+                                <div class="media-tab-count" id="filter-count-document">0</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="messages-container" class="messages-container">
+                        <div id="messages-list">
+                            <!-- 動態訊息氣泡會出現在這裡 -->
+                        </div>
+                        <!-- 默認覆蓋層 -->
+                        <div id="messages-overlay" class="content-overlay">
+                            <div class="overlay-content">
+                                <h5>選擇群組</h5>
+                                <p class="text-muted">從左側選擇一個群組來查看訊息</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 相簿入口頁面 -->
+                    <div id="album-selector" class="album-selector" style="display: none;">
+                        <div class="album-selector-header">
+                            <h3 id="album-selector-title">選擇瀏覽模式</h3>
+                        </div>
+
+                        <div class="album-selector-content">
+                            <!-- 全部訊息選項 -->
+                            <div class="album-option album-all" data-mode="all">
+                                <div class="album-icon">
+                                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                                        <rect x="10" y="8" width="28" height="32" rx="3" stroke="currentColor" stroke-width="2"/>
+                                        <line x1="14" y1="16" x2="34" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        <line x1="14" y1="22" x2="34" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        <line x1="14" y1="28" x2="28" y2="28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                </div>
+                                <div class="album-info">
+                                    <h4>瀏覽全部訊息</h4>
+                                    <p>查看完整的訊息時間軸</p>
+                                    <span class="album-count" id="album-count-all">載入中...</span>
+                                </div>
+                            </div>
+
+                            <!-- 媒體相簿選項 -->
+                            <div class="album-grid">
+                                <div class="album-card" data-media-type="photo">
+                                    <div class="album-card-icon">
+                                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                            <rect x="6" y="8" width="28" height="24" rx="3" stroke="currentColor" stroke-width="2"/>
+                                            <circle cx="14" cy="16" r="3" fill="currentColor"/>
+                                            <path d="M6 26 L14 18 L20 24 L26 18 L34 26" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </div>
+                                    <div class="album-card-title">照片</div>
+                                    <div class="album-card-count" id="album-count-photo">0</div>
+                                </div>
+
+                                <div class="album-card" data-media-type="video">
+                                    <div class="album-card-icon">
+                                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                            <rect x="6" y="10" width="20" height="20" rx="3" stroke="currentColor" stroke-width="2"/>
+                                            <path d="M26 14 L34 10 L34 30 L26 26 Z" fill="currentColor"/>
+                                        </svg>
+                                    </div>
+                                    <div class="album-card-title">影片</div>
+                                    <div class="album-card-count" id="album-count-video">0</div>
+                                </div>
+
+                                <div class="album-card" data-media-type="audio">
+                                    <div class="album-card-icon">
+                                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                            <rect x="11" y="16" width="3" height="8" rx="1.5" fill="currentColor"/>
+                                            <rect x="16" y="12" width="3" height="16" rx="1.5" fill="currentColor"/>
+                                            <rect x="21" y="8" width="3" height="24" rx="1.5" fill="currentColor"/>
+                                            <rect x="26" y="14" width="3" height="12" rx="1.5" fill="currentColor"/>
+                                        </svg>
+                                    </div>
+                                    <div class="album-card-title">音訊</div>
+                                    <div class="album-card-count" id="album-count-audio">0</div>
+                                </div>
+
+                                <div class="album-card" data-media-type="document">
+                                    <div class="album-card-icon">
+                                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                            <path d="M12 6 L24 6 L32 14 L32 34 C32 35.1 31.1 36 30 36 L12 36 C10.9 36 10 35.1 10 34 L10 8 C10 6.9 10.9 6 12 6 Z" stroke="currentColor" stroke-width="2"/>
+                                            <path d="M24 6 L24 14 L32 14" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                            <line x1="16" y1="22" x2="26" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                            <line x1="16" y1="27" x2="26" y2="27" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        </svg>
+                                    </div>
+                                    <div class="album-card-title">文件</div>
+                                    <div class="album-card-count" id="album-count-document">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 媒體相簿網格視圖 -->
+                    <div id="media-album-view" class="media-album-view" style="display: none;">
+                        <div class="album-view-header">
+                            <button id="back-to-selector" class="back-button">
+                                <i class="fas fa-chevron-left"></i>
+                                返回相簿選擇
+                            </button>
+                            <h3 id="album-view-title" style="color: #ffffff !important;">📷 照片相簿</h3>
+                            <div class="album-view-actions">
+                                <button id="album-select-all" class="album-action-btn">
+                                    <i class="fas fa-check-double"></i>
+                                    全選
+                                </button>
+                                <button id="album-clear-selection" class="album-action-btn">
+                                    <i class="fas fa-times"></i>
+                                    清除
+                                </button>
+                                <button id="album-download-selected" class="album-action-btn primary" disabled>
+                                    <i class="fas fa-download"></i>
+                                    下載選中項目 (<span id="album-selected-count">0</span>)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="album-grid-container" id="album-grid-container">
+                            <!-- 網格項目將動態加載 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="loading-spinner" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">載入中...</span>
+            </div>
+            <p class="text-muted mt-2">載入訊息中...</p>
+        </div>
     </div>
 
-    <div class="modern-tabs-content">
-      <!-- Download Manager Tab -->
-      <div id="download-manager" class="modern-tabs-panel active">
-        <!-- Progress Summary Cards -->
-        <div class="progress-summary">
-          <div class="summary-card summary-card-pending">
-            <div class="summary-card-value" id="summary-pending">0</div>
-            <div class="summary-card-label">待下載</div>
-          </div>
-          <div class="summary-card summary-card-downloading">
-            <div class="summary-card-value" id="summary-downloading">0</div>
-            <div class="summary-card-label">下載中</div>
-          </div>
-          <div class="summary-card summary-card-completed">
-            <div class="summary-card-value" id="summary-completed">0</div>
-            <div class="summary-card-label">已完成</div>
-          </div>
-          <div class="summary-card summary-card-failed">
-            <div class="summary-card-value" id="summary-failed">0</div>
-            <div class="summary-card-label">失敗</div>
-          </div>
+    <!-- Authentication Section -->
+    <div id="auth-section" class="auth-overlay" style="display: none;">
+        <h5 class="mb-3" style="color: rgba(255, 255, 255, 0.9); font-size: 16px; font-weight: 600;">
+            <i class="fas fa-user-lock" style="color: rgba(0, 122, 255, 0.8);"></i>
+            Telegram 認證
+        </h5>
+        <div id="auth-phone-step">
+            <p class="text-muted">請輸入您的電話號碼以開始認證</p>
+            <div class="row">
+                <div class="col-md-8">
+                    <input type="tel" id="phone-number" class="form-control" placeholder="+886912345678" required>
+                </div>
+                <div class="col-md-4">
+                    <button id="send-code-btn" class="btn btn-primary w-100">
+                        <i class="fas fa-paper-plane"></i>
+                        發送驗證碼
+                    </button>
+                </div>
+            </div>
         </div>
-
-        <!-- Hidden elements for progress tracking (not visible but needed for data sync) -->
-        <div style="display: none;">
-          <span id="overall-completed">0</span>
-          <span id="overall-total">0</span>
-          <span id="overall-speed">0.00 B/s</span>
-          <span id="overall-status-text">準備開始下載...</span>
-          <div id="overall-progress-bar" style="width: 0%;">
-            <div id="overall-progress-text">0%</div>
-          </div>
-          <span id="concurrent-count">0</span>
-          <div id="concurrent-downloads-container"></div>
-          <button id="pause-download-btn" style="display: none;"></button>
-          <button id="resume-download-btn" style="display: none;"></button>
-          <button id="cancel-download-btn" style="display: none;"></button>
+        <div id="auth-code-step" style="display: none;">
+            <p class="text-muted">請輸入收到的驗證碼</p>
+            <div class="row">
+                <div class="col-md-8">
+                    <input type="text" id="verification-code" class="form-control" placeholder="12345" maxlength="5" required>
+                </div>
+                <div class="col-md-4">
+                    <button id="verify-code-btn" class="btn btn-primary w-100">
+                        <i class="fas fa-check"></i>
+                        驗證
+                    </button>
+                </div>
+            </div>
         </div>
+        <div id="auth-password-step" style="display: none;">
+            <p class="text-muted">請輸入兩步驗證密碼</p>
+            <div class="row">
+                <div class="col-md-8">
+                    <input type="password" id="two-factor-password" class="form-control" placeholder="密碼" required>
+                </div>
+                <div class="col-md-4">
+                    <button id="verify-password-btn" class="btn btn-primary w-100">
+                        <i class="fas fa-unlock"></i>
+                        確認
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="auth-success" style="display: none;">
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i>
+                認證成功！歡迎，<span id="user-name"></span>
+                <button id="logout-btn" class="btn btn-sm btn-outline-secondary float-end">
+                    <i class="fas fa-sign-out-alt"></i>
+                    登出
+                </button>
+            </div>
+        </div>
+    </div>
 
-        <!-- Floating Download Progress Modal -->
-        <div class="floating-progress-modal" id="floating-progress-modal" style="display: none;">
-          <div class="floating-progress-header">
+    <!-- 即時通知容器 -->
+    <div id="notification-container" class="notification-container">
+        <!-- 動態通知會在這裡顯示 -->
+    </div>
+
+    <!-- 下載選擇對話框 -->
+    <div id="download-choice-modal" class="download-modal-overlay" style="display: none;">
+        <div class="download-modal">
+            <div class="download-modal-header">
+                <h5 class="download-modal-title">
+                    <i class="fas fa-download"></i>
+                    選擇下載方式
+                </h5>
+                <button class="download-modal-close" id="download-modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="download-modal-body">
+                <p class="download-modal-description">
+                    已選擇 <span id="download-modal-count">0</span> 個檔案，請選擇下載方式：
+                </p>
+
+                <div class="download-options">
+                    <button class="download-option" id="download-bot-option">
+                        <div class="download-option-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="download-option-content">
+                            <h6>Bot 內下載</h6>
+                            <p>下載到伺服器配置路徑，可透過 Bot 接收通知</p>
+                        </div>
+                    </button>
+
+                    <button class="download-option" id="download-local-option">
+                        <div class="download-option-icon">
+                            <i class="fas fa-laptop"></i>
+                        </div>
+                        <div class="download-option-content">
+                            <h6>本地電腦下載</h6>
+                            <p>打包成 ZIP 檔案直接下載到您的電腦</p>
+                        </div>
+                    </button>
+
+                    <button class="download-option" id="download-both-option">
+                        <div class="download-option-icon">
+                            <i class="fas fa-arrows-alt-h"></i>
+                        </div>
+                        <div class="download-option-content">
+                            <h6>以上皆是</h6>
+                            <p>同時執行 Bot 下載和本地 ZIP 下載</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="download-modal-footer">
+                <button class="btn-secondary" id="download-modal-cancel">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Message Downloader JavaScript Modules -->
+    <script src="{{ url_for('static', filename='js/downloader/core.js') }}?v=2.1"></script>
+    <script src="{{ url_for('static', filename='js/downloader/theme.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/downloader/auth.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/downloader/groups.js') }}?v=2.1"></script>
+    <script src="{{ url_for('static', filename='js/downloader/video_mse.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/downloader/messages.js') }}?v=3.2"></script>
+    <script src="{{ url_for('static', filename='js/downloader/selection.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/downloader/album.js') }}?v=3.0"></script>
+    <script src="{{ url_for('static', filename='js/downloader/notifications.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/downloader/ui.js') }}?v=2.1"></script>
+    <script src="{{ url_for('static', filename='js/downloader/main.js') }}?v=4.2"></script>
+
+
+    <!-- Fixed Animated Chat Controls - Bottom Right Corner -->
+    <div id="chat-controls" class="chat-navigation" style="display: none;">
+        <div class="chat-menu-toggle"></div>
+        <div class="chat-menu">
+            <div class="selection-info">
+                已選擇 <span id="selected-count">0</span> 項
+            </div>
+            <ul>
+                <li style="--i:0.1s;">
+                    <div class="menu-item">
+                        <button id="select-all-btn" title="全選">
+                            <i class="fas fa-check-double"></i>
+                        </button>
+                        <span class="menu-label">全選</span>
+                    </div>
+                </li>
+                <li style="--i:0.2s;">
+                    <div class="menu-item">
+                        <button id="clear-selection-btn" title="清除選擇">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <span class="menu-label">清除</span>
+                    </div>
+                </li>
+                <li style="--i:0.3s;">
+                    <div class="menu-item">
+                        <button id="refresh-messages-btn" title="載入更多訊息">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <span class="menu-label">載入</span>
+                    </div>
+                </li>
+                <li style="--i:0.4s;">
+                    <div class="menu-item">
+                        <button id="jump-to-oldest-btn" title="跳到最舊訊息">
+                            <i class="fas fa-fast-backward"></i>
+                        </button>
+                        <span class="menu-label">最舊</span>
+                    </div>
+                </li>
+                <li style="--i:0.5s;">
+                    <div class="menu-item">
+                        <button id="jump-to-id-btn" title="跳到指定 ID">
+                            <i class="fas fa-hashtag"></i>
+                        </button>
+                        <span class="menu-label">跳至</span>
+                    </div>
+                </li>
+                <li style="--i:0.6s;">
+                    <div class="menu-item">
+                        <button id="fast-test-download-btn" title="開始下載" disabled>
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <span class="menu-label">下載</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 常駐浮動進度條 -->
+    <div id="floating-progress-modal" class="floating-progress-modal" style="display: none;">
+        <div class="floating-progress-header">
             <div class="floating-progress-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7,10 12,15 17,10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              下載進度
+                <i class="fas fa-download"></i>
+                <span>下載進度</span>
             </div>
             <div class="floating-progress-controls">
-              <button class="floating-btn floating-btn-minimize" onclick="minimizeProgressModal()" title="最小化">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </button>
-              <button class="floating-btn floating-btn-close" onclick="closeProgressModal()" title="關閉">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-          
-          <div class="floating-progress-content">
-            <div class="floating-progress-stats">
-              <div class="floating-stat-compact">
-                <div class="floating-stat-row">
-                  <span class="floating-stat-item">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="9,11 12,14 22,4"/>
-                    </svg>
-                    已完成 <strong id="floating-completed-count">0</strong>
-                  </span>
-                  <span class="floating-stat-item">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <polyline points="12,6 12,12 16,14"/>
-                    </svg>
-                    剩餘 <strong id="floating-remaining-count">0</strong>
-                  </span>
-                </div>
-                <div class="floating-stat-row">
-                  <span class="floating-stat-speed">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                      <polyline points="8,9 12,5 16,9"/>
-                    </svg>
-                    <strong id="floating-overall-speed">0.00 B/s</strong>
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div class="floating-progress-bar-container">
-              <div class="floating-progress-bar">
-                <div class="floating-progress-fill" id="floating-progress-bar" style="width: 0%;">
-                  <div class="floating-progress-text" id="floating-progress-text">0%</div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="floating-progress-actions">
-              <button class="floating-action-btn floating-btn-pause" onclick="pauseDownload()" id="floating-pause-btn">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="6" y="4" width="4" height="16"/>
-                  <rect x="14" y="4" width="4" height="16"/>
-                </svg>
-                暫停
-              </button>
-              <button class="floating-action-btn floating-btn-resume" onclick="resumeDownload()" id="floating-resume-btn" style="display: none;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="5,3 19,12 5,21 5,3"/>
-                </svg>
-                繼續
-              </button>
-              <button class="floating-action-btn floating-btn-cancel" onclick="cancelDownload()" id="floating-cancel-btn">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="15" y1="9" x2="9" y2="15"/>
-                  <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-                取消
-              </button>
-            </div>
-            
-            <!-- Concurrent Downloads in Floating Modal -->
-            <div class="floating-concurrent-section" id="floating-concurrent-section" style="display: none;">
-              <div class="floating-concurrent-header">
-                <h4 class="floating-concurrent-title">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
-                  </svg>
-                  並發下載
-                  <span class="floating-concurrent-badge" id="floating-concurrent-count">0</span>
-                </h4>
-                <button class="floating-btn floating-btn-toggle" onclick="toggleConcurrentSection()" id="concurrent-toggle-btn">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6,9 12,15 18,9"/>
-                  </svg>
+                <button id="minimize-progress-btn" class="progress-control-btn" title="最小化">
+                    <i class="fas fa-minus"></i>
                 </button>
-              </div>
-              <div class="floating-concurrent-content" id="floating-concurrent-content">
-                <div class="floating-concurrent-grid" id="floating-concurrent-container">
-                  <!-- Concurrent download items will be added here dynamically -->
-                </div>
-              </div>
+                <button id="close-progress-btn" class="progress-control-btn" title="關閉">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-          </div>
-        </div>
-        
-        <!-- Minimized Progress Indicator -->
-        <div class="minimized-progress-indicator" id="minimized-progress-indicator" style="display: none;" onclick="restoreProgressModal()">
-          <div class="minimized-progress-content">
-            <div class="minimized-progress-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7,10 12,15 17,10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-            </div>
-            <div class="minimized-progress-info">
-              <span class="minimized-progress-label">下載中</span>
-              <div class="minimized-progress-bar">
-                <div class="minimized-progress-fill" id="minimized-progress-bar" style="width: 0%;"></div>
-              </div>
-              <span class="minimized-progress-percentage" id="minimized-progress-text">0%</span>
-            </div>
-          </div>
         </div>
 
-        <!-- Batch Add Download IDs -->
-        <div class="glass-card">
-          <div class="glass-card-header">
-            <h2 class="glass-card-title">批量新增下載任務</h2>
-          </div>
-          <div class="glass-card-body">
-            <form class="glass-form" id="custom-download-form">
-              <div class="glass-form-group">
-                <label class="glass-form-label" for="group-select">選擇群組</label>
-                <select name="chat_id" id="group-select" class="glass-form-select" required>
-                  <option value="">請選擇群組...</option>
-                </select>
-              </div>
-              
-              <div class="glass-form-group">
-                <label class="glass-form-label" for="message-ids">訊息 ID</label>
-                <textarea name="message_ids" id="message-ids" class="glass-form-textarea" 
-                  placeholder="請輸入訊息ID，支援以下格式：&#10;單個ID：123&#10;多個ID：123,456,789&#10;範圍：123-130&#10;混合：123,456-460,789" 
-                  rows="6"></textarea>
-                <div class="glass-form-help">
-                  支援多種格式：單個ID、逗號分隔的多個ID、範圍（如123-130）或混合格式
+        <div class="floating-progress-body">
+            <div class="progress-overview">
+                <div class="progress-status">
+                    <span id="progress-status-text">準備中...</span>
                 </div>
-              </div>
-              
-              <div class="glass-form-group">
-                <div class="flex gap-md">
-                  <button type="submit" class="glass-btn glass-btn-primary flex-1">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7,10 12,15 17,10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    立即加入佇列
-                  </button>
-                  <button type="reset" class="glass-btn glass-btn-secondary">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M3 6h18"/>
-                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                    </svg>
-                    清空
-                  </button>
+                <div class="progress-percentage">
+                    <span id="progress-percentage-text">0%</span>
                 </div>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Download History -->
-        <div class="glass-card">
-          <div class="glass-card-header">
-            <h2 class="glass-card-title">下載歷史管理</h2>
-            <div class="glass-card-actions">
-              <div class="selected-count-display">
-                <span class="selected-count-badge" id="selected-count-badge">
-                  已選中 <strong id="selected-count">0</strong> 個項目
-                </span>
-              </div>
-              <button class="glass-btn glass-btn-sm glass-btn-secondary" onclick="selectAllTasks()">
-                全選
-              </button>
-              <button class="glass-btn glass-btn-sm glass-btn-secondary" onclick="deselectAllTasks()">
-                取消全選
-              </button>
-              <button class="glass-btn glass-btn-sm glass-btn-warning" onclick="selectPendingTasks()">
-                選擇待下載
-              </button>
-              <button class="glass-btn glass-btn-sm glass-btn-success" onclick="startSelectedDownloads()" id="start-download-btn">
-                ▶ 啟動下載
-              </button>
-              <button class="glass-btn glass-btn-sm glass-btn-info" onclick="cleanDownloadedItems()">
-                🧹 清理已下載
-              </button>
-              <button class="glass-btn glass-btn-sm glass-btn-danger" onclick="removeSelectedTasks()">
-                🗑 移除選中
-              </button>
             </div>
-          </div>
-          <div class="glass-card-body">
-            <!-- Filter Toolbar -->
-            <div class="history-filter-toolbar">
-              <div class="filter-row">
-                <div class="filter-controls">
-                  <div class="filter-item">
-                    <select id="group-filter" class="modern-form-select filter-select">
-                      <option value="">🔍 全部群組</option>
-                    </select>
-                  </div>
-                  <div class="filter-item">
-                    <select id="status-filter" class="modern-form-select filter-select">
-                      <option value="">📊 全部狀態</option>
-                      <option value="pending">⏳ 待下載</option>
-                      <option value="downloading">⚡ 下載中</option>
-                      <option value="downloaded">✅ 已下載</option>
-                      <option value="failed">❌ 失敗</option>
-                    </select>
-                  </div>
-                  <div class="filter-item">
-                    <button class="glass-btn glass-btn-sm glass-btn-secondary" onclick="clearFilters()">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M1 4v6h6"/>
-                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-                      </svg>
-                      清除篩選
+
+            <div class="progress-bar-container">
+                <div class="progress-bar">
+                    <div id="progress-bar-fill" class="progress-bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="progress-details">
+                <div class="progress-stats">
+                    <div class="stat-row">
+                        <div class="stat-item">
+                            <div class="stat-label">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>速度</span>
+                            </div>
+                            <span class="stat-value" id="progress-speed">計算中...</span>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">
+                                <i class="fas fa-clock"></i>
+                                <span>剩餘時間</span>
+                            </div>
+                            <span class="stat-value" id="progress-eta">--:--</span>
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-item">
+                            <div class="stat-label">
+                                <i class="fas fa-database"></i>
+                                <span>大小</span>
+                            </div>
+                            <span class="stat-value" id="progress-size">0 B / 0 B</span>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">
+                                <i class="fas fa-file"></i>
+                                <span>檔案</span>
+                            </div>
+                            <span class="stat-value" id="progress-files">0 / 0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 個別檔案下載進度 -->
+            <div class="individual-progress-section">
+                <div class="individual-progress-header">
+                    <h6>
+                        <i class="fas fa-list"></i>
+                        個別檔案進度
+                    </h6>
+                    <button id="toggle-individual-progress" class="toggle-btn">
+                        <i class="fas fa-chevron-down"></i>
                     </button>
-                  </div>
                 </div>
-                <div class="filter-stats">
-                  <span id="filtered-count" class="stats-badge">
-                    📋 顯示：0 項目
-                  </span>
-                  <div class="pagination-controls">
-                    <label for="items-per-page">每頁：</label>
-                    <select id="items-per-page" class="modern-form-select items-per-page-select">
-                      <option value="10">10</option>
-                      <option value="20" selected>20</option>
-                      <option value="30">30</option>
-                      <option value="50">50</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            <!-- Download History List -->
-            <div class="glass-list" id="download-history-list">
-              <!-- History items will be dynamically generated here -->
+                <div id="individual-progress-container" class="individual-progress-container">
+                    <div class="individual-progress-list" id="individual-progress-list">
+                        <!-- 個別檔案進度項目將動態加載到這裡 -->
+                        <div class="no-files-message">
+                            <i class="fas fa-hourglass-start"></i>
+                            <span>等待下載開始...</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <!-- Pagination -->
-            <div id="pagination-container" class="flex justify-center mt-lg">
-              <!-- Pagination controls will be generated here -->
-            </div>
-          </div>
         </div>
-      </div>
-
-      <!-- Group Manager Tab -->
-      <div id="group-manager" class="modern-tabs-panel">
-        <!-- Add Group Form -->
-        <div class="glass-card">
-          <div class="glass-card-header">
-            <h2 class="glass-card-title">新增群組</h2>
-          </div>
-          <div class="glass-card-body">
-            <form class="glass-form" id="add-group-form">
-              <div class="modern-grid modern-grid-2 gap-md">
-                <div class="glass-form-group">
-                  <label class="glass-form-label" for="new-chat-id">群組 Chat ID</label>
-                  <input type="text" name="chat_id" id="new-chat-id" class="glass-form-input" 
-                    placeholder="輸入群組的 Chat ID" required>
-                  <div class="glass-form-help">可在 Telegram 中獲取群組的唯一 ID</div>
-                </div>
-                
-                <div class="glass-form-group">
-                  <label class="glass-form-label" for="new-group-name">群組名稱</label>
-                  <input type="text" name="name" id="new-group-name" class="glass-form-input" 
-                    placeholder="輸入群組顯示名稱" required>
-                  <div class="glass-form-help">用於在介面中顯示的友好名稱</div>
-                </div>
-              </div>
-              
-              <div class="glass-form-group">
-                <div class="flex gap-md">
-                  <button type="submit" class="glass-btn glass-btn-success">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                    新增群組
-                  </button>
-                  <button type="button" class="glass-btn glass-btn-secondary" onclick="checkGroupAccess()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M9 12l2 2 4-4"/>
-                      <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
-                    </svg>
-                    檢查群組權限
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Groups List -->
-        <div class="glass-card">
-          <div class="glass-card-header">
-            <h2 class="glass-card-title">群組管理</h2>
-            <div class="glass-card-actions">
-              <button class="glass-btn glass-btn-sm glass-btn-secondary" onclick="selectAllGroups()">全選</button>
-              <button class="glass-btn glass-btn-sm glass-btn-danger" onclick="deleteSelectedGroups()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3,6 5,6 21,6"/>
-                  <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6M8,6V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
-                </svg>
-                批量刪除
-              </button>
-              <button class="glass-btn glass-btn-sm glass-btn-warning" onclick="clearSelectedGroups()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 6h18"/>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                </svg>
-                批量清空
-              </button>
-            </div>
-          </div>
-          <div class="glass-card-body">
-            <div class="glass-list" id="groups-list">
-              <!-- Groups will be dynamically loaded here -->
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Fast Test Tab -->
-      <div id="fast-test" class="modern-tabs-panel">
-        <!-- Authentication Section (shown when not logged in) -->
-        <div id="fast-test-login" class="glass-card" style="display: block;">
-          <div class="glass-card-header">
-            <h2 class="glass-card-title">🚀 快速測試</h2>
-            <p class="glass-card-subtitle">登入您的 Telegram 帳號以開始使用快速測試功能</p>
-          </div>
-          <div class="glass-card-body">
-            <!-- Login Form -->
-            <div id="login-form" class="fast-test-section">
-              <div class="glass-form-group">
-                <label class="glass-form-label" for="phone-number">電話號碼</label>
-                <input type="tel" id="phone-number" class="glass-form-input" 
-                  placeholder="+886912345678" required>
-                <div class="glass-form-help">請輸入完整的國際電話號碼格式</div>
-              </div>
-              <button type="button" id="send-code-btn" class="glass-btn glass-btn-primary">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="m22 2-7 20-4-9-9-4 20-7z"/>
-                </svg>
-                發送驗證碼
-              </button>
-            </div>
-
-            <!-- Code Verification Form -->
-            <div id="code-form" class="fast-test-section" style="display: none;">
-              <div class="glass-form-group">
-                <label class="glass-form-label" for="verification-code">驗證碼</label>
-                <input type="text" id="verification-code" class="glass-form-input" 
-                  placeholder="輸入 Telegram 驗證碼" required>
-                <div class="glass-form-help">請檢查您的 Telegram 應用程式以獲取驗證碼</div>
-              </div>
-              <div class="flex gap-md">
-                <button type="button" id="verify-code-btn" class="glass-btn glass-btn-success">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20,6 9,17 4,12"/>
-                  </svg>
-                  驗證
-                </button>
-                <button type="button" id="back-to-phone-btn" class="glass-btn glass-btn-secondary">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="m12 19-7-7 7-7"/>
-                    <path d="M19 12H5"/>
-                  </svg>
-                  返回
-                </button>
-              </div>
-            </div>
-
-            <!-- Password Form (for 2FA) -->
-            <div id="password-form" class="fast-test-section" style="display: none;">
-              <div class="glass-form-group">
-                <label class="glass-form-label" for="two-fa-password">兩步驗證密碼</label>
-                <input type="password" id="two-fa-password" class="glass-form-input" 
-                  placeholder="輸入兩步驗證密碼" required>
-                <div class="glass-form-help">您的帳號已啟用兩步驗證，請輸入密碼</div>
-              </div>
-              <button type="button" id="verify-password-btn" class="glass-btn glass-btn-success">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M9 12l2 2 4-4"/>
-                  <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
-                </svg>
-                確認
-              </button>
-            </div>
-
-            <!-- Status Display -->
-            <div id="auth-status" class="fast-test-status" style="display: none;"></div>
-          </div>
-        </div>
-
-        <!-- Main Interface (shown when logged in) -->
-        <div id="fast-test-main" class="fast-test-main" style="display: none;">
-          <!-- User Info -->
-          <div class="glass-card glass-card-compact">
-            <div class="glass-card-body">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-md">
-                  <div class="user-avatar">👤</div>
-                  <div>
-                    <div class="user-name" id="user-display-name">載入中...</div>
-                    <div class="user-phone" id="user-display-phone"></div>
-                  </div>
-                </div>
-                <div class="flex items-center gap-sm">
-                  <button type="button" id="sync-groups-btn" class="glass-btn glass-btn-sm glass-btn-secondary" title="同步群組">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M23 4v6h-6"/>
-                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                    </svg>
-                  </button>
-                  <button type="button" id="logout-btn" class="glass-btn glass-btn-sm glass-btn-danger" title="登出">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                      <polyline points="16,17 21,12 16,7"/>
-                      <line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Group Selection -->
-          <div class="glass-card">
-            <div class="glass-card-header">
-              <h3 class="glass-card-title">選擇群組</h3>
-              <div class="glass-card-actions">
-                <button type="button" id="refresh-groups-btn" class="glass-btn glass-btn-sm glass-btn-secondary" title="重新整理">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6"/>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div class="glass-card-body">
-              <div class="glass-form-group">
-                <label class="glass-form-label" for="group-selector">選擇要瀏覽的群組</label>
-                <select id="group-selector" class="glass-form-select">
-                  <option value="">-- 請選擇群組 --</option>
-                </select>
-                <div class="glass-form-help">選擇群組後將載入最新的訊息內容</div>
-              </div>
-              <button type="button" id="load-messages-btn" class="glass-btn glass-btn-primary" disabled>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-                載入訊息
-              </button>
-            </div>
-          </div>
-
-          <!-- Messages Display -->
-          <div id="messages-container" class="glass-card" style="display: none;">
-            <div class="glass-card-header">
-              <h3 class="glass-card-title">訊息列表</h3>
-              <div class="glass-card-actions">
-                <div class="flex items-center gap-sm">
-                  <label class="glass-checkbox">
-                    <input type="checkbox" id="media-only-filter">
-                    <span class="glass-checkbox-mark"></span>
-                    僅顯示媒體
-                  </label>
-                  <button type="button" id="select-all-messages" class="glass-btn glass-btn-sm glass-btn-secondary">全選</button>
-                  <button type="button" id="start-download-btn" class="glass-btn glass-btn-sm glass-btn-success" disabled>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7,10 12,15 17,10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    開始下載
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="glass-card-body">
-              <div id="selected-count" class="fast-test-status" style="display: none;">
-                已選擇 <span id="selected-count-number">0</span> 個訊息
-              </div>
-              <div id="messages-list" class="messages-list">
-                <!-- Messages will be loaded here -->
-              </div>
-              <div id="load-more-container" style="display: none;">
-                <button type="button" id="load-more-btn" class="glass-btn glass-btn-secondary glass-btn-full">
-                  載入更多訊息
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Download Progress -->
-          <div id="download-progress-container" class="glass-card" style="display: none;">
-            <div class="glass-card-header">
-              <h3 class="glass-card-title">下載進度</h3>
-            </div>
-            <div class="glass-card-body">
-              <div class="download-summary">
-                <div class="download-stat">
-                  <span class="download-stat-label">總計</span>
-                  <span class="download-stat-value" id="total-downloads">0</span>
-                </div>
-                <div class="download-stat">
-                  <span class="download-stat-label">已完成</span>
-                  <span class="download-stat-value" id="completed-downloads">0</span>
-                </div>
-                <div class="download-stat">
-                  <span class="download-stat-label">失敗</span>
-                  <span class="download-stat-value" id="failed-downloads">0</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <!-- JavaScript Dependencies -->
-  <script src="{{ url_for('static', filename='request/index.js') }}"></script>
-  
-  <!-- Modern JavaScript Implementation -->
-  <script src="{{ url_for('static', filename='js/modern.js') }}"></script>
-  
-  <script>
-    // Initialize icons
-    if (typeof lucide !== 'undefined') {
-      lucide.createIcons();
-    }
-    
-    // Initialize the modern interface
-    document.addEventListener('DOMContentLoaded', function() {
-      ModernTelegramDownloader.init();
-    });
-  </script>
+    <!-- 最小化進度指示器 -->
+    <div id="minimized-progress-indicator" class="minimized-progress-indicator" style="display: none;">
+        <div class="minimized-progress-content">
+            <div class="minimized-icon">
+                <i class="fas fa-download"></i>
+            </div>
+            <div class="minimized-info">
+                <div class="minimized-percentage">0%</div>
+                <div class="minimized-bar">
+                    <div id="minimized-progress-fill" class="minimized-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 跳轉到指定 ID 對話框 -->
+    <div id="jump-to-id-modal" class="download-modal-overlay" style="display: none;">
+        <div class="download-modal" style="max-width: 400px;">
+            <div class="download-modal-header">
+                <h5 class="download-modal-title">
+                    <i class="fas fa-hashtag"></i>
+                    跳到指定訊息 ID
+                </h5>
+                <button class="download-modal-close" id="jump-modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="download-modal-body">
+                <p class="download-modal-description">
+                    請輸入想要跳轉的訊息 ID：
+                </p>
+                <input type="number" id="jump-message-id-input" class="form-control jump-input"
+                       placeholder="例如：12345" min="1">
+                <div id="jump-id-error" class="jump-error-message" style="display: none;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="jump-id-error-text">請輸入有效的訊息 ID</span>
+                </div>
+            </div>
+
+            <div class="download-modal-footer jump-modal-footer">
+                <button class="jump-btn jump-btn-secondary" id="jump-modal-cancel">取消</button>
+                <button class="jump-btn jump-btn-primary" id="jump-modal-confirm">
+                    <i class="fas fa-arrow-right"></i>
+                    跳轉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入進度指示器 -->
+    <div id="jump-loading-indicator" class="jump-loading-overlay" style="display: none;">
+        <div class="jump-loading-content">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">載入中...</span>
+            </div>
+            <p class="mt-3" style="font-size: 1.1em; font-weight: 500;">正在載入訊息...</p>
+            <p id="jump-loading-status" class="text-muted" style="font-size: 0.9em;">準備中...</p>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal - 圖片放大預覽 -->
+    <div id="lightbox-modal" class="lightbox-overlay" style="display: none;">
+        <div class="lightbox-container">
+            <button class="lightbox-close" id="lightbox-close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+            <button class="lightbox-prev" id="lightbox-prev-btn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="lightbox-next" id="lightbox-next-btn">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <div class="lightbox-content">
+                <img id="lightbox-image" src="" alt="Preview">
+                <div class="lightbox-loading" id="lightbox-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>載入中...</span>
+                </div>
+            </div>
+            <div class="lightbox-info-bar">
+                <div class="lightbox-info-left">
+                    <span class="lightbox-filename" id="lightbox-filename">檔案名稱</span>
+                    <span class="lightbox-message-id" id="lightbox-message-id">#1234</span>
+                    <div class="lightbox-caption" id="lightbox-caption" style="display: none; margin-top: 8px; opacity: 0.9; font-size: 0.95em; max-width: 600px; line-height: 1.4;"></div>
+                </div>
+                <div class="lightbox-counter">
+                    <span id="lightbox-current">1</span> / <span id="lightbox-total">10</span>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

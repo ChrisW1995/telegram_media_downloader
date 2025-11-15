@@ -1199,9 +1199,24 @@ async def download_from_bot(client: pyrogram.Client, message: pyrogram.types.Mes
             )
             node.is_running = True
             _bot.add_task_node(node)
+
+            # Debug logging
+            logger.info(f"🔍 DEBUG: _bot.download_chat_task = {_bot.download_chat_task}")
+            logger.info(f"🔍 DEBUG: Creating download task for chat {entity.id}, node task_id = {node.task_id}")
+
+            if _bot.download_chat_task is None:
+                logger.error("❌ ERROR: _bot.download_chat_task is None! Bot download function not initialized.")
+                await client.send_message(
+                    message.from_user.id,
+                    "⚠️ Bot download function not initialized. Please restart the application.",
+                    reply_to_message_id=message.id
+                )
+                return
+
             _bot.app.loop.create_task(
                 _bot.download_chat_task(_bot.client, chat_download_config, node)
             )
+            logger.info(f"✅ Download task created successfully for chat {entity.id}")
     except Exception as e:
         await client.send_message(
             message.from_user.id,

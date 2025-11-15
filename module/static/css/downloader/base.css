@@ -1,0 +1,57 @@
+/*
+ * Base Styles and Variables System
+ * ===============================
+ *
+ * This file contains:
+ * - CSS custom properties (variables)
+ * - Basic reset styles
+ * - Root HTML/body styles
+ * - Apple system font definitions
+ * - Core Apple design language variables
+ */
+
+/* Apple-style color palette */
+:root {
+    /* Apple Colors */
+    --apple-blue: #007AFF;
+    --apple-green: #34C759;
+    --apple-orange: #FF9500;
+    --apple-red: #FF3B30;
+    --apple-purple: #AF52DE;
+}
+
+/* Apple-style font system */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* Container system */
+.container-fluid {
+    max-width: none; /* 移除最大寬度限制 */
+    width: 100%;
+    margin: 0;
+    padding: env(safe-area-inset-top, 20px) 16px env(safe-area-inset-bottom, 20px) 16px !important;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+/* Utility classes */
+.fade-in {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* Typography compatibility aliases */
+:root {
+    --apple-label-primary: var(--theme-text-primary);
+    --apple-label-secondary: var(--theme-text-secondary);
+    --apple-label-tertiary: var(--theme-text-tertiary);
+    --apple-label-quaternary: var(--theme-text-tertiary);
+    --apple-link: var(--apple-blue);
+}

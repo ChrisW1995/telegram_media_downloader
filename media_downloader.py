@@ -895,6 +895,24 @@ async def run_until_all_task_finish():
         await asyncio.sleep(1)
 
 
+async def run_web_server_task(quart_app):
+    """Run Quart web server using Hypercorn in the main event loop"""
+    try:
+        from hypercorn.asyncio import serve
+        from hypercorn.config import Config as HyperConfig
+
+        config = HyperConfig()
+        config.bind = [f"{quart_app.web_host}:{quart_app.web_port}"]
+        config.use_reloader = False
+
+        logger.info(f"Starting Hypercorn server on {quart_app.web_host}:{quart_app.web_port}")
+        await serve(quart_app, config)
+    except Exception as e:
+        logger.error(f"Web server error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+
+
 def _exec_loop():
     """Exec loop"""
 
@@ -949,20 +967,28 @@ def main():
     )
     try:
         app.pre_run()
-        init_web(app, client, queue)
+
+        # Initialize web module and get Quart app
+        quart_app = init_web(app, client, queue)
 
         set_max_concurrent_transmissions(client, app.max_concurrent_transmissions)
 
         app.loop.run_until_complete(start_server(client))
         logger.success(_t("Successfully started (Press Ctrl+C to stop)"))
 
+        # Start web server task in the main event loop
+        if quart_app:
+            web_task = app.loop.create_task(run_web_server_task(quart_app))
+            tasks.append(web_task)
+            logger.info("Web server task started in main event loop")
+
         # Start worker tasks first
         for _ in range(app.max_download_task):
             task = app.loop.create_task(worker(client))
             tasks.append(task)
-        
+
         app.loop.create_task(download_all_chat(client))
-        
+
         # Custom download functionality - removed auto-start, now controlled via web interface
 
         if app.bot_token:

@@ -81,14 +81,29 @@ def run_async_in_thread(coro):
             return result
         finally:
             try:
-                # 清理 loop 中的待處理任務
+                # 給予額外時間讓 Pyrogram 的背景任務完成（例如檔案緩衝刷新）
+                # 不要立即取消所有待處理任務，這會導致檔案損壞
                 pending = asyncio.all_tasks(loop)
-                for task in pending:
-                    task.cancel()
 
                 if pending:
-                    # 等待所有任務被取消
-                    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                    # 等待所有待處理任務自然完成（最多 2 秒）
+                    try:
+                        loop.run_until_complete(
+                            asyncio.wait_for(
+                                asyncio.gather(*pending, return_exceptions=True),
+                                timeout=2.0
+                            )
+                        )
+                        logger.debug(f"All {len(pending)} pending tasks completed gracefully")
+                    except asyncio.TimeoutError:
+                        # 如果 2 秒後仍有任務未完成，才進行取消
+                        logger.warning(f"{len(pending)} tasks did not complete, cancelling...")
+                        for task in pending:
+                            task.cancel()
+                        try:
+                            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                        except Exception:
+                            pass
 
                 loop.close()
                 logger.debug("Event loop cleaned up successfully")

@@ -1,0 +1,65 @@
+2025-11-03 21:50:28.233 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-03 21:50:28.234 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-03 21:50:28.234 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-03 21:50:28.234 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-03 21:50:28.234 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-03 21:50:28.234 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-03 21:50:28.234 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-03 21:50:28.234 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-03 21:50:28.234 | INFO     | database.database_manager:initialize_database:143 - Database initialized successfully: /Users/chriswang/Documents/Py/TGDL-dev/tgdl.db
+[21:50:28] Telegram Media Downloader v2.2.5,                          meta.py:18
+           Copyright (C) 2025 tangyoha <https://github.com/tangyoha>            
+           Licensed under the terms of the MIT License                meta.py:21
+                                                                                
+2025-11-03 21:50:28.237 | INFO     | utils.meta:print_meta:22 - Device: CPython 3.11.5 - Telegram Media Downloader 2.2.5
+2025-11-03 21:50:28.237 | INFO     | utils.meta:print_meta:23 - System: Darwin 25.0.0 (EN)
+2025-11-03 21:50:28.237 | INFO     | module.app_db:load_config_from_database:225 - Configuration loaded from database
+2025-11-03 21:50:28.240 | DEBUG    | module.app_db:_cleanup_session_files:611 - No stale session temporary files found
+2025-11-03 21:50:28.241 | ERROR    | __main__:main:977 - 'PROVIDE_AUTOMATIC_OPTIONS'
+Traceback (most recent call last):
+
+  File "/Users/chriswang/Documents/Py/TGDL-dev/media_downloader.py", line 1036, in <module>
+    main()
+    └ <function main at 0x1079525c0>
+
+> File "/Users/chriswang/Documents/Py/TGDL-dev/media_downloader.py", line 952, in main
+    init_web(app, client, queue)
+    │        │    │       └ <Queue at 0x10795a090 maxsize=0>
+    │        │    └ <module.pyrogram_extension.HookClient object at 0x1079750d0>
+    │        └ <module.app_db.DatabaseApplication object at 0x107365690>
+    └ <function init_web at 0x105d20ae0>
+
+  File "/Users/chriswang/Documents/Py/TGDL-dev/module/web/__init__.py", line 48, in init_web
+    _quart_app = create_quart_app()
+                 └ <function create_quart_app at 0x1079532e0>
+
+  File "/Users/chriswang/Documents/Py/TGDL-dev/module/web/core/app_factory.py", line 42, in create_quart_app
+    _quart_app = Quart(__name__,
+                 │     └ 'module.web.core.app_factory'
+                 └ <class 'quart.app.Quart'>
+
+  File "/Users/chriswang/miniconda3/lib/python3.11/site-packages/quart/app.py", line 336, in __init__
+    self.add_url_rule(
+    │    └ <function App.add_url_rule at 0x1073d3740>
+    └ <Quart 'module.web.core.app_factory'>
+  File "/Users/chriswang/miniconda3/lib/python3.11/site-packages/flask/sansio/scaffold.py", line 47, in wrapper_func
+    return f(self, *args, **kwargs)
+           │ │      │       └ {'host': None}
+           │ │      └ ('/static/<path:filename>', 'static', <bound method Quart.send_static_file of <Quart 'module.web.core.app_factory'>>)
+           │ └ <Quart 'module.web.core.app_factory'>
+           └ <function App.add_url_rule at 0x1073d36a0>
+  File "/Users/chriswang/miniconda3/lib/python3.11/site-packages/flask/sansio/app.py", line 641, in add_url_rule
+    if "OPTIONS" not in methods and self.config["PROVIDE_AUTOMATIC_OPTIONS"]:
+                        │           │    └ <Config {'APPLICATION_ROOT': '/', 'BACKGROUND_TASK_SHUTDOWN_TIMEOUT': 5, 'BODY_TIMEOUT': 60, 'DEBUG': False, 'ENV': None, 'EX...
+                        │           └ <Quart 'module.web.core.app_factory'>
+                        └ {'GET'}
+
+KeyError: 'PROVIDE_AUTOMATIC_OPTIONS'
+2025-11-03 21:50:28.245 | INFO     | __main__:main:981 - Starting cleanup process...
+2025-11-03 21:50:28.245 | INFO     | __main__:main:1010 - Stopped!
+2025-11-03 21:50:28.245 | INFO     | __main__:main:1014 - update config......
+2025-11-03 21:50:28.245 | INFO     | module.app_db:update_config:447 - 已清空所有失敗的下載記錄
+2025-11-03 21:50:28.247 | DEBUG    | module.app_db:save_config_to_database:358 - Configuration saved to database
+2025-11-03 21:50:28.247 | SUCCESS  | __main__:main:1016 - Updated last read message_id to config file,total download 0, total upload file 0
+2025-11-03 21:50:28.248 | DEBUG    | __main__:main:1029 - Database connections closed
+Using session directory: /Users/chriswang/.telegram_sessions

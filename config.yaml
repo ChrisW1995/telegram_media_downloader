@@ -33,7 +33,7 @@ media_types:
 - document
 - sticker
 save_path: TGDL/unified_downloads
-web_port: 5001
+web_port: 5002
 bot_save_path: /Users/chriswang/Documents/Py/TGDL/TGDL/unified_downloads
 allowed_user_ids:
 - 7588743028

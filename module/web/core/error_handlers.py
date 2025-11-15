@@ -1,8 +1,9 @@
-"""統一錯誤處理模組"""
+"""統一錯誤處理模組 (支援 Quart async)"""
 
-from flask import jsonify
+from quart import jsonify
 from loguru import logger
 import traceback
+import inspect
 
 
 def success_response(data=None, message="操作成功"):
@@ -22,13 +23,20 @@ def error_response(message, error_code=400, data=None):
 
 
 def handle_api_exception(func):
-    """API 異常處理裝飾器"""
+    """API 異常處理裝飾器 - 支援 async 函數
+
+    自動檢測被裝飾函數是否為 async，並相應處理。
+    """
     from functools import wraps
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    async def wrapper(*args, **kwargs):
         try:
-            return func(*args, **kwargs)
+            # 如果原函數是 async，await 它；否則直接調用
+            if inspect.iscoroutinefunction(func):
+                return await func(*args, **kwargs)
+            else:
+                return func(*args, **kwargs)
         except Exception as e:
             logger.error(f"API error in {func.__name__}: {e}")
             logger.error(traceback.format_exc())
@@ -37,19 +45,19 @@ def handle_api_exception(func):
 
 
 def register_error_handlers(app):
-    """註冊全局錯誤處理器"""
+    """註冊全局錯誤處理器 (Quart async)"""
 
     @app.errorhandler(404)
-    def not_found_error(error):
+    async def not_found_error(error):
         return error_response("資源不存在", 404)
 
     @app.errorhandler(500)
-    def internal_error(error):
+    async def internal_error(error):
         logger.error(f"Internal server error: {error}")
         return error_response("伺服器內部錯誤", 500)
 
     @app.errorhandler(Exception)
-    def unhandled_exception(e):
+    async def unhandled_exception(e):
         logger.error(f"Unhandled exception: {e}")
         logger.error(traceback.format_exc())
         return error_response("發生未預期的錯誤", 500)

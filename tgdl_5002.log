@@ -1,0 +1,92 @@
+2025-11-02 20:28:08.691 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-02 20:28:08.691 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-02 20:28:08.691 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-02 20:28:08.691 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-02 20:28:08.691 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-02 20:28:08.691 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-02 20:28:08.691 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): incomplete input
+2025-11-02 20:28:08.691 | WARNING  | database.database_manager:initialize_database:137 - Schema statement failed (possibly expected): cannot commit - no transaction is active
+2025-11-02 20:28:08.691 | INFO     | database.database_manager:initialize_database:143 - Database initialized successfully: /Users/chriswang/Documents/Py/TGDL-dev/tgdl.db
+[20:28:08] Telegram Media Downloader v2.2.5,                          meta.py:18
+           Copyright (C) 2025 tangyoha <https://github.com/tangyoha>            
+           Licensed under the terms of the MIT License                meta.py:21
+                                                                                
+2025-11-02 20:28:08.694 | INFO     | utils.meta:print_meta:22 - Device: CPython 3.11.5 - Telegram Media Downloader 2.2.5
+2025-11-02 20:28:08.694 | INFO     | utils.meta:print_meta:23 - System: Darwin 25.0.0 (EN)
+2025-11-02 20:28:08.694 | INFO     | module.app_db:load_config_from_database:225 - Configuration loaded from database
+2025-11-02 20:28:08.697 | INFO     | module.app_db:_cleanup_session_files:604 - Cleaned up stale session temp file: media_downloader_bot.session-wal
+2025-11-02 20:28:08.698 | INFO     | module.app_db:_cleanup_session_files:604 - Cleaned up stale session temp file: media_downloader_bot.session-shm
+2025-11-02 20:28:08.698 | INFO     | module.app_db:_cleanup_session_files:609 - Session cleanup completed: 2 temporary files removed
+2025-11-02 20:28:08.714 | INFO     | module.web.core.app_factory:create_flask_app:131 - Flask application created successfully with event loop support
+2025-11-02 20:28:08.714 | INFO     | module.web:init_web:64 - Using main application's event loop for Flask app
+2025-11-02 20:28:08.722 | INFO     | module.web.message_downloader:register_blueprints:73 - Message Downloader blueprints registered successfully
+2025-11-02 20:28:08.722 | INFO     | module.web:init_web:97 - Web module initialized with new modular structure
+2025-11-02 20:28:08.722 | INFO     | module.web:init_web:98 - Web server started on 0.0.0.0:5002
+Using session directory: /Users/chriswang/.telegram_sessions
+ * Serving Flask app 'module.web.core.app_factory'
+ * Debug mode: off
+Address already in use
+Port 5002 is in use by another program. Either identify and stop that program, or start the server with a different port.
+2025-11-02 20:28:09.783 | ERROR    | __main__:main:977 - database is locked
+Traceback (most recent call last):
+
+  File "/Users/chriswang/Documents/Py/TGDL-dev/media_downloader.py", line 1036, in <module>
+    main()
+    └ <function main at 0x10ac11260>
+
+> File "/Users/chriswang/Documents/Py/TGDL-dev/media_downloader.py", line 956, in main
+    app.loop.run_until_complete(start_server(client))
+    │   │    │                  │            └ <module.pyrogram_extension.HookClient object at 0x10ac33e50>
+    │   │    │                  └ <function start_server at 0x10ac11120>
+    │   │    └ <function BaseEventLoop.run_until_complete at 0x1062a99e0>
+    │   └ <_UnixSelectorEventLoop running=False closed=False debug=False>
+    └ <module.app_db.DatabaseApplication object at 0x10ac0bb50>
+
+  File "/Users/chriswang/miniconda3/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           │      └ <method 'result' of '_asyncio.Task' objects>
+           └ <Task finished name='Task-1' coro=<start_server() done, defined at /Users/chriswang/Documents/Py/TGDL-dev/media_downloader.py...
+
+  File "/Users/chriswang/Documents/Py/TGDL-dev/media_downloader.py", line 908, in start_server
+    await client.start()
+          │      └ <function HookClient.start at 0x10a40ad40>
+          └ <module.pyrogram_extension.HookClient object at 0x10ac33e50>
+
+  File "/Users/chriswang/Documents/Py/TGDL-dev/module/pyrogram_extension.py", line 1321, in start
+    is_authorized = await self.connect()
+                          │    └ <function HookClient.connect at 0x10a40aca0>
+                          └ <module.pyrogram_extension.HookClient object at 0x10ac33e50>
+
+  File "/Users/chriswang/Documents/Py/TGDL-dev/module/pyrogram_extension.py", line 1298, in connect
+    await self.load_session()
+          │    └ <function Client.load_session at 0x1095d5c60>
+          └ <module.pyrogram_extension.HookClient object at 0x10ac33e50>
+
+  File "/Users/chriswang/miniconda3/lib/python3.11/site-packages/pyrogram/client.py", line 699, in load_session
+    await self.storage.open()
+          │    │       └ <function FileStorage.open at 0x1095d4e00>
+          │    └ <pyrogram.storage.file_storage.FileStorage object at 0x10a6aa650>
+          └ <module.pyrogram_extension.HookClient object at 0x10ac33e50>
+  File "/Users/chriswang/miniconda3/lib/python3.11/site-packages/pyrogram/storage/file_storage.py", line 103, in open
+    self.update()
+    │    └ <function FileStorage.update at 0x1095d4d60>
+    └ <pyrogram.storage.file_storage.FileStorage object at 0x10a6aa650>
+  File "/Users/chriswang/miniconda3/lib/python3.11/site-packages/pyrogram/storage/file_storage.py", line 92, in update
+    self.version(version)
+    │    │       └ 6
+    │    └ <function SQLiteStorage.version at 0x1095d4c20>
+    └ <pyrogram.storage.file_storage.FileStorage object at 0x10a6aa650>
+  File "/Users/chriswang/miniconda3/lib/python3.11/site-packages/pyrogram/storage/sqlite_storage.py", line 278, in version
+    self.conn.execute(
+    │    │    └ <method 'execute' of 'sqlite3.Connection' objects>
+    │    └ <sqlite3.Connection object at 0x10ac434c0>
+    └ <pyrogram.storage.file_storage.FileStorage object at 0x10a6aa650>
+
+sqlite3.OperationalError: database is locked
+2025-11-02 20:28:09.797 | INFO     | __main__:main:981 - Starting cleanup process...
+2025-11-02 20:28:09.798 | INFO     | __main__:main:1010 - Stopped!
+2025-11-02 20:28:09.799 | INFO     | __main__:main:1014 - update config......
+2025-11-02 20:28:09.799 | INFO     | module.app_db:update_config:447 - 已清空所有失敗的下載記錄
+2025-11-02 20:28:09.803 | DEBUG    | module.app_db:save_config_to_database:358 - Configuration saved to database
+2025-11-02 20:28:09.803 | SUCCESS  | __main__:main:1016 - Updated last read message_id to config file,total download 0, total upload file 0
+2025-11-02 20:28:09.803 | DEBUG    | __main__:main:1029 - Database connections closed

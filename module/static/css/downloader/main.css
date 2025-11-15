@@ -1,0 +1,62 @@
+/*
+ * Message Downloader Main CSS Index
+ * =================================
+ *
+ * This is the main CSS file that imports all modular components
+ * in the correct loading order for the Message Downloader interface.
+ *
+ * Loading Order:
+ * 1. base.css - Foundation variables and reset styles
+ * 2. theme.css - Theme management and color schemes
+ * 3. layout.css - Layout structure and containers
+ * 4. components.css - UI components and form controls
+ * 5. chat.css - Chat interface and message bubbles
+ * 6. controls.css - Navigation and control elements
+ * 7. animations.css - Animations and transitions
+ * 8. responsive.css - Media queries and responsive design
+ *
+ * Architecture Benefits:
+ * - Modular organization for easy maintenance
+ * - Clear separation of concerns
+ * - Efficient development workflow
+ * - Reusable component styles
+ * - Optimized loading sequence
+ */
+
+/* Core Foundation */
+@import 'base.css';
+
+/* Theme System */
+@import 'theme.css';
+
+/* Layout Structure */
+@import 'layout.css';
+
+/* UI Components */
+@import 'components.css';
+
+/* Chat Interface */
+@import 'chat.css';
+
+/* Control Elements */
+@import 'controls.css';
+
+/* Animations & Effects */
+@import 'animations.css';
+
+/* Responsive Design */
+@import 'responsive.css';
+
+/*
+ * Module Summary:
+ * ===============
+ *
+ * base.css        - Apple design variables, font system, container setup
+ * theme.css       - Light/dark themes, background system, theme switching
+ * layout.css      - App layout, sidebar, main content, chat area structure
+ * components.css  - Buttons, forms, status indicators, search, typography
+ * chat.css        - Message bubbles, media display, group items, selection
+ * controls.css    - Chat navigation, menu controls, notifications, counters
+ * animations.css  - Keyframes, transitions, glass morphism, loading effects
+ * responsive.css  - Media queries, mobile optimization, scrollbar styling
+ */

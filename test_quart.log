@@ -1,0 +1,60 @@
+2025-11-03 18:58:13.113 | INFO     | __main__:main:270 - 🧪 啟動 Quart POC 測試服務...
+2025-11-03 18:58:13.113 | INFO     | __main__:main:271 - 📍 測試端點: http://localhost:5003/test/video_stream/<chat_id>/<message_id>
+2025-11-03 18:58:13.113 | INFO     | __main__:main:272 - 💚 健康檢查: http://localhost:5003/test/health
+[2025-11-03 18:58:13 +0800] [8571] [INFO] Running on http://0.0.0.0:5003 (CTRL + C to quit)
+2025-11-03 18:58:43.975 | INFO     | __main__:stream_video_progressive:47 - 🎬 開始串流測試: chat_id=-1002468596496, message_id=1472
+2025-11-03 18:58:44.488 | INFO     | module.multiuser_auth:__init__:26 - 🎯 TelegramAuthManager.__init__ - NEW VERSION WITH UPDATE HANDLER!
+2025-11-03 18:58:44.488 | INFO     | module.multiuser_auth:_load_sessions:710 - Loaded 2 user sessions from file
+2025-11-03 18:58:44.488 | INFO     | __main__:async_generate_video:71 - 📱 嘗試從 session 創建客戶端: user_id=493539630
+2025-11-03 18:58:45.161 | SUCCESS  | __main__:async_generate_video:81 - ✅ 成功創建客戶端: user_id=493539630
+2025-11-03 18:58:45.162 | INFO     | __main__:async_generate_video:84 - 📥 正在獲取訊息...
+2025-11-03 18:58:45.360 | INFO     | __main__:async_generate_video:94 - 📹 影片大小: 1678.18 MB
+2025-11-03 18:58:45.361 | SUCCESS  | __main__:async_generate_video:97 - 🎬 啟動 FFmpeg 轉換管道...
+2025-11-03 18:58:45.370 | INFO     | __main__:async_generate_video:125 - ✅ FFmpeg 進程已啟動 (PID: 8745)
+2025-11-03 18:58:45.370 | INFO     | __main__:async_generate_video:184 - 📤 開始從 FFmpeg 讀取轉換後的數據...
+2025-11-03 18:58:45.370 | SUCCESS  | __main__:write_to_ffmpeg:133 - 🚀 開始從 Telegram 下載並傳給 FFmpeg...
+2025-11-03 18:58:46.344 | INFO     | __main__:write_to_ffmpeg:141 - 📦 塊 1: 1048576 bytes → FFmpeg
+2025-11-03 18:58:46.503 | INFO     | __main__:write_to_ffmpeg:141 - 📦 塊 2: 1048576 bytes → FFmpeg
+2025-11-03 18:58:46.653 | INFO     | __main__:write_to_ffmpeg:141 - 📦 塊 3: 1048576 bytes → FFmpeg
+2025-11-03 18:58:46.783 | INFO     | __main__:write_to_ffmpeg:141 - 📦 塊 4: 1048576 bytes → FFmpeg
+2025-11-03 18:58:46.915 | INFO     | __main__:write_to_ffmpeg:141 - 📦 塊 5: 1048576 bytes → FFmpeg
+2025-11-03 18:58:47.589 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 10 塊 (~10.0 MB) → FFmpeg
+2025-11-03 18:58:49.045 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 20 塊 (~20.0 MB) → FFmpeg
+2025-11-03 18:58:50.639 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 30 塊 (~30.0 MB) → FFmpeg
+2025-11-03 18:58:52.224 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 40 塊 (~40.0 MB) → FFmpeg
+2025-11-03 18:58:53.770 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 50 塊 (~50.0 MB) → FFmpeg
+2025-11-03 18:58:55.392 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 60 塊 (~60.0 MB) → FFmpeg
+2025-11-03 18:58:56.767 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 70 塊 (~70.0 MB) → FFmpeg
+2025-11-03 18:58:58.122 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 80 塊 (~80.0 MB) → FFmpeg
+2025-11-03 18:58:59.584 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 90 塊 (~90.0 MB) → FFmpeg
+2025-11-03 18:59:00.961 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 100 塊 (~100.0 MB) → FFmpeg
+2025-11-03 18:59:02.334 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 110 塊 (~110.0 MB) → FFmpeg
+2025-11-03 18:59:03.712 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 120 塊 (~120.0 MB) → FFmpeg
+2025-11-03 18:59:05.501 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 130 塊 (~130.0 MB) → FFmpeg
+2025-11-03 18:59:06.938 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 140 塊 (~140.0 MB) → FFmpeg
+2025-11-03 18:59:08.448 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 150 塊 (~150.0 MB) → FFmpeg
+2025-11-03 18:59:09.918 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 160 塊 (~160.0 MB) → FFmpeg
+2025-11-03 18:59:11.669 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 170 塊 (~170.0 MB) → FFmpeg
+2025-11-03 18:59:13.065 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 180 塊 (~180.0 MB) → FFmpeg
+2025-11-03 18:59:14.487 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 190 塊 (~190.0 MB) → FFmpeg
+2025-11-03 18:59:16.258 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 200 塊 (~200.0 MB) → FFmpeg
+2025-11-03 18:59:17.924 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 210 塊 (~210.0 MB) → FFmpeg
+2025-11-03 18:59:19.312 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 220 塊 (~220.0 MB) → FFmpeg
+2025-11-03 18:59:20.670 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 230 塊 (~230.0 MB) → FFmpeg
+2025-11-03 18:59:22.322 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 240 塊 (~240.0 MB) → FFmpeg
+2025-11-03 18:59:23.744 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 250 塊 (~250.0 MB) → FFmpeg
+2025-11-03 18:59:25.258 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 260 塊 (~260.0 MB) → FFmpeg
+2025-11-03 18:59:26.614 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 270 塊 (~270.0 MB) → FFmpeg
+2025-11-03 18:59:28.215 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 280 塊 (~280.0 MB) → FFmpeg
+2025-11-03 18:59:29.613 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 290 塊 (~290.0 MB) → FFmpeg
+2025-11-03 18:59:30.967 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 300 塊 (~300.0 MB) → FFmpeg
+2025-11-03 18:59:32.480 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 310 塊 (~310.0 MB) → FFmpeg
+2025-11-03 18:59:34.161 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 320 塊 (~320.0 MB) → FFmpeg
+2025-11-03 18:59:35.746 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 330 塊 (~330.0 MB) → FFmpeg
+2025-11-03 18:59:37.218 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 340 塊 (~340.0 MB) → FFmpeg
+2025-11-03 18:59:38.873 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 350 塊 (~350.0 MB) → FFmpeg
+2025-11-03 18:59:40.243 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 360 塊 (~360.0 MB) → FFmpeg
+2025-11-03 18:59:41.556 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 370 塊 (~370.0 MB) → FFmpeg
+2025-11-03 18:59:42.980 | INFO     | __main__:write_to_ffmpeg:146 - 📊 已下載 380 塊 (~380.0 MB) → FFmpeg
+2025-11-03 18:59:43.979 | INFO     | __main__:async_generate_video:225 - ✅ FFmpeg 管道已清理
+[2025-11-03 18:59:43 +0800] [8571] [INFO] 127.0.0.1:56520 GET /test/video_stream/-1002468596496/1472 1.1 - - 60008513
