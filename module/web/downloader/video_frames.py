@@ -171,7 +171,7 @@ async def get_video_frames(chat_id, message_id):
             )
 
         # 檢查會話
-        session_key = session.get('message_downloader_session_key')
+        session_key = session.get('session_key')
         if not session_key:
             return error_response('會話已過期，請重新登入', 401)
 
@@ -189,7 +189,7 @@ async def get_video_frames(chat_id, message_id):
         # 查找客戶端
         client = auth_manager.active_clients.get(session_key)
         if not client:
-            user_id = session.get('message_downloader_user_id')
+            user_id = session.get('user_id')
             if user_id:
                 client = auth_manager.active_clients.get(str(user_id))
 

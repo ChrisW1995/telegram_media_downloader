@@ -130,7 +130,7 @@ def add_download_tasks():
                     initialize_download_session(len(new_ids))
 
                     # 為 message_downloader 創建 TaskNode，支援 bot 通知
-                    user_id = session.get('message_downloader_user_id')
+                    user_id = session.get('user_id')
                     logger.info(f"Debug - user_id: {user_id}, has_download_bot: {hasattr(_app, 'download_bot') and _app.download_bot}")
 
                     # 創建 TaskNode 來支持進度通知（關鍵修復：使用 async 任務避免競態條件）

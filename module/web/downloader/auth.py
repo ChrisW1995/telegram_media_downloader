@@ -79,7 +79,7 @@ async def send_code():
             })
 
             # Store session key in Flask session for this user
-            session['message_downloader_session_key'] = session_key
+            session['session_key'] = session_key
             session.permanent = True  # Make session persistent
 
         return jsonify(result)
@@ -98,7 +98,7 @@ async def verify_code():
         verification_code = data.get('verification_code', '').strip()
 
         # Get session key from Quart session or request data
-        session_key = data.get('session_key') or session.get('message_downloader_session_key')
+        session_key = data.get('session_key') or session.get('session_key')
 
         if not session_key:
             return error_response('會話已過期，請重新開始')
@@ -139,12 +139,12 @@ async def verify_code():
 
             if 'user_id' in result:
                 user_id = result['user_id']
-                session['message_downloader_user_id'] = user_id
+                session['user_id'] = user_id
                 # Use user_id as session key for consistency with active_clients
                 final_session_key = str(user_id)
 
             # Always set session key for consistency
-            session['message_downloader_session_key'] = final_session_key
+            session['session_key'] = final_session_key
 
             # Move session data to new key if needed
             if session_key in message_downloader_auth_sessions and final_session_key != session_key:
@@ -199,7 +199,7 @@ async def verify_password():
         password = data.get('password', '')
 
         # Get session key from Quart session or request data
-        session_key = data.get('session_key') or session.get('message_downloader_session_key')
+        session_key = data.get('session_key') or session.get('session_key')
 
         if not session_key:
             return error_response('會話已過期，請重新開始')
@@ -239,12 +239,12 @@ async def verify_password():
 
             if 'user_id' in result:
                 user_id = result['user_id']
-                session['message_downloader_user_id'] = user_id
+                session['user_id'] = user_id
                 # Use user_id as session key for consistency with active_clients
                 final_session_key = str(user_id)
 
             # Always set session key for consistency
-            session['message_downloader_session_key'] = final_session_key
+            session['session_key'] = final_session_key
 
             # Move session data to new key if needed
             if session_key in message_downloader_auth_sessions and final_session_key != session_key:
@@ -309,7 +309,7 @@ async def get_auth_status():
 async def logout():
     """登出 (Quart async)"""
     # Get session key BEFORE clearing session
-    session_key = session.get('message_downloader_session_key')
+    session_key = session.get('session_key')
 
     # Clear all session data
     session.clear()
@@ -335,8 +335,8 @@ async def force_clear_session():
     """強制清除所有 session 數據 (用於解決瀏覽器殘留問題) - Quart async"""
     try:
         # Get all possible session keys before clearing
-        session_key = session.get('message_downloader_session_key')
-        user_id = session.get('message_downloader_user_id')
+        session_key = session.get('session_key')
+        user_id = session.get('user_id')
 
         # Force clear Quart session completely
         session.clear()
@@ -464,12 +464,12 @@ async def check_qr_status():
 
                 if 'user_id' in result:
                     user_id = result['user_id']
-                    session['message_downloader_user_id'] = user_id
+                    session['user_id'] = user_id
                     # Use user_id as session key for consistency with active_clients
                     final_session_key = str(user_id)
 
                 # Always set session key for consistency
-                session['message_downloader_session_key'] = final_session_key
+                session['session_key'] = final_session_key
 
                 # Move session data to new key if needed
                 if session_key in message_downloader_auth_sessions and final_session_key != session_key:

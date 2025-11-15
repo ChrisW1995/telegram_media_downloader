@@ -30,7 +30,7 @@ def get_message_key(chat_id: int, message_id: int) -> str:
 
 def get_session_key() -> str:
     """獲取當前會話鍵"""
-    return session.get('message_downloader_user_id', 'anonymous')
+    return session.get('user_id', 'anonymous')
 
 def cleanup_session_cache(session_key: str):
     """清理指定會話的所有快取"""

@@ -78,7 +78,7 @@ async def get_groups_list():
     """獲取已加入的群組列表 (Quart async)"""
     try:
         # Debug: Log current session state
-        session_key = session.get('message_downloader_session_key')
+        session_key = session.get('session_key')
         authenticated = session.get('authenticated', False)
         user_info = session.get('user_info', {})
 
@@ -134,7 +134,7 @@ async def get_group_messages():
             return error_response('請提供群組 ID')
 
         # Get authenticated user's session
-        session_key = session.get('message_downloader_session_key')
+        session_key = session.get('session_key')
 
         if not session_key:
             return error_response('會話已過期，請重新登入', 401)
@@ -174,7 +174,7 @@ async def load_more_messages():
             return error_response('缺少必要參數')
 
         # Get authenticated user's session
-        session_key = session.get('message_downloader_session_key')
+        session_key = session.get('session_key')
 
         if not session_key:
             return error_response('會話已過期，請重新登入', 401)
@@ -210,7 +210,7 @@ async def get_media_stats(chat_id):
         except ValueError:
             return error_response('無效的 chat_id')
         # Get authenticated user's session
-        session_key = session.get('message_downloader_session_key')
+        session_key = session.get('session_key')
 
         if not session_key:
             return error_response('會話已過期，請重新登入', 401)

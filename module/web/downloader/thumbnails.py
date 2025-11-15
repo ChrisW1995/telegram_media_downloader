@@ -41,7 +41,7 @@ async def get_thumbnail(chat_id, message_id):
         logger.info(f"Thumbnail API: chat_id={chat_id}, message_id={message_id}")
 
         # 檢查會話
-        session_key = session.get('message_downloader_session_key')
+        session_key = session.get('session_key')
         logger.info(f"Session key: {session_key}")
 
         if not session_key:
@@ -71,7 +71,7 @@ async def get_thumbnail(chat_id, message_id):
 
         # 如果沒找到，嘗試用 user_id 查找（處理認證後 key 變化的情況）
         if not client:
-            user_id = session.get('message_downloader_user_id')
+            user_id = session.get('user_id')
             if user_id:
                 client = auth_manager.active_clients.get(str(user_id))
                 logger.info(f"Client with user_id {user_id}: {client}")
@@ -86,7 +86,7 @@ async def get_thumbnail(chat_id, message_id):
                     break
 
         if not client:
-            logger.error(f"No client found for session {session_key}, user_id {session.get('message_downloader_user_id')}")
+            logger.error(f"No client found for session {session_key}, user_id {session.get('user_id')}")
             logger.error(f"Available clients: {list(auth_manager.active_clients.keys())}")
             return error_response('找不到有效的客戶端連接')
 
