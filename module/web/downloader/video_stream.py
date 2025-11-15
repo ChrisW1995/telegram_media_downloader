@@ -103,10 +103,12 @@ async def get_video_stream(chat_id: str, message_id: int):
             file_size_mb = message.video.file_size / 1024 / 1024
             logger.info(f"📏 影片大小: {file_size_mb:.2f} MB")
 
-            if file_size_mb > 200:
-                logger.info(f"🚫 HEAD 請求：影片太大 ({file_size_mb:.2f} MB > 200 MB)，返回 413")
+            # 提示：對於大檔案（>200MB），建議使用 native API 端點以獲得更好的串流體驗
+            # 但由於已實現 Range Request 支援，所有大小的檔案都可以播放
+            if file_size_mb > 500:  # 提高限制到 500 MB
+                logger.info(f"🚫 HEAD 請求：影片太大 ({file_size_mb:.2f} MB > 500 MB)，返回 413")
                 return error_response(
-                    f"影片太大 ({file_size_mb:.1f} MB)，超過 hover 播放限制 (200 MB)",
+                    f"影片太大 ({file_size_mb:.1f} MB)，超過限制 (500 MB)。請使用下載功能。",
                     413
                 )
 
@@ -156,11 +158,11 @@ async def get_video_stream(chat_id: str, message_id: int):
             file_size_mb = message.video.file_size / 1024 / 1024
             logger.info(f"影片大小: {file_size_mb:.2f} MB")
 
-            # 檔案大小限制：超過 200MB 的影片不適合 hover 播放
-            # 對於大檔案，建議使用 lightbox 的完整播放器
-            if file_size_mb > 200:
-                logger.warning(f"影片太大 ({file_size_mb:.2f} MB)，跳過 hover 播放（限制: 200MB）")
-                return {'error': 'file_too_large', 'size_mb': file_size_mb, 'limit_mb': 200}
+            # 檔案大小限制：超過 500MB 的影片不適合線上播放
+            # 對於超大檔案，建議直接下載
+            if file_size_mb > 500:
+                logger.warning(f"影片太大 ({file_size_mb:.2f} MB)，超過線上播放限制（500MB）")
+                return {'error': 'file_too_large', 'size_mb': file_size_mb, 'limit_mb': 500}
 
             # 下載影片到臨時檔案（會話結束後自動刪除）
             temp_file = tempfile.NamedTemporaryFile(
@@ -229,7 +231,7 @@ async def get_video_stream(chat_id: str, message_id: int):
         if isinstance(result, dict) and 'error' in result:
             if result['error'] == 'file_too_large':
                 return error_response(
-                    f"影片太大 ({result['size_mb']:.1f} MB)，超過 hover 播放限制 ({result['limit_mb']} MB)。請使用 lightbox 完整播放器。",
+                    f"影片太大 ({result['size_mb']:.1f} MB)，超過線上播放限制 ({result['limit_mb']} MB)。請使用下載功能。",
                     413  # 413 Payload Too Large
                 )
             return error_response(str(result), 400)
