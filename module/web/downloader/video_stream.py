@@ -605,9 +605,14 @@ async def stream_video_native_api(chat_id: str, message_id: int):
                         this_chunk_size = min(chunk_size, remaining)
 
                         chunk = await get_file_range(current_offset, this_chunk_size)
-                        yield chunk
 
-                        current_offset += len(chunk)
+                        # 關鍵修復：由於 Telegram API 的 4KB 對齊要求，
+                        # get_file_range 可能返回比請求更多的數據
+                        # 我們只發送實際需要的部分以匹配 Content-Length
+                        actual_send_size = min(len(chunk), remaining)
+                        yield chunk[:actual_send_size]
+
+                        current_offset += actual_send_size
                         chunks_sent += 1
 
                         # 每 10 個 chunks 記錄一次進度
