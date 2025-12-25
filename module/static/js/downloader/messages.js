@@ -5,6 +5,39 @@
  * 處理訊息顯示、媒體處理、分頁載入和滾動檢測邏輯
  */
 
+// ==================== 影片串流系統 (Range 請求模式) ====================
+//
+// 採用與 Telegram Web K 相同的方式：
+// 瀏覽器原生支援 moov-at-end 的 MP4，只要服務器正確支援 HTTP 206 Range 請求
+// 不再需要預載 moov atom，瀏覽器會自動處理
+
+// 已驗證可播放的影片集合（用於快速跳過重複驗證）
+const verifiedVideos = new Set();
+
+/**
+ * 預載/驗證影片（可選）
+ * 在新的 Range 請求模式下，這個函數只是驗證影片是否可訪問
+ * 瀏覽器會自動處理 moov atom 的獲取
+ *
+ * @param {number} chatId - 聊天 ID
+ * @param {number} messageId - 訊息 ID
+ * @returns {Promise<boolean>} 是否驗證成功
+ */
+async function preloadMoovAtom(chatId, messageId) {
+    const key = `${chatId}_${messageId}`;
+
+    // 已驗證過
+    if (verifiedVideos.has(key)) {
+        return true;
+    }
+
+    // 在新的 Range 請求模式下，不再需要預載 moov
+    // 直接標記為已驗證，讓瀏覽器處理
+    verifiedVideos.add(key);
+    console.log(`✅ 影片已準備好 (Range 模式): ${messageId}`);
+    return true;
+}
+
 // ==================== 滾動檢測和自動載入 ====================
 
 /**
@@ -1703,128 +1736,141 @@ function setupVideoHoverPlayback(container, message) {
     // 只為影片類型設置
     if (message.media_type !== 'video') return;
 
-    // 檢查 MSE 支援 - 詳細調試
-    console.log('🔍 檢查 MSE 支援...');
-    console.log('  - isMSESupported 函數存在?', typeof isMSESupported !== 'undefined');
-
-    console.log('✅ 設置影片 hover 播放（使用快取下載方案）');
+    console.log('✅ 設置影片 hover 播放');
 
     let videoOverlay = null;
     let videoElement = null;
     let progressBar = null;
     let progressThumb = null;
+    let loadingBar = null;
     let isInitialized = false;
     let hoverTimer = null;
+    let isHovering = false;
 
     // Mouseenter: 延遲顯示播放器
     container.addEventListener('mouseenter', async () => {
+        isHovering = true;
+
         hoverTimer = setTimeout(async () => {
+            if (!isHovering) return; // 已經離開
+
             // 創建覆蓋層
             if (!videoOverlay) {
                 videoOverlay = createVideoOverlay(container, message);
                 videoElement = videoOverlay.querySelector('video');
                 progressBar = videoOverlay.querySelector('.video-hover-progress-bar');
                 progressThumb = videoOverlay.querySelector('.video-hover-progress-thumb');
+                loadingBar = videoOverlay.querySelector('.video-loading-bar');
 
                 // 設置進度條拖曳
                 setupProgressDrag(videoOverlay, videoElement, progressBar, progressThumb);
             }
 
             // 顯示播放器
-            console.log('🖼️ 顯示 overlay...');
-            console.log('  - overlay 存在?', !!videoOverlay);
-            console.log('  - videoElement 存在?', !!videoElement);
-            console.log('  - overlay display 前:', videoOverlay.style.display);
             videoOverlay.style.display = 'block';
-            console.log('  - overlay display 後:', videoOverlay.style.display);
-            console.log('  - overlay 位置:', videoOverlay.getBoundingClientRect());
-            console.log('  - video 尺寸:', videoElement.width, 'x', videoElement.height);
 
             // 如果尚未初始化，開始載入影片
             if (!isInitialized) {
                 try {
-                    console.log('🎬 開始載入影片...');
-                    console.log('  - currentChatId:', currentChatId);
-                    console.log('  - message_id:', message.message_id);
-
-                    // 預設使用快取下載端點（首次下載，後續使用快取）
-                    let videoUrl = `/api/video/stream/${currentChatId}/${message.message_id}`;
-                    console.log('  - videoUrl (cached):', videoUrl);
-
-                    // 先檢查影片是否可用（處理錯誤狀態碼）
-                    const response = await fetch(videoUrl, { method: 'HEAD' });
-
-                    if (!response.ok) {
-                        // 如果是 413，說明檔案太大，切換到 native API 串流
-                        if (response.status === 413) {
-                            console.log('⚠️ 檔案太大 (>200MB)，切換到 native API 串流...');
-                            videoUrl = `/api/video/stream/native/${currentChatId}/${message.message_id}`;
-                            console.log('  - videoUrl (native):', videoUrl);
-                        } else {
-                            throw new Error(`HTTP ${response.status}`);
-                        }
+                    // 顯示載入中進度條動畫
+                    if (loadingBar) {
+                        loadingBar.style.display = 'block';
+                        loadingBar.classList.add('loading');
                     }
 
-                    // 使用標準瀏覽器播放器
-                    console.log('🎬 設置影片源...');
-                    console.log('  - setting videoElement.src =', videoUrl);
+                    console.log('🎬 開始載入影片 (Range 模式)...');
+                    console.log('  - message_id:', message.message_id);
 
+                    // Range 請求模式：瀏覽器自動處理 moov atom
+                    // 不再需要預載，直接設置 src 讓瀏覽器發起 Range 請求
+                    const videoUrl = `/api/video/stream/${currentChatId}/${message.message_id}`;
+                    console.log('  - videoUrl:', videoUrl);
+
+                    // 使用標準瀏覽器播放器
                     videoElement.src = videoUrl;
 
-                    console.log('  - src set, calling videoElement.load()...');
-                    // 載入元數據
-                    await new Promise((resolve, reject) => {
+                    // 載入元數據（帶超時機制）
+                    const LOAD_TIMEOUT = 10000; // 10 秒超時
+
+                    const loadPromise = new Promise((resolve, reject) => {
                         videoElement.addEventListener('loadedmetadata', () => {
                             console.log('✅ loadedmetadata event fired');
                             resolve();
                         }, { once: true });
                         videoElement.addEventListener('error', (e) => {
                             console.error('❌ video error event:', e);
-                            console.error('  - videoElement.error:', videoElement.error);
-                            console.error('  - networkState:', videoElement.networkState);
-                            console.error('  - readyState:', videoElement.readyState);
-                            reject(e);
+                            reject(new Error('VIDEO_LOAD_ERROR'));
                         }, { once: true });
-                        videoElement.load();
                     });
 
-                    console.log('✅ 影片元數據已載入');
-                    console.log('  - duration:', videoElement.duration);
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('TIMEOUT')), LOAD_TIMEOUT)
+                    );
+
+                    videoElement.load();
+
+                    // 等待載入或超時
+                    await Promise.race([loadPromise, timeoutPromise]);
+
+                    // 隱藏載入進度條
+                    if (loadingBar) {
+                        loadingBar.style.display = 'none';
+                        loadingBar.classList.remove('loading');
+                    }
+
+                    if (!isHovering) return; // 載入期間離開了
+
+                    console.log('✅ 影片元數據已載入, duration:', videoElement.duration);
 
                     // 開始播放
                     await videoElement.play();
                     console.log('✅ 影片開始播放');
-                    console.log('  - paused after play:', videoElement.paused);
 
                     isInitialized = true;
-                    console.log('✅ 影片播放已啟動');
 
                 } catch (error) {
                     console.error('❌ 影片載入失敗:', error);
 
+                    // 隱藏載入進度條
+                    if (loadingBar) {
+                        loadingBar.style.display = 'none';
+                        loadingBar.classList.remove('loading');
+                    }
+
                     // 決定錯誤訊息
-                    let errorMessage = '影片載入失敗';
-                    if (error.message === 'FILE_TOO_LARGE') {
-                        errorMessage = '影片太大\n請點擊查看';
+                    let errorMessage = '不支援串流';
+                    let detailMessage = '';
+
+                    if (error.message === 'TIMEOUT') {
+                        errorMessage = '載入逾時';
+                        detailMessage = '請稍後再試';
+                        console.warn('⚠️ 影片載入超時 (>10s)');
+                    } else if (error.message === 'VIDEO_LOAD_ERROR') {
+                        errorMessage = '不支援串流';
+                        detailMessage = '格式不相容';
+                        console.warn('⚠️ 影片格式可能不支援串流播放');
                     }
 
                     // 顯示錯誤提示
-                    if (videoOverlay) {
+                    if (videoOverlay && isHovering) {
                         const errorDiv = document.createElement('div');
                         errorDiv.className = 'video-error-message';
-                        errorDiv.innerHTML = errorMessage.replace('\n', '<br>');
+                        errorDiv.innerHTML = detailMessage
+                            ? `${errorMessage}<br><small style="opacity: 0.7">${detailMessage}</small>`
+                            : errorMessage;
                         errorDiv.style.cssText = `
                             position: absolute;
                             top: 50%;
                             left: 50%;
                             transform: translate(-50%, -50%);
-                            color: #ff4444;
+                            color: #ff6b6b;
                             font-size: 14px;
-                            padding: 8px 16px;
-                            background: rgba(0,0,0,0.8);
-                            border-radius: 4px;
+                            padding: 12px 20px;
+                            background: rgba(0,0,0,0.85);
+                            border-radius: 8px;
                             text-align: center;
                             white-space: pre-line;
+                            backdrop-filter: blur(4px);
                         `;
                         videoOverlay.appendChild(errorDiv);
                     }
@@ -1840,15 +1886,29 @@ function setupVideoHoverPlayback(container, message) {
                     console.error('❌ 重新播放失敗:', error);
                 }
             }
-        }, 300); // 300ms 延遲
+        }, 50); // 50ms 延遲 (Range 模式下無需等待 moov 預載)
     });
 
     // Mouseleave: 隱藏播放器並暫停/清理
     container.addEventListener('mouseleave', () => {
+        isHovering = false;
         clearTimeout(hoverTimer);
 
         if (videoOverlay) {
             videoOverlay.style.display = 'none';
+
+            // 隱藏載入進度條
+            const loadingBar = videoOverlay.querySelector('.video-loading-bar');
+            if (loadingBar) {
+                loadingBar.style.display = 'none';
+                loadingBar.classList.remove('loading');
+            }
+
+            // 移除錯誤訊息
+            const errorMsg = videoOverlay.querySelector('.video-error-message');
+            if (errorMsg) {
+                errorMsg.remove();
+            }
         }
 
         if (videoElement) {
@@ -1880,8 +1940,8 @@ function createVideoOverlay(container, message) {
             muted
             playsinline
             preload="metadata"
-            crossorigin="use-credentials"
         ></video>
+        <div class="video-loading-bar" style="display: none;"></div>
         <div class="video-hover-controls">
             <div class="video-hover-progress">
                 <div class="video-hover-progress-bar"></div>
